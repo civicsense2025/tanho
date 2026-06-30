@@ -8,5 +8,5 @@ export function LogoutButton() {
     await fetch("/api/auth", { method: "DELETE" });
     router.push("/admin/login");
   }
-  return <button onClick={logout} className="text-xs text-[#444] hover:text-[#666] transition-colors">Sign out</button>;
+  return <button onClick={logout} className="text-xs transition-colors" style={{ color: "var(--muted)" }}>Sign out</button>;
 }

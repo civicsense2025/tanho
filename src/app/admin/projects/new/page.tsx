@@ -11,8 +11,8 @@ export default async function NewProjectPage() {
   return (
     <div className="max-w-2xl mx-auto px-6 py-16">
       <div className="mb-10">
-        <Link href="/admin" className="text-xs text-[#444] hover:text-[#666] transition-colors">← Projects</Link>
-        <h1 className="text-lg font-medium mt-4">New Project</h1>
+        <Link href="/admin" className="text-xs transition-colors" style={{ color: "var(--muted)" }}>← Projects</Link>
+        <h1 className="text-lg font-medium mt-4" style={{ color: "var(--foreground)" }}>New Project</h1>
       </div>
       <ProjectForm />
     </div>

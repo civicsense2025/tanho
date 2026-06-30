@@ -23,6 +23,7 @@ async function migrate() {
       tagline     TEXT,
       description TEXT,
       cover_image TEXT,
+      logo_url    TEXT,
       tags        TEXT    DEFAULT '[]',
       github_url  TEXT,
       live_url    TEXT,
@@ -61,6 +62,7 @@ export interface Project {
   tagline: string | null;
   description: string | null;
   cover_image: string | null;
+  logo_url: string | null;
   tags: string;
   github_url: string | null;
   live_url: string | null;
@@ -111,9 +113,9 @@ export async function getProjectById(id: number): Promise<Project | undefined> {
 export async function createProject(data: Omit<Project, "id" | "created_at" | "updated_at">): Promise<Project> {
   const client = await db();
   const result = await client.execute({
-    sql: `INSERT INTO projects (slug, title, tagline, description, cover_image, tags, github_url, live_url, year, status, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [data.slug, data.title, data.tagline, data.description, data.cover_image, data.tags, data.github_url, data.live_url, data.year, data.status, data.sort_order],
+    sql: `INSERT INTO projects (slug, title, tagline, description, cover_image, logo_url, tags, github_url, live_url, year, status, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [data.slug, data.title, data.tagline, data.description, data.cover_image, data.logo_url, data.tags, data.github_url, data.live_url, data.year, data.status, data.sort_order],
   });
   return (await getProjectById(Number(result.lastInsertRowid)))!;
 }

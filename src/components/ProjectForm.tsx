@@ -11,7 +11,7 @@ interface Block {
 
 interface ProjectData {
   title: string; slug: string; tagline: string; description: string;
-  cover_image: string; tags: string[]; github_url: string; live_url: string;
+  cover_image: string; logo_url: string; tags: string[]; github_url: string; live_url: string;
   year: number; status: "draft" | "published"; sort_order: number; blocks: Block[];
 }
 
@@ -22,7 +22,7 @@ interface Props {
 }
 
 const DEFAULT: ProjectData = {
-  title: "", slug: "", tagline: "", description: "", cover_image: "",
+  title: "", slug: "", tagline: "", description: "", cover_image: "", logo_url: "",
   tags: [], github_url: "", live_url: "", year: new Date().getFullYear(),
   status: "draft", sort_order: 0, blocks: [],
 };
@@ -37,6 +37,7 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const set = (key: keyof ProjectData, value: unknown) => setData((d) => ({ ...d, [key]: value }));
   const addTag = () => { const t = tagInput.trim(); if (t && !data.tags.includes(t)) set("tags", [...data.tags, t]); setTagInput(""); };
@@ -62,6 +63,13 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
     setUploadingCover(true);
     set("cover_image", await uploadFile(file));
     setUploadingCover(false);
+  };
+
+  const uploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploadingLogo(true);
+    set("logo_url", await uploadFile(file));
+    setUploadingLogo(false);
   };
 
   async function save() {
@@ -110,8 +118,8 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {data.tags.map((t) => (
-                <span key={t} className="flex items-center gap-1 text-xs text-[#666] border border-[#1f1f1f] px-2 py-0.5">
-                  {t}<button onClick={() => removeTag(t)} className="text-[#333] hover:text-[#666]">×</button>
+                <span key={t} className="flex items-center gap-1 text-xs px-2 py-0.5" style={{ color: "var(--muted)", border: "1px solid var(--border)" }}>
+                  {t}<button onClick={() => removeTag(t)} className="transition-colors" style={{ color: "var(--muted)" }}>×</button>
                 </span>
               ))}
             </div>
@@ -120,9 +128,17 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
         <Field label="Cover Image">
           <div className="space-y-2">
             {data.cover_image && <img src={data.cover_image} alt="" className="w-full aspect-video object-cover rounded-sm" />}
-            <input type="file" accept="image/*" onChange={uploadCover} className="text-xs text-[#666]" />
-            {uploadingCover && <p className="text-xs text-[#444]">Uploading…</p>}
+            <input type="file" accept="image/*" onChange={uploadCover} className="text-xs" style={{ color: "var(--muted)" }} />
+            {uploadingCover && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
             <input value={data.cover_image} onChange={(e) => set("cover_image", e.target.value)} className={input} placeholder="Or paste URL" />
+          </div>
+        </Field>
+        <Field label="Logo">
+          <div className="space-y-2">
+            {data.logo_url && <img src={data.logo_url} alt="" className="w-16 h-16 object-contain rounded" style={{ background: "var(--subtle)" }} />}
+            <input type="file" accept="image/*" onChange={uploadLogo} className="text-xs" style={{ color: "var(--muted)" }} />
+            {uploadingLogo && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
+            <input value={data.logo_url} onChange={(e) => set("logo_url", e.target.value)} className={input} placeholder="Or paste URL" />
           </div>
         </Field>
         <Field label="Description (HTML)">
@@ -132,7 +148,7 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
       </section>
 
       <section>
-        <h2 className="text-xs uppercase tracking-widest text-[#444] mb-4">Case Study Blocks</h2>
+        <h2 className="text-xs uppercase tracking-widest mb-4" style={{ color: "var(--muted)" }}>Case Study Blocks</h2>
         <div className="space-y-4">
           {data.blocks.map((block, i) => (
             <BlockEditor key={i} index={i} block={block} onChange={(c) => updateBlock(i, c)} onRemove={() => removeBlock(i)} onUpload={uploadFile} />
@@ -145,8 +161,8 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
         </div>
       </section>
 
-      <div className="flex gap-3 pt-4 border-t border-[#1a1a1a]">
-        <button onClick={save} disabled={saving} className="bg-[#ededed] text-[#0a0a0a] text-sm font-medium px-6 py-2.5 hover:bg-white transition-colors disabled:opacity-50">
+      <div className="flex gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+        <button onClick={save} disabled={saving} className="text-sm font-medium px-6 py-2.5 transition-colors disabled:opacity-50" style={{ background: "var(--foreground)", color: "var(--background)" }}>
           {saving ? "Saving…" : "Save"}
         </button>
         {projectId && (
@@ -175,10 +191,10 @@ function BlockEditor({ block, onChange, onRemove, onUpload }: {
   }
 
   return (
-    <div className="border border-[#1a1a1a] p-4 space-y-3">
+    <div className="p-4 space-y-3" style={{ border: "1px solid var(--border)" }}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-[#444]">{block.type}</span>
-        <button onClick={onRemove} className="text-xs text-[#333] hover:text-red-500 transition-colors">Remove</button>
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--muted)" }}>{block.type}</span>
+        <button onClick={onRemove} className="text-xs hover:text-red-500 transition-colors" style={{ color: "var(--muted)" }}>Remove</button>
       </div>
 
       {block.type === "text" && (
@@ -190,8 +206,8 @@ function BlockEditor({ block, onChange, onRemove, onUpload }: {
         <div className="space-y-2">
           {!!(block.content.url) && block.type === "image" && <img src={block.content.url as string} alt="" className="w-full aspect-video object-cover rounded-sm" />}
           {!!(block.content.url) && block.type === "video" && <video src={block.content.url as string} controls className="w-full rounded-sm" />}
-          <input type="file" accept={block.type === "image" ? "image/*" : "video/*"} onChange={handleFileUpload} className="text-xs text-[#666]" />
-          {uploading && <p className="text-xs text-[#444]">Uploading…</p>}
+          <input type="file" accept={block.type === "image" ? "image/*" : "video/*"} onChange={handleFileUpload} className="text-xs" style={{ color: "var(--muted)" }} />
+          {uploading && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
           <input value={(block.content.url as string) || ""} onChange={(e) => onChange({ ...block.content, url: e.target.value })} className={input} placeholder="Or paste URL" />
           <input value={(block.content.caption as string) || ""} onChange={(e) => onChange({ ...block.content, caption: e.target.value })} className={input} placeholder="Caption (optional)" />
           {block.type === "video" && <input value={(block.content.poster as string) || ""} onChange={(e) => onChange({ ...block.content, poster: e.target.value })} className={input} placeholder="Poster image URL (optional)" />}
@@ -204,7 +220,7 @@ function BlockEditor({ block, onChange, onRemove, onUpload }: {
             <div key={i} className="flex gap-2">
               <input value={m.value} onChange={(e) => { const metrics = [...(block.content.metrics as { label: string; value: string }[])]; metrics[i] = { ...m, value: e.target.value }; onChange({ metrics }); }} className={`${input} flex-1`} placeholder="Value (e.g. 2.4M)" />
               <input value={m.label} onChange={(e) => { const metrics = [...(block.content.metrics as { label: string; value: string }[])]; metrics[i] = { ...m, label: e.target.value }; onChange({ metrics }); }} className={`${input} flex-1`} placeholder="Label" />
-              <button onClick={() => { const metrics = (block.content.metrics as { label: string; value: string }[]).filter((_, j) => j !== i); onChange({ metrics }); }} className="text-[#333] hover:text-red-500 px-2">×</button>
+              <button onClick={() => { const metrics = (block.content.metrics as { label: string; value: string }[]).filter((_, j) => j !== i); onChange({ metrics }); }} className="hover:text-red-500 px-2 transition-colors" style={{ color: "var(--muted)" }}>×</button>
             </div>
           ))}
           <button type="button" onClick={() => { const metrics = [...((block.content.metrics as { label: string; value: string }[]) || []), { label: "", value: "" }]; onChange({ metrics }); }} className={`${btn} text-[10px]`}>+ Add metric</button>
@@ -227,8 +243,8 @@ function BlockEditor({ block, onChange, onRemove, onUpload }: {
             const urls = await Promise.all(files.map(onUpload));
             onChange({ images: [...((block.content.images as { url: string }[]) || []), ...urls.map((url) => ({ url }))] });
             setUploading(false);
-          }} className="text-xs text-[#666]" />
-          {uploading && <p className="text-xs text-[#444]">Uploading…</p>}
+          }} className="text-xs" style={{ color: "var(--muted)" }} />
+          {uploading && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
         </div>
       )}
     </div>
@@ -238,11 +254,11 @@ function BlockEditor({ block, onChange, onRemove, onUpload }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] uppercase tracking-wider text-[#444]">{label}</label>
+      <label className="text-[10px] uppercase tracking-wider" style={{ color: "var(--muted)" }}>{label}</label>
       {children}
     </div>
   );
 }
 
-const input = "w-full bg-[#111] border border-[#1f1f1f] text-[#ededed] text-sm px-3 py-2 outline-none focus:border-[#333] transition-colors";
-const btn = "text-xs text-[#666] border border-[#1f1f1f] px-3 py-1.5 hover:border-[#333] hover:text-[#999] transition-colors";
+const input = "w-full text-sm px-3 py-2 outline-none transition-colors";
+const btn = "text-xs px-3 py-1.5 transition-colors";

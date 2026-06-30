@@ -20,15 +20,15 @@ export default async function EditProjectPage({ params }: Props) {
   return (
     <div className="max-w-2xl mx-auto px-6 py-16">
       <div className="mb-10">
-        <Link href="/admin" className="text-xs text-[#444] hover:text-[#666] transition-colors">← Projects</Link>
-        <h1 className="text-lg font-medium mt-4">{project.title}</h1>
+        <Link href="/admin" className="text-xs transition-colors" style={{ color: "var(--muted)" }}>← Projects</Link>
+        <h1 className="text-lg font-medium mt-4" style={{ color: "var(--foreground)" }}>{project.title}</h1>
       </div>
       <ProjectForm
         projectId={project.id}
         initial={{
           title: project.title, slug: project.slug,
           tagline: project.tagline || "", description: project.description || "",
-          cover_image: project.cover_image || "", tags: parseTags(project.tags),
+          cover_image: project.cover_image || "", logo_url: project.logo_url || "", tags: parseTags(project.tags),
           github_url: project.github_url || "", live_url: project.live_url || "",
           year: project.year || new Date().getFullYear(),
           status: project.status, sort_order: project.sort_order,
