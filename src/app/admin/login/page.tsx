@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Input, Button } from "@/components/ui";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -27,19 +28,35 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
-        <h1 className="text-sm uppercase tracking-widest mb-8" style={{ color: "var(--muted)" }}>Admin</h1>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password" autoFocus
-          className="w-full px-4 py-3 text-sm outline-none transition-colors"
-          style={{ background: "var(--subtle)", border: "1px solid var(--border)", color: "var(--foreground)" }} />
-        {error && <p className="text-red-500 text-xs">{error}</p>}
-        <button type="submit" disabled={loading}
-          className="w-full text-sm font-medium py-3 transition-colors disabled:opacity-50"
-          style={{ background: "var(--foreground)", color: "var(--background)" }}>
-          {loading ? "..." : "Enter"}
-        </button>
+    <div style={{ minHeight: "70vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <form onSubmit={handleSubmit} style={{ width: "var(--width-form)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <h1
+          style={{
+            margin: "0 0 var(--space-5)",
+            fontFamily: "var(--font-label)",
+            fontSize: "var(--text-sm)",
+            textTransform: "uppercase",
+            letterSpacing: "var(--tracking-widest)",
+            color: "var(--text-muted)",
+          }}
+        >
+          Admin
+        </h1>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError("");
+          }}
+          placeholder="Password"
+          autoFocus
+          invalid={!!error}
+        />
+        {error && <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--danger)" }}>{error}</p>}
+        <Button type="submit" disabled={loading} style={{ width: "100%" }}>
+          {loading ? "…" : "Enter"}
+        </Button>
       </form>
     </div>
   );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import { Field, Input, Select, Textarea, Button } from "@/components/ui";
 
 interface Block {
   type: "text" | "image" | "video" | "metric" | "gallery";
@@ -25,6 +26,25 @@ const DEFAULT: ProjectData = {
   title: "", slug: "", tagline: "", description: "", cover_image: "", logo_url: "",
   tags: [], github_url: "", live_url: "", year: new Date().getFullYear(),
   status: "draft", sort_order: 0, blocks: [],
+};
+
+const labelStyle: CSSProperties = {
+  display: "block",
+  fontFamily: "var(--font-label)",
+  fontSize: "var(--text-2xs)",
+  textTransform: "uppercase",
+  letterSpacing: "var(--tracking-wide)",
+  color: "var(--text-muted)",
+  marginBottom: "var(--space-2)",
+};
+
+const sectionLabel: CSSProperties = {
+  margin: "0 0 var(--space-4)",
+  fontFamily: "var(--font-label)",
+  fontSize: "var(--text-xs)",
+  textTransform: "uppercase",
+  letterSpacing: "var(--tracking-widest)",
+  color: "var(--text-muted)",
 };
 
 export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
@@ -89,94 +109,111 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
     router.push("/admin"); router.refresh();
   }
 
+  const fileInputStyle: CSSProperties = { fontSize: "var(--text-xs)", color: "var(--text-muted)" };
+
   return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <Field label="Title"><input value={data.title} onChange={(e) => set("title", e.target.value)} className={input} placeholder="Project title" /></Field>
-        <Field label="Slug"><input value={data.slug} onChange={(e) => set("slug", e.target.value)} className={input} placeholder="auto-generated if blank" /></Field>
-        <Field label="Tagline"><input value={data.tagline} onChange={(e) => set("tagline", e.target.value)} className={input} placeholder="One-line summary" /></Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Year"><input type="number" value={data.year} onChange={(e) => set("year", Number(e.target.value))} className={input} /></Field>
-          <Field label="Status">
-            <select value={data.status} onChange={(e) => set("status", e.target.value as "draft" | "published")} className={input}>
+    <form onSubmit={(e) => { e.preventDefault(); save(); }} style={{ display: "flex", flexDirection: "column", gap: "var(--space-8)" }}>
+      {/* core fields */}
+      <section style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+        <Field label="Title"><Input value={data.title} onChange={(e) => set("title", e.target.value)} placeholder="Project title" /></Field>
+        <Field label="Slug" hint="Auto-generated if blank"><Input value={data.slug} onChange={(e) => set("slug", e.target.value)} placeholder="auto-generated" /></Field>
+        <Field label="Tagline"><Input value={data.tagline} onChange={(e) => set("tagline", e.target.value)} placeholder="One-line summary" /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
+          <Field label="Year"><Input type="number" value={data.year} onChange={(e) => set("year", Number(e.target.value))} /></Field>
+          <Field label="Status" hint="Drafts stay hidden">
+            <Select value={data.status} onChange={(e) => set("status", e.target.value as "draft" | "published")}>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
-            </select>
+            </Select>
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Live URL"><input value={data.live_url} onChange={(e) => set("live_url", e.target.value)} className={input} placeholder="https://" /></Field>
-          <Field label="GitHub URL"><input value={data.github_url} onChange={(e) => set("github_url", e.target.value)} className={input} placeholder="https://github.com/..." /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
+          <Field label="Live URL"><Input value={data.live_url} onChange={(e) => set("live_url", e.target.value)} placeholder="https://" /></Field>
+          <Field label="GitHub URL"><Input value={data.github_url} onChange={(e) => set("github_url", e.target.value)} placeholder="https://github.com/…" /></Field>
         </div>
-        <Field label="Tags">
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <input value={tagInput} onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                className={`${input} flex-1`} placeholder="Add tag and press Enter" />
-              <button type="button" onClick={addTag} className={btn}>Add</button>
+
+        {/* tag chip editor */}
+        <div>
+          <span style={labelStyle}>Tags</span>
+          <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+            <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+              placeholder="Add tag and press Enter" style={{ flex: 1 }} />
+            <Button type="button" variant="outline" size="sm" onClick={addTag}>Add</Button>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {data.tags.map((t) => (
+              <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontFamily: "var(--font-label)", fontSize: "var(--text-2xs)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-pill)", padding: "4px 9px" }}>
+                {t}
+                <button type="button" onClick={() => removeTag(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 0, lineHeight: 1 }}>×</button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* cover + logo */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
+          <div>
+            <span style={labelStyle}>Cover image</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+              {data.cover_image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={data.cover_image} alt="" style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} />
+              )}
+              <input type="file" accept="image/*" onChange={uploadCover} style={fileInputStyle} />
+              {uploadingCover && <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Uploading…</p>}
+              <Input value={data.cover_image} onChange={(e) => set("cover_image", e.target.value)} placeholder="Or paste URL" />
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {data.tags.map((t) => (
-                <span key={t} className="flex items-center gap-1 text-xs px-2 py-0.5" style={{ color: "var(--muted)", border: "1px solid var(--border)" }}>
-                  {t}<button onClick={() => removeTag(t)} className="transition-colors" style={{ color: "var(--muted)" }}>×</button>
-                </span>
-              ))}
+          </div>
+          <div>
+            <span style={labelStyle}>Logo</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+              {data.logo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={data.logo_url} alt="" style={{ width: 64, height: 64, objectFit: "contain", borderRadius: "var(--radius-sm)", background: "var(--surface)", border: "1px solid var(--border)" }} />
+              )}
+              <input type="file" accept="image/*" onChange={uploadLogo} style={fileInputStyle} />
+              {uploadingLogo && <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Uploading…</p>}
+              <Input value={data.logo_url} onChange={(e) => set("logo_url", e.target.value)} placeholder="Or paste URL" />
             </div>
           </div>
-        </Field>
-        <Field label="Cover Image">
-          <div className="space-y-2">
-            {data.cover_image && <img src={data.cover_image} alt="" className="w-full aspect-video object-cover rounded-sm" />}
-            <input type="file" accept="image/*" onChange={uploadCover} className="text-xs" style={{ color: "var(--muted)" }} />
-            {uploadingCover && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
-            <input value={data.cover_image} onChange={(e) => set("cover_image", e.target.value)} className={input} placeholder="Or paste URL" />
-          </div>
-        </Field>
-        <Field label="Logo">
-          <div className="space-y-2">
-            {data.logo_url && <img src={data.logo_url} alt="" className="w-16 h-16 object-contain rounded" style={{ background: "var(--subtle)" }} />}
-            <input type="file" accept="image/*" onChange={uploadLogo} className="text-xs" style={{ color: "var(--muted)" }} />
-            {uploadingLogo && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
-            <input value={data.logo_url} onChange={(e) => set("logo_url", e.target.value)} className={input} placeholder="Or paste URL" />
-          </div>
-        </Field>
-        <Field label="Description (HTML)">
-          <textarea value={data.description} onChange={(e) => set("description", e.target.value)}
-            className={`${input} h-32 resize-y font-mono text-xs`} placeholder="<p>Project overview…</p>" />
+        </div>
+
+        <Field label="Description" hint="HTML allowed">
+          <Textarea mono rows={4} value={data.description} onChange={(e) => set("description", e.target.value)} placeholder="<p>Project overview…</p>" />
         </Field>
       </section>
 
+      {/* case study blocks */}
       <section>
-        <h2 className="text-xs uppercase tracking-widest mb-4" style={{ color: "var(--muted)" }}>Case Study Blocks</h2>
-        <div className="space-y-4">
+        <h2 style={sectionLabel}>Case Study Blocks</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           {data.blocks.map((block, i) => (
-            <BlockEditor key={i} index={i} block={block} onChange={(c) => updateBlock(i, c)} onRemove={() => removeBlock(i)} onUpload={uploadFile} />
+            <BlockEditor key={i} block={block} onChange={(c) => updateBlock(i, c)} onRemove={() => removeBlock(i)} onUpload={uploadFile} />
           ))}
         </div>
-        <div className="flex flex-wrap gap-2 mt-4">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
           {(["text", "image", "video", "metric", "gallery"] as const).map((t) => (
-            <button key={t} type="button" onClick={() => addBlock(t)} className={`${btn} text-[10px]`}>+ {t}</button>
+            <Button key={t} type="button" variant="outline" size="sm" onClick={() => addBlock(t)}>+ {t}</Button>
           ))}
         </div>
       </section>
 
-      <div className="flex gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
-        <button onClick={save} disabled={saving} className="text-sm font-medium px-6 py-2.5 transition-colors disabled:opacity-50" style={{ background: "var(--foreground)", color: "var(--background)" }}>
-          {saving ? "Saving…" : "Save"}
-        </button>
+      {/* footer */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", paddingTop: "var(--space-5)", borderTop: "1px solid var(--border)" }}>
+        <Button type="submit" variant="accent" disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
         {projectId && (
-          <button onClick={handleDelete} disabled={deleting} className="text-sm text-red-600 hover:text-red-400 transition-colors">
+          <button type="button" onClick={handleDelete} disabled={deleting} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--text-sm)", color: "var(--danger)" }}>
             {deleting ? "Deleting…" : "Delete"}
           </button>
         )}
       </div>
-    </div>
+    </form>
   );
 }
 
 function BlockEditor({ block, onChange, onRemove, onUpload }: {
-  index: number; block: Block;
+  block: Block;
   onChange: (c: Record<string, unknown>) => void;
   onRemove: () => void;
   onUpload: (f: File) => Promise<string>;
@@ -190,50 +227,62 @@ function BlockEditor({ block, onChange, onRemove, onUpload }: {
     setUploading(false);
   }
 
+  const metrics = (block.content.metrics as { label: string; value: string }[]) || [];
+  const images = (block.content.images as { url: string }[]) || [];
+
   return (
-    <div className="p-4 space-y-3" style={{ border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--muted)" }}>{block.type}</span>
-        <button onClick={onRemove} className="text-xs hover:text-red-500 transition-colors" style={{ color: "var(--muted)" }}>Remove</button>
+    <div style={{ padding: "var(--space-4)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontFamily: "var(--font-label)", fontSize: "var(--text-2xs)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)", color: "var(--text-muted)" }}>{block.type}</span>
+        <button type="button" onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-label)", fontSize: "var(--text-2xs)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)", color: "var(--text-faint)" }}>Remove</button>
       </div>
 
       {block.type === "text" && (
-        <textarea value={(block.content.html as string) || ""} onChange={(e) => onChange({ html: e.target.value })}
-          className={`${input} h-40 resize-y font-mono text-xs`} placeholder="<p>Content HTML…</p>" />
+        <Textarea mono rows={6} value={(block.content.html as string) || ""} onChange={(e) => onChange({ html: e.target.value })} placeholder="<p>Content HTML…</p>" />
       )}
 
       {(block.type === "image" || block.type === "video") && (
-        <div className="space-y-2">
-          {!!(block.content.url) && block.type === "image" && <img src={block.content.url as string} alt="" className="w-full aspect-video object-cover rounded-sm" />}
-          {!!(block.content.url) && block.type === "video" && <video src={block.content.url as string} controls className="w-full rounded-sm" />}
-          <input type="file" accept={block.type === "image" ? "image/*" : "video/*"} onChange={handleFileUpload} className="text-xs" style={{ color: "var(--muted)" }} />
-          {uploading && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
-          <input value={(block.content.url as string) || ""} onChange={(e) => onChange({ ...block.content, url: e.target.value })} className={input} placeholder="Or paste URL" />
-          <input value={(block.content.caption as string) || ""} onChange={(e) => onChange({ ...block.content, caption: e.target.value })} className={input} placeholder="Caption (optional)" />
-          {block.type === "video" && <input value={(block.content.poster as string) || ""} onChange={(e) => onChange({ ...block.content, poster: e.target.value })} className={input} placeholder="Poster image URL (optional)" />}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          {!!block.content.url && block.type === "image" && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={block.content.url as string} alt="" style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} />
+          )}
+          {!!block.content.url && block.type === "video" && (
+            <video src={block.content.url as string} controls style={{ width: "100%", borderRadius: "var(--radius-sm)" }} />
+          )}
+          <input type="file" accept={block.type === "image" ? "image/*" : "video/*"} onChange={handleFileUpload} style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }} />
+          {uploading && <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Uploading…</p>}
+          <Input value={(block.content.url as string) || ""} onChange={(e) => onChange({ ...block.content, url: e.target.value })} placeholder="Or paste URL" />
+          <Input value={(block.content.caption as string) || ""} onChange={(e) => onChange({ ...block.content, caption: e.target.value })} placeholder="Caption (optional)" />
+          {block.type === "video" && (
+            <Input value={(block.content.poster as string) || ""} onChange={(e) => onChange({ ...block.content, poster: e.target.value })} placeholder="Poster image URL (optional)" />
+          )}
         </div>
       )}
 
       {block.type === "metric" && (
-        <div className="space-y-2">
-          {((block.content.metrics as { label: string; value: string }[]) || []).map((m, i) => (
-            <div key={i} className="flex gap-2">
-              <input value={m.value} onChange={(e) => { const metrics = [...(block.content.metrics as { label: string; value: string }[])]; metrics[i] = { ...m, value: e.target.value }; onChange({ metrics }); }} className={`${input} flex-1`} placeholder="Value (e.g. 2.4M)" />
-              <input value={m.label} onChange={(e) => { const metrics = [...(block.content.metrics as { label: string; value: string }[])]; metrics[i] = { ...m, label: e.target.value }; onChange({ metrics }); }} className={`${input} flex-1`} placeholder="Label" />
-              <button onClick={() => { const metrics = (block.content.metrics as { label: string; value: string }[]).filter((_, j) => j !== i); onChange({ metrics }); }} className="hover:text-red-500 px-2 transition-colors" style={{ color: "var(--muted)" }}>×</button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          {metrics.map((m, i) => (
+            <div key={i} style={{ display: "flex", gap: "var(--space-2)" }}>
+              <Input value={m.value} onChange={(e) => { const next = [...metrics]; next[i] = { ...m, value: e.target.value }; onChange({ metrics: next }); }} placeholder="Value (e.g. 15M+)" style={{ flex: 1 }} />
+              <Input value={m.label} onChange={(e) => { const next = [...metrics]; next[i] = { ...m, label: e.target.value }; onChange({ metrics: next }); }} placeholder="Label" style={{ flex: 1 }} />
+              <button type="button" onClick={() => onChange({ metrics: metrics.filter((_, j) => j !== i) })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", fontSize: "var(--text-body)", padding: "0 var(--space-2)" }}>×</button>
             </div>
           ))}
-          <button type="button" onClick={() => { const metrics = [...((block.content.metrics as { label: string; value: string }[]) || []), { label: "", value: "" }]; onChange({ metrics }); }} className={`${btn} text-[10px]`}>+ Add metric</button>
+          <div>
+            <Button type="button" size="sm" variant="ghost" uppercase onClick={() => onChange({ metrics: [...metrics, { label: "", value: "" }] })}>+ Add metric</Button>
+          </div>
         </div>
       )}
 
       {block.type === "gallery" && (
-        <div className="space-y-2">
-          <div className="grid grid-cols-3 gap-2">
-            {((block.content.images as { url: string }[]) || []).map((img, i) => (
-              <div key={i} className="relative">
-                <img src={img.url} alt="" className="w-full aspect-square object-cover rounded-sm" />
-                <button onClick={() => { const images = (block.content.images as { url: string }[]).filter((_, j) => j !== i); onChange({ images }); }} className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1 rounded">×</button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)" }}>
+            {images.map((img, i) => (
+              <div key={i} style={{ position: "relative" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.url} alt="" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} />
+                <button type="button" onClick={() => onChange({ images: images.filter((_, j) => j !== i) })} style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "var(--text-xs)", border: "none", borderRadius: "var(--radius-xs)", padding: "0 5px", cursor: "pointer" }}>×</button>
               </div>
             ))}
           </div>
@@ -241,24 +290,12 @@ function BlockEditor({ block, onChange, onRemove, onUpload }: {
             const files = Array.from(e.target.files || []);
             setUploading(true);
             const urls = await Promise.all(files.map(onUpload));
-            onChange({ images: [...((block.content.images as { url: string }[]) || []), ...urls.map((url) => ({ url }))] });
+            onChange({ images: [...images, ...urls.map((url) => ({ url }))] });
             setUploading(false);
-          }} className="text-xs" style={{ color: "var(--muted)" }} />
-          {uploading && <p className="text-xs" style={{ color: "var(--muted)" }}>Uploading…</p>}
+          }} style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }} />
+          {uploading && <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Uploading…</p>}
         </div>
       )}
     </div>
   );
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-[10px] uppercase tracking-wider" style={{ color: "var(--muted)" }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const input = "w-full text-sm px-3 py-2 outline-none transition-colors";
-const btn = "text-xs px-3 py-1.5 transition-colors";

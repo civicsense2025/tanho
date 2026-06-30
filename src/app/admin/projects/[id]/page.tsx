@@ -2,7 +2,7 @@ import { getAdminSession } from "@/lib/auth";
 import { getProjectById, getBlocks } from "@/lib/db";
 import { parseTags } from "@/lib/utils";
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
+import { AdminPageShell } from "@/components/AdminPageShell";
 import { ProjectForm } from "@/components/ProjectForm";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +18,7 @@ export default async function EditProjectPage({ params }: Props) {
   const blocks = await getBlocks(project.id);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-16">
-      <div className="mb-10">
-        <Link href="/admin" className="text-xs transition-colors" style={{ color: "var(--muted)" }}>← Projects</Link>
-        <h1 className="text-lg font-medium mt-4" style={{ color: "var(--foreground)" }}>{project.title}</h1>
-      </div>
+    <AdminPageShell title={project.title}>
       <ProjectForm
         projectId={project.id}
         initial={{
@@ -35,6 +31,6 @@ export default async function EditProjectPage({ params }: Props) {
         }}
         initialBlocks={blocks}
       />
-    </div>
+    </AdminPageShell>
   );
 }

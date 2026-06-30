@@ -1,16 +1,17 @@
 import { getAdminSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AdminPageShell } from "@/components/AdminPageShell";
-import { ProjectForm } from "@/components/ProjectForm";
+import { ExperienceForm } from "@/components/ExperienceForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewProjectPage() {
+export default async function NewExperiencePage() {
   const authed = await getAdminSession();
   if (!authed) redirect("/admin/login");
+
   return (
-    <AdminPageShell title="New project">
-      <ProjectForm />
+    <AdminPageShell title="New experience">
+      <ExperienceForm />
     </AdminPageShell>
   );
 }

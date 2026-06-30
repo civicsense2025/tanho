@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -8,5 +9,9 @@ export function LogoutButton() {
     await fetch("/api/auth", { method: "DELETE" });
     router.push("/admin/login");
   }
-  return <button onClick={logout} className="text-xs transition-colors" style={{ color: "var(--muted)" }}>Sign out</button>;
+  return (
+    <Button variant="ghost" size="sm" uppercase onClick={logout}>
+      Log out
+    </Button>
+  );
 }
