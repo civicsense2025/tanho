@@ -28,6 +28,9 @@ export default async function GuidesPage({ searchParams }: Props) {
           <Link href="/guides/should-i-migrate" className="text-xs uppercase tracking-wider px-3 py-1.5 transition-colors" style={{ color: "var(--background)", background: "var(--foreground)" }}>
             Should I migrate? →
           </Link>
+          <Link href="/guides/directory" className="text-xs uppercase tracking-wider px-3 py-1.5 transition-colors" style={{ color: "var(--muted)", border: "1px solid var(--border)" }}>
+            Tools directory
+          </Link>
           <Link href="/guides/resources" className="text-xs uppercase tracking-wider px-3 py-1.5 transition-colors" style={{ color: "var(--muted)", border: "1px solid var(--border)" }}>
             Browse resources
           </Link>

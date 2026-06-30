@@ -132,6 +132,20 @@ async function migrate() {
       created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  for (const stmt of [
+    "ALTER TABLE platforms ADD COLUMN official_url TEXT",
+    "ALTER TABLE platforms ADD COLUMN is_open_source INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE platforms ADD COLUMN pricing_model TEXT",
+    "ALTER TABLE platforms ADD COLUMN pricing_notes TEXT",
+    "ALTER TABLE platforms ADD COLUMN github_url TEXT",
+  ]) {
+    try {
+      await db.execute(stmt);
+    } catch {
+      // column already exists from a prior migration run
+    }
+  }
 }
 
 let _migrated = false;
@@ -241,6 +255,7 @@ export async function upsertBlocks(projectId: number, blocks: Omit<ProjectBlock,
 // ---------- Platforms ----------
 
 export type PlatformKind = "source" | "target" | "both";
+export type PricingModel = "free_oss" | "freemium" | "paid_saas" | "usage_based";
 
 export interface Platform {
   id: number;
@@ -251,6 +266,11 @@ export interface Platform {
   logo_url: string | null;
   description: string | null;
   sort_order: number;
+  official_url: string | null;
+  is_open_source: number;
+  pricing_model: PricingModel | null;
+  pricing_notes: string | null;
+  github_url: string | null;
 }
 
 function platformRow(r: Record<string, unknown>): Platform {
@@ -266,11 +286,15 @@ export async function listPlatforms(): Promise<Platform[]> {
 export async function upsertPlatform(data: Omit<Platform, "id">): Promise<void> {
   const client = await db();
   await client.execute({
-    sql: `INSERT INTO platforms (slug, name, kind, category, logo_url, description, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+    sql: `INSERT INTO platforms (slug, name, kind, category, logo_url, description, sort_order,
+            official_url, is_open_source, pricing_model, pricing_notes, github_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(slug) DO UPDATE SET name=excluded.name, kind=excluded.kind, category=excluded.category,
-            logo_url=excluded.logo_url, description=excluded.description, sort_order=excluded.sort_order`,
-    args: [data.slug, data.name, data.kind, data.category, data.logo_url, data.description, data.sort_order],
+            logo_url=excluded.logo_url, description=excluded.description, sort_order=excluded.sort_order,
+            official_url=excluded.official_url, is_open_source=excluded.is_open_source,
+            pricing_model=excluded.pricing_model, pricing_notes=excluded.pricing_notes, github_url=excluded.github_url`,
+    args: [data.slug, data.name, data.kind, data.category, data.logo_url, data.description, data.sort_order,
+      data.official_url, data.is_open_source, data.pricing_model, data.pricing_notes, data.github_url],
   });
 }
 

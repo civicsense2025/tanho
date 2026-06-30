@@ -23,6 +23,9 @@ export default async function ResourcesPage() {
         <p className="text-lg leading-relaxed max-w-xl" style={{ color: "var(--muted)" }}>
           A curated collection of tutorials, docs, and discussions on self-hosting and migrating off hosted platforms.
         </p>
+        <Link href="/guides/directory" className="text-xs uppercase tracking-wider px-3 py-1.5 mt-6 inline-block transition-colors" style={{ color: "var(--muted)", border: "1px solid var(--border)" }}>
+          Tools & platforms directory
+        </Link>
       </header>
 
       {resources.length === 0 ? (
