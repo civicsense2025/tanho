@@ -11,6 +11,6 @@ export async function POST(req: NextRequest) {
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
   const ext = file.name.split(".").pop() || "bin";
   const name = `${randomUUID()}.${ext}`;
-  await writeFile(path.join(process.cwd(), "public", "uploads", name), Buffer.from(await file.arrayBuffer()));
+  await writeFile(path.join(process.cwd(), "public", "uploads", name), new Uint8Array(await file.arrayBuffer()));
   return NextResponse.json({ url: `/uploads/${name}` });
 }

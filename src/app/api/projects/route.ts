@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     slug: body.slug || slugify(body.title),
     title: body.title, tagline: body.tagline || null,
     description: body.description || null, cover_image: body.cover_image || null,
+    logo_url: body.logo_url || null,
     tags: JSON.stringify(body.tags || []), github_url: body.github_url || null,
     live_url: body.live_url || null, year: body.year || new Date().getFullYear(),
     status: body.status || "draft", sort_order: body.sort_order || 0,
