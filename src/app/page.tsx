@@ -15,9 +15,10 @@ export default async function Home() {
           className="rounded-full flex-shrink-0 object-cover" />
         <div>
           <h1 className="text-4xl font-medium tracking-tight mb-4" style={{ color: "var(--foreground)" }}>Tan Ho</h1>
-          <p className="text-lg max-w-xl leading-relaxed" style={{ color: "var(--muted)" }}>
+          <p className="text-lg max-w-xl leading-relaxed mb-4" style={{ color: "var(--muted)" }}>
             I'm a Forbes 30 Under 30 product designer and front-end developer. I co-founded Fiveable and scaled it from 2K to 15M+ students, securing $15M in funding along the way. I build products at the intersection of design, growth, and engineering.
           </p>
+          <Link href="/guides" className="text-sm transition-colors" style={{ color: "var(--foreground)" }}>Self-hosting migration guides →</Link>
         </div>
       </section>
 
