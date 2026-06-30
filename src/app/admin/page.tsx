@@ -20,6 +20,10 @@ export default async function AdminPage() {
         </div>
         <LogoutButton />
       </div>
+      <div className="flex gap-4 mb-12">
+        <Link href="/admin/guides" className="text-xs uppercase tracking-wider px-3 py-1.5 transition-colors" style={{ color: "var(--muted)", border: "1px solid var(--border)" }}>Guides →</Link>
+        <Link href="/admin/resources" className="text-xs uppercase tracking-wider px-3 py-1.5 transition-colors" style={{ color: "var(--muted)", border: "1px solid var(--border)" }}>Resources →</Link>
+      </div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-medium" style={{ color: "var(--foreground)" }}>Projects</h2>
         <Link href="/admin/projects/new" className="text-xs uppercase tracking-wider px-3 py-1.5 transition-colors" style={{ color: "var(--background)", background: "var(--foreground)" }}>+ New</Link>
