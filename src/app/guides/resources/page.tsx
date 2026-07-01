@@ -1,5 +1,7 @@
-import { listResources } from "@/lib/db";
+import { listContentEntries, getContentTypeBySlug } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { TextLink, Tag, Button } from "@/components/ui";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +14,26 @@ export const metadata: Metadata = {
 const TYPE_LABEL: Record<string, string> = {
   article: "Article",
   video: "Video",
-  forum_thread: "Forum thread",
-  docs: "Docs",
   tool: "Tool",
+  course: "Course",
+  book: "Book",
+  community: "Community",
 };
 
+function parseData(dataJson: string): Record<string, unknown> {
+  try {
+    return JSON.parse(dataJson) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export default async function ResourcesPage() {
-  const resources = await listResources(true);
+  const settings = await getSettings();
+  if (!settings.features.guides) notFound();
+
+  const resourceType = await getContentTypeBySlug("resource");
+  const resources = resourceType ? await listContentEntries({ contentTypeId: resourceType.id, publishedOnly: true }) : [];
 
   return (
     <main style={{ maxWidth: "var(--width-prose)", margin: "0 auto", padding: "var(--space-10) var(--gutter)" }}>
@@ -37,7 +52,7 @@ export default async function ResourcesPage() {
         </p>
         <div style={{ marginTop: "var(--space-5)" }}>
           <Button as="a" href="/guides/directory" variant="outline" size="sm">
-            Tools & platforms directory
+            Tools &amp; platforms directory
           </Button>
         </div>
       </header>
@@ -46,18 +61,25 @@ export default async function ResourcesPage() {
         <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>No resources yet.</p>
       ) : (
         <div>
-          {resources.map((r, i) => (
-            <div key={r.id} style={{ padding: "var(--space-4) 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
-                <Tag>{TYPE_LABEL[r.resourceType] || r.resourceType}</Tag>
-                {r.sourceName && <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{r.sourceName}</span>}
+          {resources.map((r, i) => {
+            const data = parseData(r.data);
+            const resourceType = String(data.resourceType || "");
+            const url = String(data.url || "");
+            const sourceName = data.sourceName ? String(data.sourceName) : null;
+            const summary = data.summary ? String(data.summary) : null;
+            return (
+              <div key={r.id} style={{ padding: "var(--space-4) 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                  <Tag>{TYPE_LABEL[resourceType] || resourceType}</Tag>
+                  {sourceName && <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{sourceName}</span>}
+                </div>
+                <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text)" }}>
+                  {r.title} ↗
+                </a>
+                {summary && <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{summary}</p>}
               </div>
-              <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text)" }}>
-                {r.title} ↗
-              </a>
-              {r.summary && <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{r.summary}</p>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </main>

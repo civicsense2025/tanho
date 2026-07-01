@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { QUIZ_QUESTIONS, QuizAnswer, QuizResult } from "@/lib/quiz";
-import { Guide } from "@/lib/db";
-import { GuideCard } from "@/components/GuideCard";
-import { Button } from "@/components/ui";
+import type { ContentEntry } from "@/lib/db";
+import { Button, TextLink } from "@/components/ui";
 
 const VERDICT_LABEL: Record<QuizResult["verdict"], string> = {
   migrate_now: "You're ready to migrate now",
@@ -16,7 +15,7 @@ export function MigrationQuiz() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ result: QuizResult; guides: Guide[] } | null>(null);
+  const [result, setResult] = useState<{ result: QuizResult; guides: ContentEntry[] } | null>(null);
 
   const question = QUIZ_QUESTIONS[step];
 
@@ -66,7 +65,9 @@ export function MigrationQuiz() {
             </h3>
             <div style={{ display: "flex", flexDirection: "column" }}>
               {result.guides.map((g) => (
-                <GuideCard key={g.id} guide={g} />
+                <div key={g.id} style={{ padding: "var(--space-3) 0", borderBottom: "1px solid var(--border)" }}>
+                  <TextLink arrow="forward" href={`/guides/${g.slug}`} style={{ fontWeight: 500 }}>{g.title}</TextLink>
+                </div>
               ))}
             </div>
           </div>
