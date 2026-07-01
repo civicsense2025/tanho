@@ -221,6 +221,21 @@ export interface GuideFilter {
   maxDifficulty?: GuideDifficulty;
 }
 
+export type SeoEntityType = "project" | "guide" | "resource" | "page";
+
+/** One row per entity type (natural key = entityType, seeded by migration), not a free-form
+ * CRUD list -- so it's exposed via getSeoTemplate/upsertSeoTemplate bespoke methods below rather
+ * than the generic Repository<T> shape, following the join-table precedent elsewhere in this file. */
+export interface SeoTemplate {
+  id: string;
+  entityType: SeoEntityType;
+  /** {{variable}} placeholders, resolved by resolveTemplate() in src/lib/seo.ts. */
+  titleTemplate: string;
+  descriptionTemplate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DbAdapter {
   projects: Repository<Project>;
   experience: Repository<Experience>;
@@ -250,10 +265,16 @@ export interface DbAdapter {
   setGuideResources(guideId: string, resourceIds: string[]): Promise<void>;
   listGuides(filter?: GuideFilter): Promise<Guide[]>;
   getGuideBySlug(slug: string): Promise<Guide | undefined>;
+  getPlatformBySlug(slug: string): Promise<Platform | undefined>;
   /** Upsert-by-slug, used by scripts/seed-platforms.ts to make seeding idempotent. */
   upsertPlatform(data: Omit<Platform, "id">): Promise<Platform>;
   upsertTag(data: Omit<Tag, "id">): Promise<Tag>;
   listResources(publicOnly?: boolean): Promise<Resource[]>;
   logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void>;
+  /** seo_templates is a singleton-per-entityType table (seeded by migration), so it's keyed off
+   * entityType rather than id -- get/upsert rather than the generic Repository<T> CRUD shape. */
+  listSeoTemplates(): Promise<SeoTemplate[]>;
+  getSeoTemplate(entityType: SeoEntityType): Promise<SeoTemplate | undefined>;
+  upsertSeoTemplate(entityType: SeoEntityType, data: { titleTemplate: string; descriptionTemplate: string }): Promise<SeoTemplate>;
   migrate(): Promise<void>;
 }

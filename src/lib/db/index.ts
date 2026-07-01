@@ -22,6 +22,8 @@ export type {
   Repository,
   Resource,
   ResourceType,
+  SeoEntityType,
+  SeoTemplate,
   Skill,
   Tag,
 } from "./types";

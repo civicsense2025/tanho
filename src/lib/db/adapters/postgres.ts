@@ -15,6 +15,8 @@ import type {
   ProjectBlock,
   Repository,
   Resource,
+  SeoEntityType,
+  SeoTemplate,
   Skill,
   Tag,
 } from "../types";
@@ -485,6 +487,11 @@ export function createPostgresAdapter(): DbAdapter {
     return g;
   }
 
+  async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
+    const [p] = await platforms.list({ where: { slug } });
+    return p;
+  }
+
   async function upsertPlatform(data: Omit<Platform, "id">): Promise<Platform> {
     const id = randomUUID();
     await sql.unsafe(
@@ -527,6 +534,46 @@ export function createPostgresAdapter(): DbAdapter {
     );
   }
 
+  function seoTemplateRow(row: Record<string, unknown>): SeoTemplate {
+    return {
+      id: String(row.id),
+      entityType: row.entity_type as SeoTemplate["entityType"],
+      titleTemplate: (row.title_template as string) ?? "",
+      descriptionTemplate: (row.description_template as string) ?? "",
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+    };
+  }
+
+  async function listSeoTemplates(): Promise<SeoTemplate[]> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>("SELECT * FROM seo_templates ORDER BY entity_type ASC");
+    return rows.map(seoTemplateRow);
+  }
+
+  async function getSeoTemplate(entityType: SeoEntityType): Promise<SeoTemplate | undefined> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>(
+      "SELECT * FROM seo_templates WHERE entity_type = $1",
+      [entityType] as never[]
+    );
+    return rows[0] ? seoTemplateRow(rows[0]) : undefined;
+  }
+
+  async function upsertSeoTemplate(
+    entityType: SeoEntityType,
+    data: { titleTemplate: string; descriptionTemplate: string }
+  ): Promise<SeoTemplate> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await sql.unsafe(
+      `INSERT INTO seo_templates (id, entity_type, title_template, description_template, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (entity_type) DO UPDATE SET title_template=excluded.title_template,
+         description_template=excluded.description_template, updated_at=excluded.updated_at`,
+      [id, entityType, data.titleTemplate, data.descriptionTemplate, now, now] as never[]
+    );
+    return (await getSeoTemplate(entityType))!;
+  }
+
   return {
     projects,
     experience,
@@ -551,10 +598,14 @@ export function createPostgresAdapter(): DbAdapter {
     setGuideResources,
     listGuides,
     getGuideBySlug,
+    getPlatformBySlug,
     upsertPlatform,
     upsertTag,
     listResources,
     logQuizResponse,
+    listSeoTemplates,
+    getSeoTemplate,
+    upsertSeoTemplate,
     migrate: () => applyPostgresMigrations(sql, postgresMigrations),
   };
 }
