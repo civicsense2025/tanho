@@ -188,11 +188,14 @@ export async function deleteEducation(id: string): Promise<void> {
   await adapter.education.delete(id);
 }
 
-export async function getPage(slug: string): Promise<Page | undefined> {
+// Wrapped in React's cache() for request-level memoization -- generateMetadata() and the page
+// body both call getPage("home") with the same argument for the same request, so without this
+// every homepage view issued two identical SELECTs.
+export const getPage = cache(async (slug: string): Promise<Page | undefined> => {
   const adapter = await getAdapter();
   const [page] = await adapter.pages.list({ where: { slug } });
   return page;
-}
+});
 
 export async function getPageById(id: string): Promise<Page | undefined> {
   const adapter = await getAdapter();
@@ -356,10 +359,13 @@ export async function listSeoTemplates(): Promise<SeoTemplate[]> {
   return adapter.listSeoTemplates();
 }
 
-export async function getSeoTemplate(entityType: SeoEntityType): Promise<SeoTemplate | undefined> {
+// Wrapped in React's cache() for request-level memoization -- generateMetadata() and the page
+// body both call getSeoTemplate(entityType) with the same argument for the same request, so
+// without this every project/guide/home page view issued two identical SELECTs.
+export const getSeoTemplate = cache(async (entityType: SeoEntityType): Promise<SeoTemplate | undefined> => {
   const adapter = await getAdapter();
   return adapter.getSeoTemplate(entityType);
-}
+});
 
 export async function upsertSeoTemplate(
   entityType: SeoEntityType,
