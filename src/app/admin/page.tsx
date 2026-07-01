@@ -1,5 +1,6 @@
 import { getAdminSession } from "@/lib/auth";
-import { listProjects, listExperience, listSkills, listAwards, listEducation, listGuides, listResources } from "@/lib/db";
+import { listProjects, listExperience, listSkills, listAwards, listEducation, listGuides, listResources, listPosts, listSubscribers } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { redirect } from "next/navigation";
 import { Badge, Button, TextLink } from "@/components/ui";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -16,7 +17,9 @@ const sectionHead = {
 export default async function AdminPage() {
   const authed = await getAdminSession();
   if (!authed) redirect("/admin/login");
-  const [projects, experiences, skills, awards, education, guides, resources] = await Promise.all([
+  const settings = await getSettings();
+  const newsletterOn = settings.features.newsletter;
+  const [projects, experiences, skills, awards, education, guides, resources, posts, subscribers] = await Promise.all([
     listProjects(false),
     listExperience(),
     listSkills(),
@@ -24,6 +27,8 @@ export default async function AdminPage() {
     listEducation(),
     listGuides({ publishedOnly: false }),
     listResources(false),
+    newsletterOn ? listPosts(false) : Promise.resolve([]),
+    newsletterOn ? listSubscribers() : Promise.resolve([]),
   ]);
 
   const summary = `${experiences.length} roles · ${skills.length} skills · ${awards.length} awards · ${education.length} schools`;
@@ -276,6 +281,52 @@ export default async function AdminPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Newsletter (feature-gated) */}
+      {newsletterOn && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-8)", marginBottom: "var(--space-5)" }}>
+            <h2 style={sectionHead}>Posts</h2>
+            <Button as="a" href="/admin/posts/new" size="sm" variant="outline">
+              + New
+            </Button>
+          </div>
+          {posts.length === 0 ? (
+            <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginBottom: "var(--space-8)" }}>No posts yet.</p>
+          ) : (
+            <div style={{ marginBottom: "var(--space-8)" }}>
+              {posts.map((p, i) => (
+                <div
+                  key={p.id}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-4) 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                    <span style={{ fontSize: "var(--text-sm)", color: "var(--text)" }}>{p.title}</span>
+                    <Badge status={p.status === "published" ? "published" : "draft"}>{p.status === "published" ? "Published" : "Draft"}</Badge>
+                    {p.visibility === "paid" && <span style={{ fontSize: "var(--text-2xs)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)", color: "var(--accent)" }}>Paid</span>}
+                  </div>
+                  <TextLink arrow="forward" muted href={`/admin/posts/${p.id}`} style={{ fontSize: "var(--text-xs)" }}>
+                    Edit
+                  </TextLink>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
+            <h2 style={sectionHead}>Subscribers</h2>
+            <Button as="a" href="/api/subscribers?format=csv" size="sm" variant="outline">
+              Export CSV
+            </Button>
+          </div>
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+            {subscribers.length} total · {subscribers.filter((s) => s.status === "active").length} active ·{" "}
+            {subscribers.filter((s) => s.status === "pending").length} pending
+            {" · "}
+            <TextLink href="/admin/subscribers">Manage / import</TextLink>
+          </p>
+        </>
       )}
     </div>
   );
