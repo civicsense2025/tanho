@@ -2,13 +2,14 @@ import { getProject, getProjectById, getBlocks, getSeoTemplate } from "@/lib/db"
 import { getProjectBody } from "@/lib/content/project-content";
 import { getAdminSession } from "@/lib/auth";
 import { parseTags } from "@/lib/utils";
-import { buildMetadata } from "@/lib/seo";
+import { absoluteUrl, buildMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Avatar, Tag, Button, TextLink } from "@/components/ui";
 import { BlockTree } from "@/components/BlockTree";
 import { PreviewFrame } from "@/components/PreviewFrame";
+import { JsonLd } from "@/components/JsonLd";
 import { sanitizeHtml } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const [project, template] = await Promise.all([getProject(slug), getSeoTemplate("project")]);
   if (!project) return {};
-  return buildMetadata(project, { title: project.title, tagline: project.tagline, coverImage: project.coverImage }, template);
+  return buildMetadata(
+    project,
+    { title: project.title, tagline: project.tagline, coverImage: project.coverImage, path: `/projects/${project.slug}` },
+    template
+  );
 }
 
 export default async function ProjectPage({ params, searchParams }: Props) {
@@ -41,8 +46,34 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   const [blocks, body] = await Promise.all([getBlocks(project.id), getProjectBody(project)]);
   const tags = parseTags(project.tags);
 
+  // Same override/template/fallback-resolved fields generateMetadata() computed for <head>,
+  // reused here so JSON-LD never diverges from the visible SEO tags. Skipped in preview mode --
+  // an in-progress admin preview isn't the canonical public page this schema describes.
+  const seoTemplate = !isPreview ? await getSeoTemplate("project") : undefined;
+  const resolved = !isPreview
+    ? buildMetadata(
+        project,
+        { title: project.title, tagline: project.tagline, coverImage: project.coverImage, path: `/projects/${project.slug}` },
+        seoTemplate
+      )
+    : null;
+
   return (
     <main style={{ maxWidth: "var(--width-prose)", margin: "0 auto", padding: "var(--space-10) var(--gutter)" }}>
+      {resolved && (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "CreativeWork",
+            name: resolved.title as string,
+            description: resolved.description as string | undefined,
+            image: project.coverImage || undefined,
+            url: absoluteUrl(`/projects/${project.slug}`),
+            dateModified: project.updatedAt,
+            author: { "@type": "Person", name: "Tan Ho" },
+          }}
+        />
+      )}
       <div style={{ marginBottom: "var(--space-8)" }}>
         <TextLink arrow="back" muted href="/" style={{ fontSize: "var(--text-xs)" }}>
           Back

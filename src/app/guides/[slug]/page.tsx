@@ -1,7 +1,8 @@
 import { getGuide, getGuideSteps, getResourcesForGuide, getSeoTemplate } from "@/lib/db";
 import { parseTags } from "@/lib/utils";
-import { buildMetadata } from "@/lib/seo";
+import { absoluteUrl, buildMetadata } from "@/lib/seo";
 import { GuideMeta } from "@/components/GuideMeta";
+import { JsonLd } from "@/components/JsonLd";
 import { notFound } from "next/navigation";
 import { TextLink } from "@/components/ui";
 import type { Metadata } from "next";
@@ -18,14 +19,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!guide) return {};
   return buildMetadata(
     guide,
-    { title: guide.title, tagline: guide.tagline, coverImage: guide.coverImage, vars: { summary: guide.summary } },
+    {
+      title: guide.title,
+      tagline: guide.tagline,
+      coverImage: guide.coverImage,
+      path: `/guides/${guide.slug}`,
+      vars: { summary: guide.summary },
+    },
     template
   );
 }
 
 export default async function GuidePage({ params }: Props) {
   const { slug } = await params;
-  const guide = await getGuide(slug);
+  const [guide, seoTemplate] = await Promise.all([getGuide(slug), getSeoTemplate("guide")]);
   if (!guide || guide.status !== "published") notFound();
 
   const [steps, resources] = await Promise.all([
@@ -35,8 +42,34 @@ export default async function GuidePage({ params }: Props) {
   const skills = parseTags(guide.skillsRequired);
   const requirements = parseTags(guide.requirements);
 
+  // Same override/template/fallback-resolved fields generateMetadata() computed for <head>,
+  // reused here so JSON-LD never diverges from the visible SEO tags.
+  const resolved = buildMetadata(
+    guide,
+    {
+      title: guide.title,
+      tagline: guide.tagline,
+      coverImage: guide.coverImage,
+      path: `/guides/${guide.slug}`,
+      vars: { summary: guide.summary },
+    },
+    seoTemplate
+  );
+
   return (
     <main style={{ maxWidth: "var(--width-prose)", margin: "0 auto", padding: "var(--space-10) var(--gutter)" }}>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CreativeWork",
+          name: resolved.title as string,
+          description: resolved.description as string | undefined,
+          image: guide.coverImage || undefined,
+          url: absoluteUrl(`/guides/${guide.slug}`),
+          dateModified: guide.updatedAt,
+          author: { "@type": "Person", name: "Tan Ho" },
+        }}
+      />
       <div style={{ marginBottom: "var(--space-8)" }}>
         <TextLink arrow="back" muted href="/guides" style={{ fontSize: "var(--text-xs)" }}>
           All guides
