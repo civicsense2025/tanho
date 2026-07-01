@@ -5,6 +5,8 @@ export type {
   DbAdapter,
   Education,
   Experience,
+  Page,
+  PageStatus,
   Project,
   ProjectBlock,
   ProjectStatus,

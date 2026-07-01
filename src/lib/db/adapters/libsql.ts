@@ -6,6 +6,7 @@ import type {
   Education,
   Experience,
   ListQuery,
+  Page,
   Project,
   ProjectBlock,
   Repository,
@@ -166,6 +167,16 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
+  const pages = sqlRepository<Page>(client, "pages", {
+    slug: "slug",
+    title: "title",
+    route: "route",
+    status: "status",
+    sortOrder: "sort_order",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
   async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
     const result = await client.execute({
       sql: "SELECT * FROM project_blocks WHERE project_id = ? ORDER BY sort_order ASC",
@@ -202,6 +213,7 @@ export function createLibsqlAdapter(): DbAdapter {
     skills,
     awards,
     education,
+    pages,
     getProjectBlocks,
     replaceProjectBlocks,
     migrate: () => applyMigrations(client, libsqlMigrations),

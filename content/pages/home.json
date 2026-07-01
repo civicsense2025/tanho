@@ -1,0 +1,17 @@
+{
+  "blocks": [
+    {
+      "type": "profile-header",
+      "props": {
+        "name": "Tan Ho",
+        "bio": "I'm a Forbes 30 Under 30 product designer and front-end developer. I co-founded Fiveable and scaled it from 2K to 15M+ students, securing $15M in funding along the way. I build products at the intersection of design, growth, and engineering.",
+        "avatarSrc": "/uploads/tan-ho-profile.jpg"
+      }
+    },
+    { "type": "project-list", "props": { "heading": "Selected Work" } },
+    { "type": "experience-list", "props": { "heading": "Experience" } },
+    { "type": "skills-list", "props": { "heading": "Skills" } },
+    { "type": "award-list", "props": { "heading": "Awards" } },
+    { "type": "education-list", "props": { "heading": "Education" } }
+  ]
+}

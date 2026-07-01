@@ -1,5 +1,5 @@
 import { getAdapter } from "./adapter-context";
-import type { Award, Education, Experience, Project, ProjectBlock, Skill } from "./types";
+import type { Award, Education, Experience, Page, Project, ProjectBlock, Skill } from "./types";
 
 export async function listProjects(publishedOnly = true): Promise<Project[]> {
   const adapter = await getAdapter();
@@ -166,4 +166,30 @@ export async function updateEducation(id: string, data: Partial<Omit<Education, 
 export async function deleteEducation(id: string): Promise<void> {
   const adapter = await getAdapter();
   await adapter.education.delete(id);
+}
+
+export async function getPage(slug: string): Promise<Page | undefined> {
+  const adapter = await getAdapter();
+  const [page] = await adapter.pages.list({ where: { slug } });
+  return page;
+}
+
+export async function getPageById(id: string): Promise<Page | undefined> {
+  const adapter = await getAdapter();
+  return adapter.pages.get(id);
+}
+
+export async function listPages(): Promise<Page[]> {
+  const adapter = await getAdapter();
+  return adapter.pages.list({ orderBy: [{ field: "sortOrder", direction: "asc" }] });
+}
+
+export async function createPage(data: Omit<Page, "id" | "createdAt" | "updatedAt">): Promise<Page> {
+  const adapter = await getAdapter();
+  return adapter.pages.create(data);
+}
+
+export async function updatePage(id: string, data: Partial<Omit<Page, "id" | "createdAt" | "updatedAt">>): Promise<Page> {
+  const adapter = await getAdapter();
+  return adapter.pages.update(id, data);
 }

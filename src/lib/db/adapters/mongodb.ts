@@ -6,6 +6,7 @@ import type {
   Education,
   Experience,
   ListQuery,
+  Page,
   Project,
   ProjectBlock,
   Repository,
@@ -93,6 +94,7 @@ export function createMongoAdapter(): DbAdapter {
   const skills = mongoRepository<Skill>(getDb().collection("skills"));
   const awards = mongoRepository<Award>(getDb().collection("awards"));
   const education = mongoRepository<Education>(getDb().collection("education"));
+  const pages = mongoRepository<Page>(getDb().collection("pages"));
 
   async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
     const docs = await getDb()
@@ -124,6 +126,7 @@ export function createMongoAdapter(): DbAdapter {
     skills,
     awards,
     education,
+    pages,
     getProjectBlocks,
     replaceProjectBlocks,
     async migrate() {

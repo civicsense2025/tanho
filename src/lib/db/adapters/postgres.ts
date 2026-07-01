@@ -6,6 +6,7 @@ import type {
   Education,
   Experience,
   ListQuery,
+  Page,
   Project,
   ProjectBlock,
   Repository,
@@ -169,6 +170,16 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
+  const pages = sqlRepository<Page>(sql, "pages", {
+    slug: "slug",
+    title: "title",
+    route: "route",
+    status: "status",
+    sortOrder: "sort_order",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
   async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
     const rows = await sql.unsafe<Record<string, unknown>[]>(
       "SELECT * FROM project_blocks WHERE project_id = $1 ORDER BY sort_order ASC",
@@ -201,6 +212,7 @@ export function createPostgresAdapter(): DbAdapter {
     skills,
     awards,
     education,
+    pages,
     getProjectBlocks,
     replaceProjectBlocks,
     migrate: () => applyPostgresMigrations(sql, postgresMigrations),
