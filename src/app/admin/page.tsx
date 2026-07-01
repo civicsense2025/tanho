@@ -99,6 +99,9 @@ export default async function AdminPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
         <h2 style={sectionHead}>Content</h2>
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <Button as="a" href="/admin/scheduled" size="sm" variant="outline">
+            Scheduled
+          </Button>
           <Button as="a" href="/admin/collections" size="sm" variant="outline">
             Manage collections
           </Button>

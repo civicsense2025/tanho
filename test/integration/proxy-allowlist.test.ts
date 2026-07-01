@@ -79,6 +79,26 @@ describe("proxy allowlist ↔ matcher drift guard", () => {
     }
   });
 
+  it("keeps the cron route outside BOTH allowlists — protected only by its own CRON_SECRET bearer check", () => {
+    // A machine caller (Vercel Cron) has no admin cookie, so this route can't go through the
+    // session-based gate at all. It's a GET handler specifically so isProtectedApiRequest's
+    // non-GET-only rule already exempts it; it also must never appear in config.matcher, since
+    // proxy() has nothing to add here and running it would be pointless overhead.
+    const cronRoute = "/api/cron/publish-scheduled";
+    expect(
+      KNOWN_PROTECTED_API_PREFIXES.some((p) => cronRoute.startsWith(p)),
+      `${cronRoute} must stay outside PROTECTED_API_PREFIXES`
+    ).toBe(false);
+    // A matcher entry ending in "/:path*" matches anything under that prefix; any other entry
+    // (e.g. the bare "/" root or the exact "/api/upload") matches ONLY that literal path, not
+    // as a prefix — a naive `path.startsWith(entry)` would wrongly treat "/" as covering every
+    // path, since every absolute path starts with "/".
+    const matched = config.matcher.some((m) =>
+      m.endsWith("/:path*") ? cronRoute === m.slice(0, -"/:path*".length) || cronRoute.startsWith(m.slice(0, -":path*".length)) : cronRoute === m
+    );
+    expect(matched, `${cronRoute} must stay outside config.matcher`).toBe(false);
+  });
+
   it("the widened public-content matcher (added for AI-crawler blocking) doesn't collide with any protected API prefix", () => {
     // The matcher was additively widened with "/", "/posts/:path*", "/projects/:path*",
     // "/guides/:path*" so the AI-crawler UA check in proxy() actually runs on public content
