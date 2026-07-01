@@ -1,5 +1,7 @@
 import type { DbAdapter } from "./types";
 import { createLibsqlAdapter } from "./adapters/libsql";
+import { createPostgresAdapter } from "./adapters/postgres";
+import { createMongoAdapter } from "./adapters/mongodb";
 
 function selectAdapter(): DbAdapter {
   const provider = process.env.DB_PROVIDER || "turso";
@@ -7,6 +9,12 @@ function selectAdapter(): DbAdapter {
     case "turso":
     case "libsql":
       return createLibsqlAdapter();
+    case "postgres":
+    case "supabase":
+      return createPostgresAdapter();
+    case "mongodb":
+    case "mongo":
+      return createMongoAdapter();
     default:
       throw new Error(`Unknown DB_PROVIDER: ${provider}`);
   }
