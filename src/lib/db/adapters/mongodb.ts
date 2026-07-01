@@ -317,9 +317,13 @@ export function createMongoAdapter(): DbAdapter {
   }
 
   async function listAuditLog(limit: number): Promise<AuditLog[]> {
+    // ts has millisecond resolution and can tie under load (two events in the
+    // same ms sort ambiguously on ts alone). Mongo's auto-generated _id is
+    // monotonically increasing at sub-millisecond granularity, so it's a
+    // reliable secondary sort key for a stable, true insertion-order tiebreak.
     const docs = await getDb()
       .collection("audit_log")
-      .find({}, { sort: { ts: -1 }, limit, projection: { _id: 0 } })
+      .find({}, { sort: { ts: -1, _id: -1 }, limit, projection: { _id: 0 } })
       .toArray();
     return docs.map((d) => ({
       id: d.id as string,
