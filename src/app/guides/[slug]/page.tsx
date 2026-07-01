@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { TextLink } from "@/components/ui";
 import type { Metadata } from "next";
 import Image from "next/image";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function GuidePage({ params }: Props) {
         </div>
       )}
 
-      {guide.summary && <div style={{ marginBottom: "var(--space-8)", color: "var(--text)" }} dangerouslySetInnerHTML={{ __html: guide.summary }} />}
+      {guide.summary && <div style={{ marginBottom: "var(--space-8)", color: "var(--text)" }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(guide.summary) }} />}
 
       {(skills.length > 0 || requirements.length > 0) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-8)", marginBottom: "var(--space-10)", padding: "var(--space-5)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
@@ -99,7 +100,7 @@ export default async function GuidePage({ params }: Props) {
                 {step.title && (
                   <h2 style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-h2)", fontWeight: 500, color: "var(--text)" }}>{step.title}</h2>
                 )}
-                {step.type === "text" && <div style={{ color: "var(--text)" }} dangerouslySetInnerHTML={{ __html: content.html || "" }} />}
+                {step.type === "text" && <div style={{ color: "var(--text)" }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.html || "") }} />}
                 {step.type === "image" && (
                   <figure style={{ margin: 0 }}>
                     <div style={{ position: "relative", overflow: "hidden", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
@@ -145,7 +146,7 @@ export default async function GuidePage({ params }: Props) {
                       background: "var(--surface)",
                       border: `1px solid ${content.variant === "danger" ? "var(--danger)" : content.variant === "warning" ? "var(--accent-2)" : "var(--border)"}`,
                     }}
-                    dangerouslySetInnerHTML={{ __html: content.html || "" }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.html || "") }}
                   />
                 )}
                 {step.type === "checklist" && (
