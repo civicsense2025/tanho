@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getAdapter } from "./adapter-context";
 import type {
   Award,
@@ -28,11 +29,14 @@ export async function listProjects(publishedOnly = true): Promise<Project[]> {
   });
 }
 
-export async function getProject(slug: string): Promise<Project | undefined> {
+// Wrapped in React's cache() for request-level memoization -- generateMetadata() and the page
+// body both call getProject(slug)/getGuide(slug) with the same argument for the same request,
+// so without this every page view issued two identical SELECTs.
+export const getProject = cache(async (slug: string): Promise<Project | undefined> => {
   const adapter = await getAdapter();
   const [project] = await adapter.projects.list({ where: { slug } });
   return project;
-}
+});
 
 export async function getProjectById(id: string): Promise<Project | undefined> {
   const adapter = await getAdapter();
@@ -215,10 +219,12 @@ export async function listGuides(filter?: GuideFilter): Promise<Guide[]> {
   return adapter.listGuides(filter);
 }
 
-export async function getGuide(slug: string): Promise<Guide | undefined> {
+// See getProject() above -- same request-level memoization rationale (generateMetadata() + page
+// body both call getGuide(slug) once per request).
+export const getGuide = cache(async (slug: string): Promise<Guide | undefined> => {
   const adapter = await getAdapter();
   return adapter.getGuideBySlug(slug);
-}
+});
 
 export async function getGuideById(id: string): Promise<Guide | undefined> {
   const adapter = await getAdapter();
