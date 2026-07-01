@@ -5,6 +5,7 @@ import { parseEntryData, type FieldDef } from "@/lib/content-types";
 import { redactPaidEntry } from "@/lib/content-types/paywall";
 import { revalidateContent } from "@/lib/cache";
 import { slugify } from "@/lib/utils";
+import { audit, auditContext } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -66,5 +67,6 @@ export async function POST(req: NextRequest) {
     await setContentEntryCollections(entry.id, body.collectionIds.map((collectionId: string, i: number) => ({ collectionId, sortOrder: i })));
   }
   revalidateContent(type.slug); // new entry → refresh public lists/pages for this type
+  await audit({ ...auditContext(req), actor: "admin", action: "content.create", target: entry.id, outcome: "success", metadata: { type: type.slug, status: entry.status } });
   return NextResponse.json(entry, { status: 201 });
 }

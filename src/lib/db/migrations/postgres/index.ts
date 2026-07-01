@@ -14,6 +14,7 @@ import { addPlatformDynamicOptions } from "./add_platform_dynamic_options";
 import { backfillLegacyData } from "./backfill_legacy_data";
 import { dropLegacyTables } from "./0011_drop_legacy_tables";
 import { dropOrphanedResourcesTables } from "./drop_orphaned_resources_tables";
+import { sql as auditLog } from "./0013_audit_log";
 
 export const postgresMigrations: PostgresMigration[] = [
   { name: "0001_init", sql: init },
@@ -31,4 +32,5 @@ export const postgresMigrations: PostgresMigration[] = [
   ...backfillLegacyData,
   dropLegacyTables,
   dropOrphanedResourcesTables,
+  { name: "0013_audit_log", sql: auditLog },
 ];

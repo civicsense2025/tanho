@@ -5,6 +5,7 @@ import { parseEntryData, type FieldDef } from "@/lib/content-types";
 import { redactPaidEntry } from "@/lib/content-types/paywall";
 import { revalidateContent } from "@/lib/cache";
 import { slugify } from "@/lib/utils";
+import { audit, auditContext } from "@/lib/audit";
 
 /** Resolves a content type's slug for cache-tag revalidation. */
 async function typeSlugFor(contentTypeId: string): Promise<string | undefined> {
@@ -60,14 +61,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   // Bust the ISR cache so the edit shows on public pages immediately (Next 16 serve-stale-then-
   // revalidate). Busts the broad content tag + this entry's type.
   revalidateContent(await typeSlugFor(existing.contentTypeId));
+  // Audit status transitions (publish/unpublish/schedule) — the security-relevant
+  // change; log the id + new status, no content body.
+  if (body.status !== undefined) {
+    await audit({ ...auditContext(req), actor: "admin", action: "content.update", target: id, outcome: "success", metadata: { status: body.status } });
+  }
   return NextResponse.json(entry);
 }
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const existing = await getContentEntryById(id);
   await deleteContentEntry(id);
   revalidateContent(existing ? await typeSlugFor(existing.contentTypeId) : undefined);
+  await audit({ ...auditContext(req), actor: "admin", action: "content.delete", target: id, outcome: "success", metadata: null });
   return NextResponse.json({ ok: true });
 }

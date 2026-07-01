@@ -13,5 +13,6 @@ import { addPlatformDynamicOptions } from "./add_platform_dynamic_options";
 import { backfillLegacyData } from "./backfill_legacy_data";
 import { dropLegacyCollections } from "./0010_drop_legacy_collections";
 import { dropOrphanedResourcesTables } from "./drop_orphaned_resources_tables";
+import { auditLog } from "./0011_audit_log";
 
-export const mongoMigrations: MongoMigration[] = [init, pages, guides, seoTemplates, newsletter, payments, siteSettings, contentTypes, seedBuiltinTypes, fixGuideSeedBlocksField, addPlatformDynamicOptions, backfillLegacyData, dropLegacyCollections, dropOrphanedResourcesTables];
+export const mongoMigrations: MongoMigration[] = [init, pages, guides, seoTemplates, newsletter, payments, siteSettings, contentTypes, seedBuiltinTypes, fixGuideSeedBlocksField, addPlatformDynamicOptions, backfillLegacyData, dropLegacyCollections, dropOrphanedResourcesTables, auditLog];

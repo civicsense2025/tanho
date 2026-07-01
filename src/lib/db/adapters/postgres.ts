@@ -1,6 +1,7 @@
 import postgres, { type Sql } from "postgres";
 import { randomUUID } from "crypto";
 import type {
+  AuditLog,
   Award,
   Collection,
   ContentEntry,
@@ -413,6 +414,39 @@ export function createPostgresAdapter(): DbAdapter {
     );
   }
 
+  async function appendAuditLog(input: Omit<AuditLog, "id" | "ts"> & { ts?: string }): Promise<void> {
+    const metadata = input.metadata ? JSON.stringify(input.metadata) : null;
+    if (input.ts) {
+      await sql.unsafe(
+        "INSERT INTO audit_log (id, ts, actor, action, target, ip, user_agent, outcome, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        [randomUUID(), input.ts, input.actor, input.action, input.target, input.ip, input.userAgent, input.outcome, metadata] as never[]
+      );
+    } else {
+      await sql.unsafe(
+        "INSERT INTO audit_log (id, actor, action, target, ip, user_agent, outcome, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        [randomUUID(), input.actor, input.action, input.target, input.ip, input.userAgent, input.outcome, metadata] as never[]
+      );
+    }
+  }
+
+  async function listAuditLog(limit: number): Promise<AuditLog[]> {
+    const rows = await sql.unsafe(
+      "SELECT * FROM audit_log ORDER BY ts DESC LIMIT $1",
+      [limit] as never[]
+    );
+    return (rows as unknown as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      ts: row.ts as string,
+      actor: (row.actor as string) ?? null,
+      action: row.action as string,
+      target: (row.target as string) ?? null,
+      ip: (row.ip as string) ?? null,
+      userAgent: (row.user_agent as string) ?? null,
+      outcome: row.outcome as string,
+      metadata: row.metadata ? (JSON.parse(row.metadata as string) as Record<string, unknown>) : null,
+    }));
+  }
+
   function seoTemplateRow(row: Record<string, unknown>): SeoTemplate {
     return {
       id: String(row.id),
@@ -508,6 +542,8 @@ export function createPostgresAdapter(): DbAdapter {
     upsertPlatform,
     upsertTag,
     logQuizResponse,
+    appendAuditLog,
+    listAuditLog,
     listSeoTemplates,
     getSeoTemplate,
     upsertSeoTemplate,

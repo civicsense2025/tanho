@@ -461,5 +461,39 @@ export function runAdapterContract(harness: BackendHarness) {
         await db.upsertSiteSetting("contract_test_get", { value: null, isSecret: 0 });
       });
     });
+
+    describe("audit log (append-only)", () => {
+      it("appends and lists newest-first with metadata round-trip", async () => {
+        await db.appendAuditLog({
+          actor: "admin",
+          action: "contract.audit.first",
+          target: "t1",
+          ip: "198.51.100.4",
+          userAgent: "vitest",
+          outcome: "success",
+          metadata: { keys: ["a", "b"] },
+        });
+        await db.appendAuditLog({
+          actor: "admin",
+          action: "contract.audit.second",
+          target: null,
+          ip: null,
+          userAgent: null,
+          outcome: "failure",
+          metadata: null,
+        });
+
+        const rows = await db.listAuditLog(50);
+        const mine = rows.filter((r) => r.action.startsWith("contract.audit."));
+        expect(mine.length).toBe(2);
+        // Newest first: the "second" event was appended last.
+        expect(mine[0].action).toBe("contract.audit.second");
+        expect(mine[1].action).toBe("contract.audit.first");
+        expect(mine[1].metadata).toEqual({ keys: ["a", "b"] });
+        expect(mine[1].ip).toBe("198.51.100.4");
+        expect(mine[0].id).toBeTruthy();
+        expect(mine[0].ts).toBeTruthy();
+      });
+    });
   });
 }

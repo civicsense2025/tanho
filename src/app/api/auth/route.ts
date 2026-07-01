@@ -9,6 +9,7 @@ import {
   recordFailedAttempt,
   clearFailedAttempts,
 } from "@/lib/rate-limit";
+import { audit, auditContext } from "@/lib/audit";
 
 // Node runtime so the (later) crypto-based compare and jose signing work.
 export const runtime = "nodejs";
@@ -48,12 +49,15 @@ export async function POST(req: NextRequest) {
   const parsed = await parseBody(req, adminLoginSchema);
   if (!parsed.ok) return parsed.response;
 
+  const ctx = auditContext(req);
   if (!verifyAdminPassword(parsed.data.password)) {
     recordFailedAttempt(key);
+    await audit({ ...ctx, actor: "admin", action: "admin.login", target: null, outcome: "failure", metadata: null });
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }
 
   clearFailedAttempts(key);
+  await audit({ ...ctx, actor: "admin", action: "admin.login", target: null, outcome: "success", metadata: null });
   const token = await signAdminToken();
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE_NAME, token, { httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7, path: "/" });

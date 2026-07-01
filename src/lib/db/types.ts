@@ -284,6 +284,28 @@ export interface ContentEntryTag {
   tagId: string;
 }
 
+/**
+ * Append-only security/admin audit event (SOC 2 CC7.2 / ISO A.8.15 /
+ * HIPAA §164.312(b)). Written on admin login, settings changes, and content
+ * publish/delete. NEVER contains secrets — no passwords, tokens, or secret
+ * setting values; only ids, actions, outcomes, and request context.
+ */
+export interface AuditLog {
+  id: string;
+  ts: string;
+  /** Who performed it — "admin" for the single shared admin, or null. */
+  actor: string | null;
+  /** Machine-readable event name, e.g. "admin.login", "settings.update". */
+  action: string;
+  target: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  /** "success" | "failure" | "denied". */
+  outcome: string;
+  /** Small JSON of non-sensitive context (never secret values). */
+  metadata: Record<string, unknown> | null;
+}
+
 export interface DbAdapter {
   experience: Repository<Experience>;
   skills: Repository<Skill>;
@@ -339,5 +361,8 @@ export interface DbAdapter {
   /** Convenience: look up a content type by slug, then its entry by slug. Returns undefined if either is missing. */
   getContentEntry(typeSlug: string, slug: string): Promise<ContentEntry | undefined>;
   getContentTypeBySlug(slug: string): Promise<ContentType | undefined>;
+  /** Append-only audit log. There is deliberately no update/delete method. */
+  appendAuditLog(input: Omit<AuditLog, "id" | "ts"> & { ts?: string }): Promise<void>;
+  listAuditLog(limit: number): Promise<AuditLog[]>;
   migrate(): Promise<void>;
 }

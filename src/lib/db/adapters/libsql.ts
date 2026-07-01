@@ -1,6 +1,7 @@
 import { createClient, type Client, type InValue } from "@libsql/client";
 import { randomUUID } from "crypto";
 import type {
+  AuditLog,
   Award,
   Collection,
   ContentEntry,
@@ -405,6 +406,36 @@ export function createLibsqlAdapter(): DbAdapter {
     });
   }
 
+  async function appendAuditLog(input: Omit<AuditLog, "id" | "ts"> & { ts?: string }): Promise<void> {
+    const metadata = input.metadata ? JSON.stringify(input.metadata) : null;
+    if (input.ts) {
+      await client.execute({
+        sql: "INSERT INTO audit_log (id, ts, actor, action, target, ip, user_agent, outcome, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        args: [randomUUID(), input.ts, input.actor, input.action, input.target, input.ip, input.userAgent, input.outcome, metadata],
+      });
+    } else {
+      await client.execute({
+        sql: "INSERT INTO audit_log (id, actor, action, target, ip, user_agent, outcome, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        args: [randomUUID(), input.actor, input.action, input.target, input.ip, input.userAgent, input.outcome, metadata],
+      });
+    }
+  }
+
+  async function listAuditLog(limit: number): Promise<AuditLog[]> {
+    const result = await client.execute({ sql: "SELECT * FROM audit_log ORDER BY ts DESC LIMIT ?", args: [limit] });
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      ts: row.ts as string,
+      actor: (row.actor as string) ?? null,
+      action: row.action as string,
+      target: (row.target as string) ?? null,
+      ip: (row.ip as string) ?? null,
+      userAgent: (row.user_agent as string) ?? null,
+      outcome: row.outcome as string,
+      metadata: row.metadata ? (JSON.parse(row.metadata as string) as Record<string, unknown>) : null,
+    }));
+  }
+
   function seoTemplateRow(row: Record<string, unknown>): SeoTemplate {
     return {
       id: String(row.id),
@@ -497,6 +528,8 @@ export function createLibsqlAdapter(): DbAdapter {
     upsertPlatform,
     upsertTag,
     logQuizResponse,
+    appendAuditLog,
+    listAuditLog,
     listSeoTemplates,
     getSeoTemplate,
     upsertSeoTemplate,

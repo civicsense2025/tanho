@@ -1,6 +1,7 @@
 import { MongoClient, type Collection, type Db, type Filter } from "mongodb";
 import { randomUUID } from "crypto";
 import type {
+  AuditLog,
   Award,
   Collection as CollectionEntity,
   ContentEntry,
@@ -299,6 +300,38 @@ export function createMongoAdapter(): DbAdapter {
     });
   }
 
+  async function appendAuditLog(input: Omit<AuditLog, "id" | "ts"> & { ts?: string }): Promise<void> {
+    await getDb().collection("audit_log").insertOne({
+      id: randomUUID(),
+      ts: input.ts ?? new Date().toISOString(),
+      actor: input.actor,
+      action: input.action,
+      target: input.target,
+      ip: input.ip,
+      userAgent: input.userAgent,
+      outcome: input.outcome,
+      metadata: input.metadata,
+    });
+  }
+
+  async function listAuditLog(limit: number): Promise<AuditLog[]> {
+    const docs = await getDb()
+      .collection("audit_log")
+      .find({}, { sort: { ts: -1 }, limit, projection: { _id: 0 } })
+      .toArray();
+    return docs.map((d) => ({
+      id: d.id as string,
+      ts: d.ts as string,
+      actor: (d.actor as string) ?? null,
+      action: d.action as string,
+      target: (d.target as string) ?? null,
+      ip: (d.ip as string) ?? null,
+      userAgent: (d.userAgent as string) ?? null,
+      outcome: d.outcome as string,
+      metadata: (d.metadata as Record<string, unknown> | null) ?? null,
+    }));
+  }
+
   function seoTemplateFromDoc(d: Record<string, unknown>): SeoTemplate {
     return {
       id: d.id as string,
@@ -392,6 +425,8 @@ export function createMongoAdapter(): DbAdapter {
     upsertPlatform,
     upsertTag,
     logQuizResponse,
+    appendAuditLog,
+    listAuditLog,
     listSeoTemplates,
     getSeoTemplate,
     upsertSeoTemplate,
