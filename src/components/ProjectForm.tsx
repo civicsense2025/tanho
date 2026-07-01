@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, type CSSProperties } from "react";
+import { useState, useCallback, useEffect, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Field, Input, Select, Textarea, Button } from "@/components/ui";
 import { PageBuilder } from "@/components/PageBuilder";
 import type { Block } from "@/lib/blocks/types";
+import type { ProjectDraftMessage } from "@/components/PreviewFrame";
 
 interface ProjectData {
   title: string; slug: string; tagline: string;
@@ -20,6 +21,10 @@ interface Props {
    * (MDX), not a field on the structured-fields save payload. See ProjectForm's
    * saveBody(), which PATCHes it independently of the main form save. */
   initialBody?: string;
+  /** Called on every body/blocks change so a hosting page can forward draft
+   * state into a live-preview iframe via postMessage. Optional -- pages
+   * without a preview pane (e.g. "new project") just omit it. */
+  onDraftChange?: (draft: Omit<ProjectDraftMessage, "type">) => void;
 }
 
 const DEFAULT: ProjectData = {
@@ -47,7 +52,7 @@ const sectionLabel: CSSProperties = {
   color: "var(--text-muted)",
 };
 
-export function ProjectForm({ projectId, initial, initialBlocks = [], initialBody = "" }: Props) {
+export function ProjectForm({ projectId, initial, initialBlocks = [], initialBody = "", onDraftChange }: Props) {
   const router = useRouter();
   const [data, setData] = useState<ProjectData>({
     ...DEFAULT, ...initial,
@@ -60,6 +65,14 @@ export function ProjectForm({ projectId, initial, initialBlocks = [], initialBod
   const [deleting, setDeleting] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  useEffect(() => {
+    onDraftChange?.({
+      body,
+      blocks: data.blocks.map((b, i) => ({ id: `draft-${i}`, type: b.type, content: b.content })),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [body, data.blocks]);
 
   const set = (key: keyof ProjectData, value: unknown) => setData((d) => ({ ...d, [key]: value }));
   const addTag = () => { const t = tagInput.trim(); if (t && !data.tags.includes(t)) set("tags", [...data.tags, t]); setTagInput(""); };

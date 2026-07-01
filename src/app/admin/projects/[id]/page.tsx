@@ -4,7 +4,7 @@ import { getProjectBody } from "@/lib/content/project-content";
 import { parseTags } from "@/lib/utils";
 import { redirect, notFound } from "next/navigation";
 import { AdminPageShell } from "@/components/AdminPageShell";
-import { ProjectForm } from "@/components/ProjectForm";
+import { ProjectEditorWithPreview } from "@/components/ProjectEditorWithPreview";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +19,10 @@ export default async function EditProjectPage({ params }: Props) {
   const [blocks, body] = await Promise.all([getBlocks(project.id), getProjectBody(project)]);
 
   return (
-    <AdminPageShell title={project.title}>
-      <ProjectForm
+    <AdminPageShell title={project.title} wide>
+      <ProjectEditorWithPreview
         projectId={project.id}
+        slug={project.slug}
         initial={{
           title: project.title, slug: project.slug,
           tagline: project.tagline || "",

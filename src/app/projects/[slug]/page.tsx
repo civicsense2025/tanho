@@ -1,19 +1,32 @@
-import { getProject, getBlocks } from "@/lib/db";
+import { getProject, getProjectById, getBlocks } from "@/lib/db";
 import { getProjectBody } from "@/lib/content/project-content";
+import { getAdminSession } from "@/lib/auth";
 import { parseTags } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Avatar, Tag, Button, TextLink } from "@/components/ui";
 import { BlockTree } from "@/components/BlockTree";
+import { PreviewFrame } from "@/components/PreviewFrame";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ preview?: string; id?: string }> };
 
-export default async function ProjectPage({ params }: Props) {
+export default async function ProjectPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const project = await getProject(slug);
-  if (!project || project.status !== "published") notFound();
+  const { preview, id } = await searchParams;
+
+  // Preview mode looks up by id (not slug) so an in-progress slug edit --
+  // not yet saved -- doesn't 404 the preview the admin is actively looking
+  // at. Gated server-side the same way draft project bodies are: admin only.
+  const isPreview = preview === "1";
+  let project = isPreview && id ? await getProjectById(id) : await getProject(slug);
+  if (isPreview) {
+    if (!project || !(await getAdminSession())) notFound();
+  } else if (!project || project.status !== "published") {
+    notFound();
+  }
+  project = project!;
 
   const [blocks, body] = await Promise.all([getBlocks(project.id), getProjectBody(project)]);
   const tags = parseTags(project.tags);
@@ -109,12 +122,20 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       )}
 
-      {body && (
-        <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: body }} />
-      )}
-
-      {blocks.length > 0 && (
-        <BlockTree blocks={blocks.map((b) => ({ id: b.id, type: b.type, content: JSON.parse(b.content) }))} />
+      {isPreview ? (
+        <PreviewFrame
+          initialBody={body}
+          initialBlocks={blocks.map((b) => ({ id: b.id, type: b.type, content: JSON.parse(b.content) }))}
+        />
+      ) : (
+        <>
+          {body && (
+            <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: body }} />
+          )}
+          {blocks.length > 0 && (
+            <BlockTree blocks={blocks.map((b) => ({ id: b.id, type: b.type, content: JSON.parse(b.content) }))} />
+          )}
+        </>
       )}
     </main>
   );
