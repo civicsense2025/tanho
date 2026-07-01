@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
-import { listContentEntries, createContentEntry, getContentTypeBySlug } from "@/lib/db";
+import { listContentEntries, createContentEntry, getContentTypeBySlug, listContentTypes } from "@/lib/db";
 import { parseEntryData, type FieldDef } from "@/lib/content-types";
+import { redactPaidEntry } from "@/lib/content-types/paywall";
+import { revalidateContent } from "@/lib/cache";
 import { slugify } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
@@ -24,7 +26,16 @@ export async function GET(req: NextRequest) {
     status: isAdmin ? status : undefined,
     publishedOnly,
   });
-  return NextResponse.json(entries);
+
+  // Admins already see everything (including unredacted paid bodies via the admin UI's own
+  // auth), so redaction only applies to public/unauthenticated callers -- never skip this for
+  // the admin case's convenience, but there's nothing to hide from an admin either.
+  if (isAdmin) return NextResponse.json(entries);
+
+  const types = await listContentTypes();
+  const typesById = new Map(types.map((t) => [t.id, t]));
+  const redacted = await Promise.all(entries.map((e) => redactPaidEntry(e, typesById.get(e.contentTypeId))));
+  return NextResponse.json(redacted);
 }
 
 export async function POST(req: NextRequest) {
@@ -51,5 +62,6 @@ export async function POST(req: NextRequest) {
     noIndex: body.noIndex ? 1 : 0,
     data: JSON.stringify(data),
   });
+  revalidateContent(type.slug); // new entry → refresh public lists/pages for this type
   return NextResponse.json(entry, { status: 201 });
 }
