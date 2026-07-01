@@ -35,6 +35,34 @@ export interface SiteFeatures {
  * wiring in later phases; declared here so the choice has one canonical home. */
 export type SiteMode = "static" | "dynamic";
 
+/** Default color mode. `system` follows the OS (the historical behavior); `light`/`dark` force
+ * a mode. Maps to <html data-theme> in layout.tsx. */
+export type ThemeMode = "light" | "dark" | "system";
+
+/** Per-instance theme overrides. Empty/undefined = the built-in design tokens. Colors/font/
+ * radius map onto the existing semantic token layer via ThemeStyle, so a white-label re-skins
+ * the whole app from env with no code edits. */
+export interface ThemeConfig {
+  defaultMode: ThemeMode;
+  /** Hex override for --accent (primary). */
+  accent?: string;
+  /** Hex override for --accent-2 (secondary). */
+  accent2?: string;
+  /** Sans-serif font stack override for --font-sans. */
+  font?: string;
+}
+
+/** Third-party site-verification meta tags and analytics IDs. All optional/off-by-default --
+ * unset means the corresponding <meta>/script simply isn't rendered, so an unconfigured
+ * checkout has no tracking and nothing to verify. */
+export interface SiteAnalytics {
+  /** Google Search Console HTML-tag verification token (the content= value only, not the
+   * whole <meta> tag). From GSC property setup -> "HTML tag" method. */
+  googleSiteVerification?: string;
+  /** GA4 Measurement ID, e.g. "G-XXXXXXXXXX". Loads gtag.js when set. */
+  gaMeasurementId?: string;
+}
+
 export interface SiteConfig {
   /** Short brand/person name, e.g. used in JSON-LD author and SEO title suffixes. */
   siteName: string;
@@ -53,12 +81,14 @@ export interface SiteConfig {
   url: string;
   features: SiteFeatures;
   mode: SiteMode;
+  theme: ThemeConfig;
+  analytics: SiteAnalytics;
 }
 
 /** Parses a boolean env flag. Only the exact strings "true"/"1" (case-insensitive) enable;
  * anything else — including unset — falls back to `fallback`. Defensive against typos silently
  * enabling a module. */
-function envFlag(value: string | undefined, fallback: boolean): boolean {
+export function envFlag(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   const v = value.trim().toLowerCase();
   if (v === "true" || v === "1") return true;
@@ -72,6 +102,11 @@ const DEFAULT_DESCRIPTION =
 
 const rawMode = process.env.NEXT_PUBLIC_SITE_MODE;
 const mode: SiteMode = rawMode === "static" ? "static" : "dynamic";
+
+const rawThemeMode = process.env.NEXT_PUBLIC_THEME_MODE;
+// Default "system" preserves the historical auto-dark behavior (prefers-color-scheme).
+const themeMode: ThemeMode =
+  rawThemeMode === "light" || rawThemeMode === "dark" ? rawThemeMode : "system";
 
 export const siteConfig: SiteConfig = Object.freeze({
   siteName: process.env.NEXT_PUBLIC_SITE_NAME || "Tan Ho",
@@ -88,4 +123,14 @@ export const siteConfig: SiteConfig = Object.freeze({
     newsletter: envFlag(process.env.NEXT_PUBLIC_FEATURE_NEWSLETTER, false),
   },
   mode,
+  theme: {
+    defaultMode: themeMode,
+    accent: process.env.NEXT_PUBLIC_THEME_ACCENT || undefined,
+    accent2: process.env.NEXT_PUBLIC_THEME_ACCENT_2 || undefined,
+    font: process.env.NEXT_PUBLIC_THEME_FONT || undefined,
+  },
+  analytics: {
+    googleSiteVerification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    gaMeasurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || undefined,
+  },
 });
