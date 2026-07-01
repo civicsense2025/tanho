@@ -280,6 +280,11 @@ export async function getPlatformById(id: string): Promise<Platform | undefined>
   return adapter.platforms.get(id);
 }
 
+export async function getPlatform(slug: string): Promise<Platform | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getPlatformBySlug(slug);
+}
+
 export async function upsertPlatform(data: Omit<Platform, "id">): Promise<Platform> {
   const adapter = await getAdapter();
   return adapter.upsertPlatform(data);
