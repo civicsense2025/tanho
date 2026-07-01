@@ -2,6 +2,12 @@ import { MongoClient, type Collection, type Db, type Filter } from "mongodb";
 import { randomUUID } from "crypto";
 import type {
   Award,
+  Collection as CollectionEntity,
+  ContentEntry,
+  ContentEntryCollection,
+  ContentEntryStatus,
+  ContentEntryTag,
+  ContentType,
   DbAdapter,
   Education,
   Experience,
@@ -126,6 +132,9 @@ export function createMongoAdapter(): DbAdapter {
   const subscribers = mongoRepository<Subscriber>(getDb().collection("subscribers"));
   const orders = mongoRepository<Order>(getDb().collection("orders"));
   const subscriptions = mongoRepository<Subscription>(getDb().collection("subscriptions"));
+  const contentTypes = mongoRepository<ContentType>(getDb().collection("content_types"));
+  const contentEntries = mongoRepository<ContentEntry>(getDb().collection("content_entries"));
+  const collections = mongoRepository<CollectionEntity>(getDb().collection("collections"));
 
   async function getOrderByCheckoutSession(sessionId: string): Promise<Order | undefined> {
     const [o] = await orders.list({ where: { stripeCheckoutSessionId: sessionId } });
@@ -259,6 +268,61 @@ export function createMongoAdapter(): DbAdapter {
     await collection.deleteMany({ guideId });
     if (tagIds.length === 0) return;
     await collection.insertMany(tagIds.map((tagId) => ({ guideId, tagId })));
+  }
+
+  async function getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]> {
+    const docs = await getDb().collection("content_entry_collections").find({ contentEntryId: entryId }).sort({ sortOrder: 1 }).toArray();
+    return docs.map((d) => ({
+      id: d.id as string,
+      contentEntryId: d.contentEntryId as string,
+      collectionId: d.collectionId as string,
+      sortOrder: d.sortOrder as number,
+    }));
+  }
+
+  async function setContentEntryCollections(entryId: string, cols: { collectionId: string; sortOrder: number }[]): Promise<void> {
+    const collection = getDb().collection("content_entry_collections");
+    await collection.deleteMany({ contentEntryId: entryId });
+    if (cols.length === 0) return;
+    await collection.insertMany(cols.map((c) => ({ id: randomUUID(), contentEntryId: entryId, collectionId: c.collectionId, sortOrder: c.sortOrder })));
+  }
+
+  async function getContentEntryTags(entryId: string): Promise<Tag[]> {
+    const joins = await getDb().collection("content_entry_tags").find({ contentEntryId: entryId }).toArray();
+    const tagIds = joins.map((j) => j.tagId as string);
+    if (tagIds.length === 0) return [];
+    const docs = await getDb().collection("tags").find({ id: { $in: tagIds } }).sort({ name: 1 }).toArray();
+    return docs.map((d) => ({ id: d.id as string, slug: d.slug as string, name: d.name as string }));
+  }
+
+  async function setContentEntryTags(entryId: string, tagIds: string[]): Promise<void> {
+    const collection = getDb().collection("content_entry_tags");
+    await collection.deleteMany({ contentEntryId: entryId });
+    if (tagIds.length === 0) return;
+    await collection.insertMany(tagIds.map((tagId) => ({ id: randomUUID(), contentEntryId: entryId, tagId })));
+  }
+
+  async function listContentEntries(filter: { contentTypeId?: string; status?: ContentEntryStatus; publishedOnly?: boolean } = {}): Promise<ContentEntry[]> {
+    const where: { contentTypeId?: string; status?: ContentEntryStatus } = {};
+    if (filter.contentTypeId) where.contentTypeId = filter.contentTypeId;
+    if (filter.publishedOnly) where.status = "published";
+    else if (filter.status) where.status = filter.status;
+    return contentEntries.list({
+      where,
+      orderBy: [{ field: "sortOrder", direction: "asc" }, { field: "title", direction: "asc" }],
+    });
+  }
+
+  async function getContentTypeBySlug(slug: string): Promise<ContentType | undefined> {
+    const [t] = await contentTypes.list({ where: { slug } });
+    return t;
+  }
+
+  async function getContentEntry(typeSlug: string, slug: string): Promise<ContentEntry | undefined> {
+    const type = await getContentTypeBySlug(typeSlug);
+    if (!type) return undefined;
+    const [entry] = await contentEntries.list({ where: { contentTypeId: type.id, slug } });
+    return entry;
   }
 
   function platformFromDoc(d: Record<string, unknown>): Platform {
@@ -557,6 +621,16 @@ export function createMongoAdapter(): DbAdapter {
     listSiteSettings,
     getSiteSetting,
     upsertSiteSetting,
+    contentTypes,
+    contentEntries,
+    collections,
+    getContentEntryCollections,
+    setContentEntryCollections,
+    getContentEntryTags,
+    setContentEntryTags,
+    listContentEntries,
+    getContentEntry,
+    getContentTypeBySlug,
     async migrate() {
       await client.connect();
       await applyMongoMigrations(getDb(), mongoMigrations);

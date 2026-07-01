@@ -8,6 +8,7 @@ import { sql as seoTemplates } from "./0006_seo_templates";
 import { sql as newsletter } from "./0007_newsletter";
 import { sql as payments } from "./0008_payments";
 import { sql as siteSettings } from "./0009_site_settings";
+import { sql as contentTypes } from "./0010_content_types";
 
 export const libsqlMigrations: SqlMigration[] = [
   { name: "0001_init", sql: init },
@@ -19,4 +20,5 @@ export const libsqlMigrations: SqlMigration[] = [
   { name: "0007_newsletter", sql: newsletter },
   { name: "0008_payments", sql: payments },
   { name: "0009_site_settings", sql: siteSettings },
+  { name: "0010_content_types", sql: contentTypes },
 ];

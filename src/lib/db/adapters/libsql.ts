@@ -2,6 +2,12 @@ import { createClient, type Client, type InValue } from "@libsql/client";
 import { randomUUID } from "crypto";
 import type {
   Award,
+  Collection,
+  ContentEntry,
+  ContentEntryCollection,
+  ContentEntryStatus,
+  ContentEntryTag,
+  ContentType,
   DbAdapter,
   Education,
   Experience,
@@ -249,6 +255,46 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
+  const contentTypes = makeSqlRepository<ContentType>(client, "content_types", {
+    slug: "slug",
+    name: "name",
+    icon: "icon",
+    fields: "fields",
+    isBuiltIn: "is_built_in",
+    sortOrder: "sort_order",
+    seoTitleTemplate: "seo_title_template",
+    seoDescriptionTemplate: "seo_description_template",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const contentEntries = makeSqlRepository<ContentEntry>(client, "content_entries", {
+    contentTypeId: "content_type_id",
+    slug: "slug",
+    title: "title",
+    status: "status",
+    scheduledAt: "scheduled_at",
+    publishedAt: "published_at",
+    sortOrder: "sort_order",
+    seoTitle: "seo_title",
+    seoDescription: "seo_description",
+    ogImage: "og_image",
+    canonicalUrl: "canonical_url",
+    noIndex: "no_index",
+    data: "data",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const collections = makeSqlRepository<Collection>(client, "collections", {
+    slug: "slug",
+    name: "name",
+    description: "description",
+    sortOrder: "sort_order",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
   async function getOrderByCheckoutSession(sessionId: string): Promise<Order | undefined> {
     const [o] = await orders.list({ where: { stripeCheckoutSessionId: sessionId } });
     return o;
@@ -413,6 +459,79 @@ export function createLibsqlAdapter(): DbAdapter {
       ],
       "write"
     );
+  }
+
+  async function getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]> {
+    const result = await client.execute({
+      sql: "SELECT * FROM content_entry_collections WHERE content_entry_id = ? ORDER BY sort_order ASC",
+      args: [entryId],
+    });
+    return result.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        id: String(row.id),
+        contentEntryId: String(row.content_entry_id),
+        collectionId: String(row.collection_id),
+        sortOrder: Number(row.sort_order),
+      };
+    });
+  }
+
+  async function setContentEntryCollections(entryId: string, cols: { collectionId: string; sortOrder: number }[]): Promise<void> {
+    await client.batch(
+      [
+        { sql: "DELETE FROM content_entry_collections WHERE content_entry_id = ?", args: [entryId] },
+        ...cols.map((c) => ({
+          sql: "INSERT INTO content_entry_collections (id, content_entry_id, collection_id, sort_order) VALUES (?, ?, ?, ?)",
+          args: [randomUUID(), entryId, c.collectionId, c.sortOrder],
+        })),
+      ],
+      "write"
+    );
+  }
+
+  async function getContentEntryTags(entryId: string): Promise<Tag[]> {
+    const result = await client.execute({
+      sql: "SELECT t.* FROM tags t JOIN content_entry_tags cet ON cet.tag_id = t.id WHERE cet.content_entry_id = ? ORDER BY t.name ASC",
+      args: [entryId],
+    });
+    return result.rows.map((r) => tagRow(r as Record<string, unknown>));
+  }
+
+  async function setContentEntryTags(entryId: string, tagIds: string[]): Promise<void> {
+    await client.batch(
+      [
+        { sql: "DELETE FROM content_entry_tags WHERE content_entry_id = ?", args: [entryId] },
+        ...tagIds.map((tagId) => ({
+          sql: "INSERT INTO content_entry_tags (id, content_entry_id, tag_id) VALUES (?, ?, ?)",
+          args: [randomUUID(), entryId, tagId],
+        })),
+      ],
+      "write"
+    );
+  }
+
+  async function listContentEntries(filter: { contentTypeId?: string; status?: ContentEntryStatus; publishedOnly?: boolean } = {}): Promise<ContentEntry[]> {
+    const where: { contentTypeId?: string; status?: ContentEntryStatus } = {};
+    if (filter.contentTypeId) where.contentTypeId = filter.contentTypeId;
+    if (filter.publishedOnly) where.status = "published";
+    else if (filter.status) where.status = filter.status;
+    return contentEntries.list({
+      where,
+      orderBy: [{ field: "sortOrder", direction: "asc" }, { field: "title", direction: "asc" }],
+    });
+  }
+
+  async function getContentTypeBySlug(slug: string): Promise<ContentType | undefined> {
+    const [t] = await contentTypes.list({ where: { slug } });
+    return t;
+  }
+
+  async function getContentEntry(typeSlug: string, slug: string): Promise<ContentEntry | undefined> {
+    const type = await getContentTypeBySlug(typeSlug);
+    if (!type) return undefined;
+    const [entry] = await contentEntries.list({ where: { contentTypeId: type.id, slug } });
+    return entry;
   }
 
   function platformRow(row: Record<string, unknown>): Platform {
@@ -730,6 +849,16 @@ export function createLibsqlAdapter(): DbAdapter {
     listSiteSettings,
     getSiteSetting,
     upsertSiteSetting,
+    contentTypes,
+    contentEntries,
+    collections,
+    getContentEntryCollections,
+    setContentEntryCollections,
+    getContentEntryTags,
+    setContentEntryTags,
+    listContentEntries,
+    getContentEntry,
+    getContentTypeBySlug,
     migrate: () => applyMigrations(client, libsqlMigrations),
   };
 }
