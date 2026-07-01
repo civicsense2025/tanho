@@ -1,4 +1,4 @@
-import { listPosts } from "@/lib/db";
+import { listContentEntries, getContentTypeBySlug } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { TextLink } from "@/components/ui";
 import { SubscribeForm } from "@/components/SubscribeForm";
@@ -13,7 +13,14 @@ export const metadata: Metadata = {
   description: "Recent posts and issues.",
 };
 
-/** Formats an ISO date for display; tolerant of null. */
+function parseData(dataJson: string): Record<string, unknown> {
+  try {
+    return JSON.parse(dataJson) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 function fmtDate(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -21,11 +28,11 @@ function fmtDate(iso: string | null): string {
 }
 
 export default async function PostsPage() {
-  // Feature-gated: when newsletter is off, this section doesn't exist.
   const settings = await getSettings();
   if (!settings.features.newsletter) notFound();
 
-  const posts = await listPosts(true);
+  const postType = await getContentTypeBySlug("post");
+  const posts = postType ? await listContentEntries({ contentTypeId: postType.id, publishedOnly: true }) : [];
 
   return (
     <main style={{ maxWidth: "var(--width-prose)", margin: "0 auto", padding: "var(--space-10) var(--gutter)" }}>
@@ -46,24 +53,27 @@ export default async function PostsPage() {
         <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>No posts yet.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-          {posts.map((p) => (
-            <article key={p.id}>
-              <Link href={`/posts/${p.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <h2 style={{ margin: "0 0 var(--space-1)", fontSize: "var(--text-h2)", fontWeight: 500, color: "var(--text)" }}>
-                  {p.title}
-                  {p.visibility === "paid" && (
-                    <span style={{ marginLeft: "var(--space-2)", fontSize: "var(--text-2xs)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--tracking-widest)", color: "var(--accent)" }}>
-                      Paid
-                    </span>
-                  )}
-                </h2>
-              </Link>
-              {p.publishedAt && (
-                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-faint)", marginBottom: "var(--space-2)" }}>{fmtDate(p.publishedAt)}</div>
-              )}
-              {p.excerpt && <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-muted)", lineHeight: "var(--leading-normal)" }}>{p.excerpt}</p>}
-            </article>
-          ))}
+          {posts.map((p) => {
+            const data = parseData(p.data);
+            return (
+              <article key={p.id}>
+                <Link href={`/posts/${p.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
+                  <h2 style={{ margin: "0 0 var(--space-1)", fontSize: "var(--text-h2)", fontWeight: 500, color: "var(--text)" }}>
+                    {p.title}
+                    {data.visibility === "paid" ? (
+                      <span style={{ marginLeft: "var(--space-2)", fontSize: "var(--text-2xs)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--tracking-widest)", color: "var(--accent)" }}>
+                        Paid
+                      </span>
+                    ) : null}
+                  </h2>
+                </Link>
+                {p.publishedAt && (
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--text-faint)", marginBottom: "var(--space-2)" }}>{fmtDate(p.publishedAt)}</div>
+                )}
+                {data.excerpt ? <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-muted)", lineHeight: "var(--leading-normal)" }}>{String(data.excerpt)}</p> : null}
+              </article>
+            );
+          })}
         </div>
       )}
     </main>
