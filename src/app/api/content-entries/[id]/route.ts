@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
 import { getContentEntryById, updateContentEntry, deleteContentEntry, getContentTypeById } from "@/lib/db";
 import { parseEntryData, type FieldDef } from "@/lib/content-types";
+import { redactPaidEntry } from "@/lib/content-types/paywall";
+import { revalidateContent } from "@/lib/cache";
 import { slugify } from "@/lib/utils";
+
+/** Resolves a content type's slug for cache-tag revalidation. */
+async function typeSlugFor(contentTypeId: string): Promise<string | undefined> {
+  return (await getContentTypeById(contentTypeId))?.slug;
+}
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,7 +19,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const isAdmin = await getAdminSession();
   if (!isAdmin && entry.status !== "published") return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(entry);
+  if (isAdmin) return NextResponse.json(entry);
+  const type = await getContentTypeById(entry.contentTypeId);
+  return NextResponse.json(await redactPaidEntry(entry, type));
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
@@ -45,12 +54,17 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   const entry = await updateContentEntry(id, data);
+  // Bust the ISR cache so the edit shows on public pages immediately (Next 16 serve-stale-then-
+  // revalidate). Busts the broad content tag + this entry's type.
+  revalidateContent(await typeSlugFor(existing.contentTypeId));
   return NextResponse.json(entry);
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
+  const existing = await getContentEntryById(id);
   await deleteContentEntry(id);
+  revalidateContent(existing ? await typeSlugFor(existing.contentTypeId) : undefined);
   return NextResponse.json({ ok: true });
 }
