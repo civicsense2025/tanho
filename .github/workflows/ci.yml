@@ -57,6 +57,7 @@ jobs:
       TURSO_DATABASE_URL: file:./db/e2e.db
       ADMIN_PASSWORD: e2e-test-password
       ADMIN_SECRET: e2e-test-secret-at-least-32-characters-long
+      CRON_SECRET: e2e-test-cron-secret-at-least-32-characters-long
       NEXT_PUBLIC_FEATURE_NEWSLETTER: "true"
     steps:
       - uses: actions/checkout@v4
