@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { listSiteSettings } from "@/lib/db";
+import type { SiteSetting } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
 import {
   envFlag,
@@ -41,6 +42,28 @@ export const SECRET_SETTING_KEYS = new Set([
   "integrations.resendApiKey",
   "integrations.postmarkServerToken",
 ]);
+
+/** Shape sent to/rendered by the /admin/settings UI -- decrypted secret values never appear
+ * here, only whether one is currently set (hasValue), so the browser never receives plaintext
+ * for a secret key once it's been saved. Shared by src/app/api/settings/route.ts (GET) and
+ * src/app/admin/settings/page.tsx so the row-shaping logic lives in one place. */
+export interface SettingRow {
+  key: string;
+  value: string | null;
+  isSecret: boolean;
+  hasValue: boolean;
+  updatedAt: string;
+}
+
+export function toSettingRow(r: SiteSetting): SettingRow {
+  return {
+    key: r.key,
+    value: r.isSecret ? null : r.value,
+    isSecret: !!r.isSecret,
+    hasValue: r.value !== null && r.value !== "",
+    updatedAt: r.updatedAt,
+  };
+}
 
 function readValue(map: Map<string, { value: string | null; isSecret: number }>, key: string): string | undefined {
   const row = map.get(key);
