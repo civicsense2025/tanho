@@ -1,9 +1,10 @@
 import { getGuide, getGuideSteps, getResourcesForGuide, getSeoTemplate } from "@/lib/db";
 import { parseTags } from "@/lib/utils";
 import { absoluteImage, absoluteUrl, buildMetadata } from "@/lib/seo";
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 import { GuideMeta } from "@/components/GuideMeta";
 import { JsonLd } from "@/components/JsonLd";
+import { ShareButtons } from "@/components/ShareButtons";
 import { notFound } from "next/navigation";
 import { TextLink } from "@/components/ui";
 import type { Metadata } from "next";
@@ -36,9 +37,10 @@ export default async function GuidePage({ params }: Props) {
   const [guide, seoTemplate] = await Promise.all([getGuide(slug), getSeoTemplate("guide")]);
   if (!guide || guide.status !== "published") notFound();
 
-  const [steps, resources] = await Promise.all([
+  const [steps, resources, settings] = await Promise.all([
     getGuideSteps(guide.id),
     getResourcesForGuide(guide.id),
+    getSettings(),
   ]);
   const skills = parseTags(guide.skillsRequired);
   const requirements = parseTags(guide.requirements);
@@ -68,7 +70,7 @@ export default async function GuidePage({ params }: Props) {
           image: guide.coverImage ? absoluteImage(guide.coverImage) : undefined,
           url: absoluteUrl(`/guides/${guide.slug}`),
           dateModified: guide.updatedAt,
-          author: { "@type": "Person", name: siteConfig.author },
+          author: { "@type": "Person", name: settings.author },
         }}
       />
       <div style={{ marginBottom: "var(--space-8)" }}>
@@ -91,6 +93,10 @@ export default async function GuidePage({ params }: Props) {
         )}
         <GuideMeta guide={guide} />
       </header>
+
+      <div style={{ marginBottom: "var(--space-10)" }}>
+        <ShareButtons url={absoluteUrl(`/guides/${guide.slug}`)} title={guide.title} />
+      </div>
 
       {guide.coverImage && (
         <div style={{ position: "relative", aspectRatio: "16 / 9", overflow: "hidden", borderRadius: "var(--radius-sm)", background: "var(--surface)", marginBottom: "var(--space-10)" }}>

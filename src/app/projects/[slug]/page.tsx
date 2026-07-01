@@ -3,7 +3,7 @@ import { getProjectBody } from "@/lib/content/project-content";
 import { getAdminSession } from "@/lib/auth";
 import { parseTags } from "@/lib/utils";
 import { absoluteImage, absoluteUrl, buildMetadata } from "@/lib/seo";
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -11,6 +11,7 @@ import { Avatar, Tag, Button, TextLink } from "@/components/ui";
 import { BlockTree } from "@/components/BlockTree";
 import { PreviewFrame } from "@/components/PreviewFrame";
 import { JsonLd } from "@/components/JsonLd";
+import { ShareButtons } from "@/components/ShareButtons";
 import { sanitizeHtml } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   }
   project = project!;
 
-  const [blocks, body] = await Promise.all([getBlocks(project.id), getProjectBody(project)]);
+  const [blocks, body, settings] = await Promise.all([getBlocks(project.id), getProjectBody(project), getSettings()]);
   const tags = parseTags(project.tags);
 
   // Same override/template/fallback-resolved fields generateMetadata() computed for <head>,
@@ -71,7 +72,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
             image: project.coverImage ? absoluteImage(project.coverImage) : undefined,
             url: absoluteUrl(`/projects/${project.slug}`),
             dateModified: project.updatedAt,
-            author: { "@type": "Person", name: siteConfig.author },
+            author: { "@type": "Person", name: settings.author },
           }}
         />
       )}
@@ -122,6 +123,12 @@ export default async function ProjectPage({ params, searchParams }: Props) {
           </div>
         )}
       </header>
+
+      {!isPreview && (
+        <div style={{ marginBottom: "var(--space-10)" }}>
+          <ShareButtons url={absoluteUrl(`/projects/${project.slug}`)} title={project.title} />
+        </div>
+      )}
 
       {project.coverImage ? (
         <div
