@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { getStripe } from "./client";
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 
 /**
  * Builds Stripe Checkout Sessions for the three sell modes. Per Stripe's security guidance the
@@ -14,8 +14,12 @@ import { siteConfig } from "@/config/site.config";
  * pending Order keyed by session.id.
  */
 
-const successUrl = () => `${siteConfig.url}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
-const cancelUrl = () => `${siteConfig.url}/checkout/cancel`;
+function checkoutUrls(siteUrl: string): { successUrl: string; cancelUrl: string } {
+  return {
+    successUrl: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${siteUrl}/checkout/cancel`,
+  };
+}
 
 export interface OneTimeParams {
   priceId: string;
@@ -26,11 +30,12 @@ export interface OneTimeParams {
 
 export async function createOneTimeCheckout(params: OneTimeParams): Promise<Stripe.Checkout.Session> {
   const stripe = getStripe();
+  const { successUrl, cancelUrl } = checkoutUrls((await getSettings()).url);
   return stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [{ price: params.priceId, quantity: 1 }],
-    success_url: successUrl(),
-    cancel_url: cancelUrl(),
+    success_url: successUrl,
+    cancel_url: cancelUrl,
     customer_email: params.email,
     metadata: { kind: "one_time", ...(params.postId ? { postId: params.postId } : {}) },
   });
@@ -43,11 +48,12 @@ export interface SubscriptionParams {
 
 export async function createSubscriptionCheckout(params: SubscriptionParams): Promise<Stripe.Checkout.Session> {
   const stripe = getStripe();
+  const { successUrl, cancelUrl } = checkoutUrls((await getSettings()).url);
   return stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: params.priceId, quantity: 1 }],
-    success_url: successUrl(),
-    cancel_url: cancelUrl(),
+    success_url: successUrl,
+    cancel_url: cancelUrl,
     customer_email: params.email,
     metadata: { kind: "subscription" },
   });
@@ -64,6 +70,8 @@ export interface DonationParams {
 
 export async function createDonationCheckout(params: DonationParams): Promise<Stripe.Checkout.Session> {
   const stripe = getStripe();
+  const settings = await getSettings();
+  const { successUrl, cancelUrl } = checkoutUrls(settings.url);
   const currency = params.currency || "usd";
   // `custom_unit_amount` is a documented Checkout price_data field (pay-what-you-want) that this
   // SDK version's TypeScript types don't yet expose. The Stripe API accepts it, and using it is
@@ -71,7 +79,7 @@ export async function createDonationCheckout(params: DonationParams): Promise<St
   // enforces our server-set minimum/maximum, so no client-supplied unit_amount is ever trusted.
   const priceData = {
     currency,
-    product_data: { name: `Support ${siteConfig.siteName}` },
+    product_data: { name: `Support ${settings.siteName}` },
     custom_unit_amount: {
       enabled: true,
       minimum: params.minAmount ?? 100,
@@ -84,8 +92,8 @@ export async function createDonationCheckout(params: DonationParams): Promise<St
     mode: "payment",
     submit_type: "donate",
     line_items: [{ price_data: priceData, quantity: 1 }],
-    success_url: successUrl(),
-    cancel_url: cancelUrl(),
+    success_url: successUrl,
+    cancel_url: cancelUrl,
     customer_email: params.email,
     metadata: { kind: "donation" },
   });

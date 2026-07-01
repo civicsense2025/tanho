@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { getAdminSession } from "@/lib/auth";
 import { getSubscriberByEmail, createSubscriber, updateSubscriber } from "@/lib/db";
 import { parseSubscriberCsv, type ImportPlatform } from "@/lib/import/subscribers";
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 
 const PLATFORMS: ImportPlatform[] = ["substack", "mailchimp", "ghost", "buttondown", "kit", "beehiiv", "generic"];
 
@@ -14,7 +14,7 @@ const PLATFORMS: ImportPlatform[] = ["substack", "mailchimp", "ghost", "buttondo
  * unsubscribed contact back to active, and unknown statuses land as `pending`.
  */
 export async function POST(req: NextRequest) {
-  if (!siteConfig.features.newsletter) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await getSettings()).features.newsletter) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
