@@ -1,10 +1,10 @@
-import type { SqlMigration } from "../../migrate-runner";
+import type { PostgresMigration } from "../../migrate-runner-postgres";
 
 /**
  * Drops the legacy entity tables that have been replaced by content_types + content_entries.
  * Append-only and idempotent: uses DROP TABLE IF EXISTS so re-running migrate() is safe.
  */
-export const dropLegacyTables: SqlMigration = {
+export const dropLegacyTables: PostgresMigration = {
   name: "0011_drop_legacy_entity_tables",
   sql: [
     "DROP TABLE IF EXISTS project_blocks",

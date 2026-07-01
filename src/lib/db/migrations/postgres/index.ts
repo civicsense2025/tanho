@@ -1,4 +1,4 @@
-import type { SqlMigration } from "../../migrate-runner";
+import type { PostgresMigration } from "../../migrate-runner-postgres";
 import { sql as init } from "./0001_init";
 import { sql as pages } from "./0002_pages";
 import { sql as seo } from "./0003_seo";
@@ -9,9 +9,10 @@ import { sql as payments } from "./0007_payments";
 import { sql as siteSettings } from "./0008_site_settings";
 import { sql as contentTypes } from "./0009_content_types";
 import { seedBuiltinTypes } from "./0010_seed_builtin_types";
+import { fixGuideSeedBlocksField } from "./fix_guide_seed_blocks_field";
 import { dropLegacyTables } from "./0011_drop_legacy_tables";
 
-export const postgresMigrations: SqlMigration[] = [
+export const postgresMigrations: PostgresMigration[] = [
   { name: "0001_init", sql: init },
   { name: "0002_pages", sql: pages },
   { name: "0003_seo", sql: seo },
@@ -22,5 +23,6 @@ export const postgresMigrations: SqlMigration[] = [
   { name: "0008_site_settings", sql: siteSettings },
   { name: "0009_content_types", sql: contentTypes },
   seedBuiltinTypes,
+  fixGuideSeedBlocksField,
   dropLegacyTables,
 ];
