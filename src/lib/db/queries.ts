@@ -11,6 +11,8 @@ import type {
   Project,
   ProjectBlock,
   Resource,
+  SeoEntityType,
+  SeoTemplate,
   Skill,
   Tag,
 } from "./types";
@@ -336,4 +338,22 @@ export async function deleteResource(id: string): Promise<void> {
 export async function logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void> {
   const adapter = await getAdapter();
   await adapter.logQuizResponse(answers, recommendation, sourcePlatform);
+}
+
+export async function listSeoTemplates(): Promise<SeoTemplate[]> {
+  const adapter = await getAdapter();
+  return adapter.listSeoTemplates();
+}
+
+export async function getSeoTemplate(entityType: SeoEntityType): Promise<SeoTemplate | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getSeoTemplate(entityType);
+}
+
+export async function upsertSeoTemplate(
+  entityType: SeoEntityType,
+  data: { titleTemplate: string; descriptionTemplate: string }
+): Promise<SeoTemplate> {
+  const adapter = await getAdapter();
+  return adapter.upsertSeoTemplate(entityType, data);
 }

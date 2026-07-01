@@ -15,6 +15,8 @@ import type {
   ProjectBlock,
   Repository,
   Resource,
+  SeoEntityType,
+  SeoTemplate,
   Skill,
   Tag,
 } from "../types";
@@ -309,6 +311,11 @@ export function createMongoAdapter(): DbAdapter {
     return g;
   }
 
+  async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
+    const [p] = await platforms.list({ where: { slug } });
+    return p;
+  }
+
   async function upsertPlatform(data: Omit<Platform, "id">): Promise<Platform> {
     const collection = getDb().collection("platforms");
     const existing = await collection.findOne({ slug: data.slug });
@@ -341,6 +348,43 @@ export function createMongoAdapter(): DbAdapter {
     });
   }
 
+  function seoTemplateFromDoc(d: Record<string, unknown>): SeoTemplate {
+    return {
+      id: d.id as string,
+      entityType: d.entityType as SeoTemplate["entityType"],
+      titleTemplate: (d.titleTemplate as string) ?? "",
+      descriptionTemplate: (d.descriptionTemplate as string) ?? "",
+      createdAt: d.createdAt as string,
+      updatedAt: d.updatedAt as string,
+    };
+  }
+
+  async function listSeoTemplates(): Promise<SeoTemplate[]> {
+    const docs = await getDb().collection("seo_templates").find({}).sort({ entityType: 1 }).toArray();
+    return docs.map((d) => seoTemplateFromDoc(d as Record<string, unknown>));
+  }
+
+  async function getSeoTemplate(entityType: SeoEntityType): Promise<SeoTemplate | undefined> {
+    const doc = await getDb().collection("seo_templates").findOne({ entityType });
+    return doc ? seoTemplateFromDoc(doc as Record<string, unknown>) : undefined;
+  }
+
+  async function upsertSeoTemplate(
+    entityType: SeoEntityType,
+    data: { titleTemplate: string; descriptionTemplate: string }
+  ): Promise<SeoTemplate> {
+    const collection = getDb().collection("seo_templates");
+    const existing = await collection.findOne({ entityType });
+    const id = (existing?.id as string) ?? randomUUID();
+    const now = new Date().toISOString();
+    await collection.updateOne(
+      { entityType },
+      { $set: { id, entityType, ...data, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
+    return (await getSeoTemplate(entityType))!;
+  }
+
   return {
     projects,
     experience,
@@ -365,10 +409,14 @@ export function createMongoAdapter(): DbAdapter {
     setGuideResources,
     listGuides,
     getGuideBySlug,
+    getPlatformBySlug,
     upsertPlatform,
     upsertTag,
     listResources,
     logQuizResponse,
+    listSeoTemplates,
+    getSeoTemplate,
+    upsertSeoTemplate,
     async migrate() {
       await client.connect();
       await applyMongoMigrations(getDb(), mongoMigrations);

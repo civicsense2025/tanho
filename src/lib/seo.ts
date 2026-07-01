@@ -33,3 +33,12 @@ export function buildMetadata(fields: SeoFields, fallbacks: SeoFallbacks): Metad
 
   return metadata;
 }
+
+/** Substitutes {{variable}} placeholders in a title/description template with values from `vars`.
+ * Unknown/missing variables resolve to an empty string rather than being left as literal
+ * "{{...}}" in admin-facing previews or rendered metadata. Shared by both the server-side
+ * template resolution (future generateMetadata() call sites) and the client-side live SERP
+ * preview in SeoFields.tsx, so the substitution logic lives in exactly one place. */
+export function resolveTemplate(template: string, vars: Record<string, string | null | undefined>): string {
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key: string) => vars[key] || "");
+}

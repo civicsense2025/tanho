@@ -4,6 +4,7 @@ import { sql as stringIds } from "./0002_string_ids";
 import { sql as pages } from "./0003_pages";
 import { sql as seo } from "./0004_seo";
 import { sql as guides } from "./0005_guides";
+import { sql as seoTemplates } from "./0006_seo_templates";
 
 export const libsqlMigrations: SqlMigration[] = [
   { name: "0001_init", sql: init },
@@ -11,4 +12,5 @@ export const libsqlMigrations: SqlMigration[] = [
   { name: "0003_pages", sql: pages },
   { name: "0004_seo", sql: seo },
   { name: "0005_guides", sql: guides },
+  { name: "0006_seo_templates", sql: seoTemplates },
 ];

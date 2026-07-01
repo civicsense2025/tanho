@@ -15,6 +15,8 @@ import type {
   ProjectBlock,
   Repository,
   Resource,
+  SeoEntityType,
+  SeoTemplate,
   Skill,
   Tag,
 } from "../types";
@@ -492,6 +494,11 @@ export function createLibsqlAdapter(): DbAdapter {
     return g;
   }
 
+  async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
+    const [p] = await platforms.list({ where: { slug } });
+    return p;
+  }
+
   async function upsertPlatform(data: Omit<Platform, "id">): Promise<Platform> {
     const id = randomUUID();
     await client.execute({
@@ -534,6 +541,43 @@ export function createLibsqlAdapter(): DbAdapter {
     });
   }
 
+  function seoTemplateRow(row: Record<string, unknown>): SeoTemplate {
+    return {
+      id: String(row.id),
+      entityType: row.entity_type as SeoTemplate["entityType"],
+      titleTemplate: (row.title_template as string) ?? "",
+      descriptionTemplate: (row.description_template as string) ?? "",
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+    };
+  }
+
+  async function listSeoTemplates(): Promise<SeoTemplate[]> {
+    const result = await client.execute("SELECT * FROM seo_templates ORDER BY entity_type ASC");
+    return result.rows.map((r) => seoTemplateRow(r as Record<string, unknown>));
+  }
+
+  async function getSeoTemplate(entityType: SeoEntityType): Promise<SeoTemplate | undefined> {
+    const result = await client.execute({ sql: "SELECT * FROM seo_templates WHERE entity_type = ?", args: [entityType] });
+    return result.rows[0] ? seoTemplateRow(result.rows[0] as Record<string, unknown>) : undefined;
+  }
+
+  async function upsertSeoTemplate(
+    entityType: SeoEntityType,
+    data: { titleTemplate: string; descriptionTemplate: string }
+  ): Promise<SeoTemplate> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await client.execute({
+      sql: `INSERT INTO seo_templates (id, entity_type, title_template, description_template, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(entity_type) DO UPDATE SET title_template=excluded.title_template,
+              description_template=excluded.description_template, updated_at=excluded.updated_at`,
+      args: [id, entityType, data.titleTemplate, data.descriptionTemplate, now, now],
+    });
+    return (await getSeoTemplate(entityType))!;
+  }
+
   return {
     projects,
     experience,
@@ -558,10 +602,14 @@ export function createLibsqlAdapter(): DbAdapter {
     setGuideResources,
     listGuides,
     getGuideBySlug,
+    getPlatformBySlug,
     upsertPlatform,
     upsertTag,
     listResources,
     logQuizResponse,
+    listSeoTemplates,
+    getSeoTemplate,
+    upsertSeoTemplate,
     migrate: () => applyMigrations(client, libsqlMigrations),
   };
 }
