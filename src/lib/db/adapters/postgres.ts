@@ -331,9 +331,12 @@ export function createPostgresAdapter(): DbAdapter {
   async function setGuideTags(guideId: string, tagIds: string[]): Promise<void> {
     await sql.begin(async (tx) => {
       await tx.unsafe("DELETE FROM guide_tags WHERE guide_id = $1", [guideId] as never[]);
-      for (const tagId of tagIds) {
-        await tx.unsafe("INSERT INTO guide_tags (guide_id, tag_id) VALUES ($1, $2)", [guideId, tagId] as never[]);
-      }
+      if (tagIds.length === 0) return;
+      const values = tagIds.map((_, i) => `($1, $${i + 2})`).join(", ");
+      await tx.unsafe(
+        `INSERT INTO guide_tags (guide_id, tag_id) VALUES ${values}`,
+        [guideId, ...tagIds] as never[]
+      );
     });
   }
 
@@ -366,12 +369,12 @@ export function createPostgresAdapter(): DbAdapter {
   async function setResourcePlatforms(resourceId: string, platformIds: string[]): Promise<void> {
     await sql.begin(async (tx) => {
       await tx.unsafe("DELETE FROM resource_platforms WHERE resource_id = $1", [resourceId] as never[]);
-      for (const platformId of platformIds) {
-        await tx.unsafe(
-          "INSERT INTO resource_platforms (resource_id, platform_id) VALUES ($1, $2)",
-          [resourceId, platformId] as never[]
-        );
-      }
+      if (platformIds.length === 0) return;
+      const values = platformIds.map((_, i) => `($1, $${i + 2})`).join(", ");
+      await tx.unsafe(
+        `INSERT INTO resource_platforms (resource_id, platform_id) VALUES ${values}`,
+        [resourceId, ...platformIds] as never[]
+      );
     });
   }
 
@@ -424,12 +427,13 @@ export function createPostgresAdapter(): DbAdapter {
   async function setGuideResources(guideId: string, resourceIds: string[]): Promise<void> {
     await sql.begin(async (tx) => {
       await tx.unsafe("DELETE FROM guide_resources WHERE guide_id = $1", [guideId] as never[]);
-      for (const [i, resourceId] of resourceIds.entries()) {
-        await tx.unsafe(
-          "INSERT INTO guide_resources (guide_id, resource_id, sort_order) VALUES ($1, $2, $3)",
-          [guideId, resourceId, i] as never[]
-        );
-      }
+      if (resourceIds.length === 0) return;
+      const values = resourceIds.map((_, i) => `($1, $${i * 2 + 2}, $${i * 2 + 3})`).join(", ");
+      const args = resourceIds.flatMap((resourceId, i) => [resourceId, i]);
+      await tx.unsafe(
+        `INSERT INTO guide_resources (guide_id, resource_id, sort_order) VALUES ${values}`,
+        [guideId, ...args] as never[]
+      );
     });
   }
 
