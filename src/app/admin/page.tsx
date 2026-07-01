@@ -328,6 +328,17 @@ export default async function AdminPage() {
           </p>
         </>
       )}
+
+      {/* Updates & license */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-8)", marginBottom: "var(--space-5)" }}>
+        <h2 style={sectionHead}>Updates</h2>
+        <TextLink arrow="forward" muted href="/admin/updates" style={{ fontSize: "var(--text-xs)" }}>
+          Manage
+        </TextLink>
+      </div>
+      <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+        Check your template version and apply updates from the Own Your Site hub.
+      </p>
     </div>
   );
 }
