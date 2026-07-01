@@ -8,15 +8,15 @@ interface EducationData {
   school: string;
   degree: string;
   span: string;
-  sort_order: number;
+  sortOrder: number;
 }
 
 interface Props {
-  educationId?: number;
+  educationId?: string;
   initial?: Partial<EducationData>;
 }
 
-const DEFAULT: EducationData = { school: "", degree: "", span: "", sort_order: 0 };
+const DEFAULT: EducationData = { school: "", degree: "", span: "", sortOrder: 0 };
 
 export function EducationForm({ educationId, initial }: Props) {
   const router = useRouter();
@@ -68,7 +68,7 @@ export function EducationForm({ educationId, initial }: Props) {
         <Input value={data.degree} onChange={(e) => set("degree", e.target.value)} placeholder="Dual major — Digital Media Arts & Communication Studies" />
       </Field>
       <Field label="Sort order">
-        <Input type="number" value={data.sort_order} onChange={(e) => set("sort_order", Number(e.target.value))} />
+        <Input type="number" value={data.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} />
       </Field>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", paddingTop: "var(--space-5)", borderTop: "1px solid var(--border)" }}>
         <Button type="submit" variant="accent" disabled={saving}>

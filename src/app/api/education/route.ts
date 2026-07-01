@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     school: body.school,
     degree: body.degree || null,
     span: body.span || null,
-    sort_order: body.sort_order || 0,
+    sortOrder: body.sortOrder || 0,
   });
   return NextResponse.json(education, { status: 201 });
 }

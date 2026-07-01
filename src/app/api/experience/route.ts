@@ -13,10 +13,10 @@ export async function POST(req: NextRequest) {
     company: body.company,
     role: body.role,
     description: body.description || null,
-    start_date: body.start_date || null,
-    end_date: body.end_date || null,
+    startDate: body.startDate || null,
+    endDate: body.endDate || null,
     current: body.current ? 1 : 0,
-    sort_order: body.sort_order || 0,
+    sortOrder: body.sortOrder || 0,
   });
   return NextResponse.json(experience, { status: 201 });
 }

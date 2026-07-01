@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const skill = await createSkill({
     name: body.name,
     category: body.category || null,
-    sort_order: body.sort_order || 0,
+    sortOrder: body.sortOrder || 0,
   });
   return NextResponse.json(skill, { status: 201 });
 }

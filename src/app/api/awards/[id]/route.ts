@@ -6,13 +6,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await req.json();
-  const award = await updateAward(Number(id), body);
+  const award = await updateAward(id, body);
   return NextResponse.json(award);
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
-  await deleteAward(Number(id));
+  await deleteAward(id);
   return NextResponse.json({ ok: true });
 }

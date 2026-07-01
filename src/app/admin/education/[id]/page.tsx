@@ -10,7 +10,7 @@ export default async function EditEducationPage({ params }: { params: Promise<{ 
   const authed = await getAdminSession();
   if (!authed) redirect("/admin/login");
   const { id } = await params;
-  const education = await getEducationById(Number(id));
+  const education = await getEducationById(id);
   if (!education) redirect("/admin");
 
   return (
@@ -21,7 +21,7 @@ export default async function EditEducationPage({ params }: { params: Promise<{ 
           school: education.school,
           degree: education.degree || "",
           span: education.span || "",
-          sort_order: education.sort_order,
+          sortOrder: education.sortOrder,
         }}
       />
     </AdminPageShell>

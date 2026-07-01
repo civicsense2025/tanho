@@ -8,14 +8,14 @@ interface ExperienceData {
   company: string;
   role: string;
   description: string;
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
   current: boolean;
-  sort_order: number;
+  sortOrder: number;
 }
 
 interface Props {
-  experienceId?: number;
+  experienceId?: string;
   initial?: Partial<ExperienceData>;
 }
 
@@ -23,10 +23,10 @@ const DEFAULT: ExperienceData = {
   company: "",
   role: "",
   description: "",
-  start_date: "",
-  end_date: "",
+  startDate: "",
+  endDate: "",
   current: false,
-  sort_order: 0,
+  sortOrder: 0,
 };
 
 export function ExperienceForm({ experienceId, initial }: Props) {
@@ -78,10 +78,10 @@ export function ExperienceForm({ experienceId, initial }: Props) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
         <Field label="Start date">
-          <Input value={data.start_date} onChange={(e) => set("start_date", e.target.value)} placeholder="2018" />
+          <Input value={data.startDate} onChange={(e) => set("startDate", e.target.value)} placeholder="2018" />
         </Field>
         <Field label="End date">
-          <Input value={data.end_date} onChange={(e) => set("end_date", e.target.value)} placeholder="2024" disabled={data.current} />
+          <Input value={data.endDate} onChange={(e) => set("endDate", e.target.value)} placeholder="2024" disabled={data.current} />
         </Field>
       </div>
       <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
@@ -92,7 +92,7 @@ export function ExperienceForm({ experienceId, initial }: Props) {
         <Textarea rows={3} value={data.description} onChange={(e) => set("description", e.target.value)} placeholder="What you did and achieved…" />
       </Field>
       <Field label="Sort order">
-        <Input type="number" value={data.sort_order} onChange={(e) => set("sort_order", Number(e.target.value))} />
+        <Input type="number" value={data.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} />
       </Field>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", paddingTop: "var(--space-5)", borderTop: "1px solid var(--border)" }}>
         <Button type="submit" variant="accent" disabled={saving}>

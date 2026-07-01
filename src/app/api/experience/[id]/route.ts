@@ -6,7 +6,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await req.json();
-  const experience = await updateExperience(Number(id), {
+  const experience = await updateExperience(id, {
     ...body,
     current: body.current ? 1 : 0,
   });
@@ -16,6 +16,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
-  await deleteExperience(Number(id));
+  await deleteExperience(id);
   return NextResponse.json({ ok: true });
 }

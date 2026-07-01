@@ -26,7 +26,7 @@ export default async function ProjectPage({ params }: Props) {
 
       <header style={{ marginBottom: "var(--space-10)" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-5)", marginBottom: "var(--space-5)" }}>
-          <Avatar src={project.logo_url} name={project.title} size={64} rounded="square" />
+          <Avatar src={project.logoUrl} name={project.title} size={64} rounded="square" />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-4)", marginBottom: "var(--space-3)" }}>
               <h1 style={{ margin: 0, fontSize: "var(--text-h1)", fontWeight: 500, letterSpacing: "var(--tracking-tight)", color: "var(--text)" }}>
@@ -42,15 +42,15 @@ export default async function ProjectPage({ params }: Props) {
           </div>
         </div>
 
-        {(project.live_url || project.github_url) && (
+        {(project.liveUrl || project.githubUrl) && (
           <div style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
-            {project.live_url && (
-              <Button as="a" href={project.live_url} target="_blank" rel="noopener noreferrer" variant="outline" size="sm">
+            {project.liveUrl && (
+              <Button as="a" href={project.liveUrl} target="_blank" rel="noopener noreferrer" variant="outline" size="sm">
                 Live ↗
               </Button>
             )}
-            {project.github_url && (
-              <Button as="a" href={project.github_url} target="_blank" rel="noopener noreferrer" variant="ghost" size="sm" uppercase>
+            {project.githubUrl && (
+              <Button as="a" href={project.githubUrl} target="_blank" rel="noopener noreferrer" variant="ghost" size="sm" uppercase>
                 GitHub ↗
               </Button>
             )}
@@ -66,7 +66,7 @@ export default async function ProjectPage({ params }: Props) {
         )}
       </header>
 
-      {project.cover_image ? (
+      {project.coverImage ? (
         <div
           style={{
             position: "relative",
@@ -78,7 +78,7 @@ export default async function ProjectPage({ params }: Props) {
             marginBottom: "var(--space-10)",
           }}
         >
-          <Image src={project.cover_image} alt={project.title} fill style={{ objectFit: "cover" }} />
+          <Image src={project.coverImage} alt={project.title} fill style={{ objectFit: "cover" }} />
         </div>
       ) : (
         <div

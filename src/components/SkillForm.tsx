@@ -7,15 +7,15 @@ import { Field, Input, Button } from "@/components/ui";
 interface SkillData {
   name: string;
   category: string;
-  sort_order: number;
+  sortOrder: number;
 }
 
 interface Props {
-  skillId?: number;
+  skillId?: string;
   initial?: Partial<SkillData>;
 }
 
-const DEFAULT: SkillData = { name: "", category: "", sort_order: 0 };
+const DEFAULT: SkillData = { name: "", category: "", sortOrder: 0 };
 
 export function SkillForm({ skillId, initial }: Props) {
   const router = useRouter();
@@ -64,7 +64,7 @@ export function SkillForm({ skillId, initial }: Props) {
         </Field>
       </div>
       <Field label="Sort order">
-        <Input type="number" value={data.sort_order} onChange={(e) => set("sort_order", Number(e.target.value))} />
+        <Input type="number" value={data.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} />
       </Field>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", paddingTop: "var(--space-5)", borderTop: "1px solid var(--border)" }}>
         <Button type="submit" variant="accent" disabled={saving}>

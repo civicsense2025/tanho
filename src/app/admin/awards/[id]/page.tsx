@@ -10,7 +10,7 @@ export default async function EditAwardPage({ params }: { params: Promise<{ id: 
   const authed = await getAdminSession();
   if (!authed) redirect("/admin/login");
   const { id } = await params;
-  const award = await getAwardById(Number(id));
+  const award = await getAwardById(id);
   if (!award) redirect("/admin");
 
   return (
@@ -23,7 +23,7 @@ export default async function EditAwardPage({ params }: { params: Promise<{ id: 
           description: award.description || "",
           date: award.date || "",
           url: award.url || "",
-          sort_order: award.sort_order,
+          sortOrder: award.sortOrder,
         }}
       />
     </AdminPageShell>

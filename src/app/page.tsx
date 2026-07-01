@@ -85,7 +85,7 @@ export default async function Home() {
                 title={p.title}
                 year={p.year}
                 tagline={p.tagline}
-                logo={p.logo_url}
+                logo={p.logoUrl}
                 tags={parseTags(p.tags)}
                 href={`/projects/${p.slug}`}
               />
@@ -98,7 +98,7 @@ export default async function Home() {
         <section style={{ marginBottom: "var(--space-12)" }}>
           <Eyebrow>Experience</Eyebrow>
           {experiences.map((e, i) => (
-            <Row key={e.id} span={`${e.start_date ?? ""}${e.start_date ? " — " : ""}${e.current ? "Present" : e.end_date ?? ""}`} last={i === experiences.length - 1}>
+            <Row key={e.id} span={`${e.startDate ?? ""}${e.startDate ? " — " : ""}${e.current ? "Present" : e.endDate ?? ""}`} last={i === experiences.length - 1}>
               <div style={{ marginBottom: "var(--space-2)", lineHeight: "var(--leading-snug)" }}>
                 <span style={{ fontSize: "var(--text-body)", fontWeight: 500, color: "var(--text)" }}>{e.role}</span>
                 <span style={{ fontSize: "var(--text-sm)", color: "var(--accent)", marginLeft: "var(--space-3)" }}>{e.company}</span>

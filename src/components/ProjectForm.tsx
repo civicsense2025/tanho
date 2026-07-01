@@ -7,25 +7,25 @@ import { Field, Input, Select, Textarea, Button } from "@/components/ui";
 interface Block {
   type: "text" | "image" | "video" | "metric" | "gallery";
   content: Record<string, unknown>;
-  sort_order: number;
+  sortOrder: number;
 }
 
 interface ProjectData {
   title: string; slug: string; tagline: string; description: string;
-  cover_image: string; logo_url: string; tags: string[]; github_url: string; live_url: string;
-  year: number; status: "draft" | "published"; sort_order: number; blocks: Block[];
+  coverImage: string; logoUrl: string; tags: string[]; githubUrl: string; liveUrl: string;
+  year: number; status: "draft" | "published"; sortOrder: number; blocks: Block[];
 }
 
 interface Props {
-  projectId?: number;
+  projectId?: string;
   initial?: Partial<ProjectData>;
-  initialBlocks?: Array<{ type: string; content: string; sort_order: number }>;
+  initialBlocks?: Array<{ type: string; content: string; sortOrder: number }>;
 }
 
 const DEFAULT: ProjectData = {
-  title: "", slug: "", tagline: "", description: "", cover_image: "", logo_url: "",
-  tags: [], github_url: "", live_url: "", year: new Date().getFullYear(),
-  status: "draft", sort_order: 0, blocks: [],
+  title: "", slug: "", tagline: "", description: "", coverImage: "", logoUrl: "",
+  tags: [], githubUrl: "", liveUrl: "", year: new Date().getFullYear(),
+  status: "draft", sortOrder: 0, blocks: [],
 };
 
 const labelStyle: CSSProperties = {
@@ -51,7 +51,7 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
   const router = useRouter();
   const [data, setData] = useState<ProjectData>({
     ...DEFAULT, ...initial,
-    blocks: initialBlocks.map((b) => ({ type: b.type as Block["type"], content: JSON.parse(b.content), sort_order: b.sort_order })),
+    blocks: initialBlocks.map((b) => ({ type: b.type as Block["type"], content: JSON.parse(b.content), sortOrder: b.sortOrder })),
   });
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,7 +65,7 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
   const addBlock = (type: Block["type"]) => {
     const defaultContent: Record<string, unknown> =
       type === "metric" ? { metrics: [{ label: "", value: "" }] } : type === "gallery" ? { images: [] } : {};
-    set("blocks", [...data.blocks, { type, content: defaultContent, sort_order: data.blocks.length }]);
+    set("blocks", [...data.blocks, { type, content: defaultContent, sortOrder: data.blocks.length }]);
   };
   const updateBlock = (i: number, content: Record<string, unknown>) =>
     set("blocks", data.blocks.map((b, idx) => (idx === i ? { ...b, content } : b)));
@@ -81,20 +81,20 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
   const uploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setUploadingCover(true);
-    set("cover_image", await uploadFile(file));
+    set("coverImage", await uploadFile(file));
     setUploadingCover(false);
   };
 
   const uploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setUploadingLogo(true);
-    set("logo_url", await uploadFile(file));
+    set("logoUrl", await uploadFile(file));
     setUploadingLogo(false);
   };
 
   async function save() {
     setSaving(true);
-    const payload = { ...data, blocks: data.blocks.map((b, i) => ({ type: b.type, content: JSON.stringify(b.content), sort_order: i })) };
+    const payload = { ...data, blocks: data.blocks.map((b, i) => ({ type: b.type, content: JSON.stringify(b.content), sortOrder: i })) };
     const res = projectId
       ? await fetch(`/api/projects/${projectId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       : await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -128,8 +128,8 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
           </Field>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
-          <Field label="Live URL"><Input value={data.live_url} onChange={(e) => set("live_url", e.target.value)} placeholder="https://" /></Field>
-          <Field label="GitHub URL"><Input value={data.github_url} onChange={(e) => set("github_url", e.target.value)} placeholder="https://github.com/…" /></Field>
+          <Field label="Live URL"><Input value={data.liveUrl} onChange={(e) => set("liveUrl", e.target.value)} placeholder="https://" /></Field>
+          <Field label="GitHub URL"><Input value={data.githubUrl} onChange={(e) => set("githubUrl", e.target.value)} placeholder="https://github.com/…" /></Field>
         </div>
 
         {/* tag chip editor */}
@@ -156,25 +156,25 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
           <div>
             <span style={labelStyle}>Cover image</span>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              {data.cover_image && (
+              {data.coverImage && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={data.cover_image} alt="" style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} />
+                <img src={data.coverImage} alt="" style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} />
               )}
               <input type="file" accept="image/*" onChange={uploadCover} style={fileInputStyle} />
               {uploadingCover && <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Uploading…</p>}
-              <Input value={data.cover_image} onChange={(e) => set("cover_image", e.target.value)} placeholder="Or paste URL" />
+              <Input value={data.coverImage} onChange={(e) => set("coverImage", e.target.value)} placeholder="Or paste URL" />
             </div>
           </div>
           <div>
             <span style={labelStyle}>Logo</span>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              {data.logo_url && (
+              {data.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={data.logo_url} alt="" style={{ width: 64, height: 64, objectFit: "contain", borderRadius: "var(--radius-sm)", background: "var(--surface)", border: "1px solid var(--border)" }} />
+                <img src={data.logoUrl} alt="" style={{ width: 64, height: 64, objectFit: "contain", borderRadius: "var(--radius-sm)", background: "var(--surface)", border: "1px solid var(--border)" }} />
               )}
               <input type="file" accept="image/*" onChange={uploadLogo} style={fileInputStyle} />
               {uploadingLogo && <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Uploading…</p>}
-              <Input value={data.logo_url} onChange={(e) => set("logo_url", e.target.value)} placeholder="Or paste URL" />
+              <Input value={data.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="Or paste URL" />
             </div>
           </div>
         </div>

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     description: body.description || null,
     date: body.date || null,
     url: body.url || null,
-    sort_order: body.sort_order || 0,
+    sortOrder: body.sortOrder || 0,
   });
   return NextResponse.json(award, { status: 201 });
 }

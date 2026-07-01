@@ -13,11 +13,11 @@ export async function POST(req: NextRequest) {
   const project = await createProject({
     slug: body.slug || slugify(body.title),
     title: body.title, tagline: body.tagline || null,
-    description: body.description || null, cover_image: body.cover_image || null,
-    logo_url: body.logo_url || null,
-    tags: JSON.stringify(body.tags || []), github_url: body.github_url || null,
-    live_url: body.live_url || null, year: body.year || new Date().getFullYear(),
-    status: body.status || "draft", sort_order: body.sort_order || 0,
+    description: body.description || null, coverImage: body.coverImage || null,
+    logoUrl: body.logoUrl || null,
+    tags: JSON.stringify(body.tags || []), githubUrl: body.githubUrl || null,
+    liveUrl: body.liveUrl || null, year: body.year || new Date().getFullYear(),
+    status: body.status || "draft", sortOrder: body.sortOrder || 0,
   });
   return NextResponse.json(project, { status: 201 });
 }

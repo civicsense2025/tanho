@@ -13,7 +13,7 @@ export default async function EditProjectPage({ params }: Props) {
   const authed = await getAdminSession();
   if (!authed) redirect("/admin/login");
   const { id } = await params;
-  const project = await getProjectById(Number(id));
+  const project = await getProjectById(id);
   if (!project) notFound();
   const blocks = await getBlocks(project.id);
 
@@ -24,10 +24,10 @@ export default async function EditProjectPage({ params }: Props) {
         initial={{
           title: project.title, slug: project.slug,
           tagline: project.tagline || "", description: project.description || "",
-          cover_image: project.cover_image || "", logo_url: project.logo_url || "", tags: parseTags(project.tags),
-          github_url: project.github_url || "", live_url: project.live_url || "",
+          coverImage: project.coverImage || "", logoUrl: project.logoUrl || "", tags: parseTags(project.tags),
+          githubUrl: project.githubUrl || "", liveUrl: project.liveUrl || "",
           year: project.year || new Date().getFullYear(),
-          status: project.status, sort_order: project.sort_order,
+          status: project.status, sortOrder: project.sortOrder,
         }}
         initialBlocks={blocks}
       />

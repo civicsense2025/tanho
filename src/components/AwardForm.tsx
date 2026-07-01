@@ -10,15 +10,15 @@ interface AwardData {
   description: string;
   date: string;
   url: string;
-  sort_order: number;
+  sortOrder: number;
 }
 
 interface Props {
-  awardId?: number;
+  awardId?: string;
   initial?: Partial<AwardData>;
 }
 
-const DEFAULT: AwardData = { title: "", organization: "", description: "", date: "", url: "", sort_order: 0 };
+const DEFAULT: AwardData = { title: "", organization: "", description: "", date: "", url: "", sortOrder: 0 };
 
 export function AwardForm({ awardId, initial }: Props) {
   const router = useRouter();
@@ -76,7 +76,7 @@ export function AwardForm({ awardId, initial }: Props) {
         <Textarea rows={3} value={data.description} onChange={(e) => set("description", e.target.value)} placeholder="What the award is for…" />
       </Field>
       <Field label="Sort order">
-        <Input type="number" value={data.sort_order} onChange={(e) => set("sort_order", Number(e.target.value))} />
+        <Input type="number" value={data.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} />
       </Field>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", paddingTop: "var(--space-5)", borderTop: "1px solid var(--border)" }}>
         <Button type="submit" variant="accent" disabled={saving}>

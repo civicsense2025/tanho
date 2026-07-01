@@ -10,7 +10,7 @@ export default async function EditExperiencePage({ params }: { params: Promise<{
   const authed = await getAdminSession();
   if (!authed) redirect("/admin/login");
   const { id } = await params;
-  const experience = await getExperienceById(Number(id));
+  const experience = await getExperienceById(id);
   if (!experience) redirect("/admin");
 
   return (
@@ -21,10 +21,10 @@ export default async function EditExperiencePage({ params }: { params: Promise<{
           company: experience.company,
           role: experience.role,
           description: experience.description || "",
-          start_date: experience.start_date || "",
-          end_date: experience.end_date || "",
+          startDate: experience.startDate || "",
+          endDate: experience.endDate || "",
           current: experience.current === 1,
-          sort_order: experience.sort_order,
+          sortOrder: experience.sortOrder,
         }}
       />
     </AdminPageShell>
