@@ -1,6 +1,15 @@
 import type { Metadata } from "next";
 import type { SeoTemplate } from "./db/types";
 
+/** Absolute origin (no trailing slash) used to build canonical URLs, sitemap.xml, robots.txt,
+ * and JSON-LD. Falls back to localhost so local dev/build doesn't crash when unset. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+
+/** Builds an absolute URL for `path` (must start with "/") off SITE_URL. */
+export function absoluteUrl(path: string): string {
+  return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 interface SeoFields {
   seoTitle: string | null;
   seoDescription: string | null;
@@ -13,6 +22,10 @@ interface SeoFallbacks {
   title: string;
   tagline?: string | null;
   coverImage?: string | null;
+  /** This entity's own public route (e.g. `/projects/my-slug`), used to build the default
+   * absolute canonical URL when no canonicalUrl override is set. Optional so callers that
+   * don't care about canonical tags (none currently) aren't forced to pass one. */
+  path?: string;
   /** Extra {{variable}} values (beyond title/tagline) referenced by this entity type's
    * template, e.g. { summary } for guides/resources. Merged with title/tagline when
    * resolving `template` below. */
@@ -23,7 +36,8 @@ interface SeoFallbacks {
  * for description -> tagline, ogImage -> coverImage. `template` is optional so callers with
  * no seo_templates row (or that haven't fetched one) still get the old title/tagline-only
  * fallback. Shared by every generateMetadata() call site so the fallback logic lives in one
- * place. */
+ * place. Canonical: fields.canonicalUrl (made absolute if relative) -> absolute URL built
+ * from fallbacks.path -> unset. */
 export function buildMetadata(fields: SeoFields, fallbacks: SeoFallbacks, template?: SeoTemplate): Metadata {
   const vars = { title: fallbacks.title, tagline: fallbacks.tagline, ...fallbacks.vars };
   const templateTitle = template?.titleTemplate ? resolveTemplate(template.titleTemplate, vars) : "";
@@ -39,7 +53,14 @@ export function buildMetadata(fields: SeoFields, fallbacks: SeoFallbacks, templa
     openGraph: { title, description, images: image ? [image] : undefined },
   };
 
-  if (fields.canonicalUrl) metadata.alternates = { canonical: fields.canonicalUrl };
+  const canonical = fields.canonicalUrl
+    ? fields.canonicalUrl.startsWith("http")
+      ? fields.canonicalUrl
+      : absoluteUrl(fields.canonicalUrl)
+    : fallbacks.path
+      ? absoluteUrl(fallbacks.path)
+      : undefined;
+  if (canonical) metadata.alternates = { canonical };
   if (fields.noIndex) metadata.robots = { index: false, follow: false };
 
   return metadata;
