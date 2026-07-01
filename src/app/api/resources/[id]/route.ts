@@ -8,7 +8,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const resource = await getResourceById(id);
   if (!resource) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(resource);
+  if (await getAdminSession()) return NextResponse.json(resource);
+  // Non-admins never see draft/internal-only resources or internalNotes, matching
+  // the same is_public/status gating listResources() already applies to list views.
+  if (resource.isPublic !== 1 || resource.status !== "published") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const { internalNotes: _internalNotes, ...publicResource } = resource;
+  return NextResponse.json(publicResource);
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
