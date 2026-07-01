@@ -44,6 +44,19 @@ for (const harness of harnesses) {
       expect(fields.some((f: { key: string; kind: string }) => f.key === "blocks" && f.kind === "block-list")).toBe(true);
     });
 
+    it("marks sourcePlatform/targetPlatform for dynamic (platform-list) options, not a static list", async () => {
+      // Regression test: these two fields were seeded as bare 'select' fields with no options
+      // at all, leaving the admin dropdown permanently empty. dynamicOptions: "platforms" tells
+      // EntryForm to populate them from listPlatforms() at render time instead.
+      const db = await harness.make();
+      const types = await db.contentTypes.list({ where: { slug: "guide" } });
+      const fields: { key: string; dynamicOptions?: string }[] = JSON.parse(types[0].fields);
+      const sourcePlatform = fields.find((f) => f.key === "sourcePlatform");
+      const targetPlatform = fields.find((f) => f.key === "targetPlatform");
+      expect(sourcePlatform?.dynamicOptions).toBe("platforms");
+      expect(targetPlatform?.dynamicOptions).toBe("platforms");
+    });
+
     it("seeds every built-in content type with a real, non-empty id", async () => {
       // Regression test: the mongo seed migration used $setOnInsert with no `id` field, and
       // mongoRepository's fromDoc() never synthesizes one from _id -- every built-in content

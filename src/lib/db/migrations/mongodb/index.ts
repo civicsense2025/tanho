@@ -9,7 +9,8 @@ import { siteSettings } from "./0007_site_settings";
 import { contentTypes } from "./0008_content_types";
 import { seedBuiltinTypes } from "./0009_seed_builtin_types";
 import { fixGuideSeedBlocksField } from "./fix_guide_seed_blocks_field";
+import { addPlatformDynamicOptions } from "./add_platform_dynamic_options";
 import { backfillLegacyData } from "./backfill_legacy_data";
 import { dropLegacyCollections } from "./0010_drop_legacy_collections";
 
-export const mongoMigrations: MongoMigration[] = [init, pages, guides, seoTemplates, newsletter, payments, siteSettings, contentTypes, seedBuiltinTypes, fixGuideSeedBlocksField, backfillLegacyData, dropLegacyCollections];
+export const mongoMigrations: MongoMigration[] = [init, pages, guides, seoTemplates, newsletter, payments, siteSettings, contentTypes, seedBuiltinTypes, fixGuideSeedBlocksField, addPlatformDynamicOptions, backfillLegacyData, dropLegacyCollections];
