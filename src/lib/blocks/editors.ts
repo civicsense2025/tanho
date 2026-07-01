@@ -28,4 +28,8 @@ export const blockEditors: Record<BlockType, ComponentType<BlockEditorProps>> = 
   video: VideoEditor as ComponentType<BlockEditorProps>,
   metric: MetricEditor as ComponentType<BlockEditorProps>,
   gallery: GalleryEditor as ComponentType<BlockEditorProps>,
+  richtext: RichTextEditor as ComponentType<BlockEditorProps>,
+  code: CodeEditor as ComponentType<BlockEditorProps>,
+  callout: CalloutEditor as ComponentType<BlockEditorProps>,
+  checklist: ChecklistEditor as ComponentType<BlockEditorProps>,
 };

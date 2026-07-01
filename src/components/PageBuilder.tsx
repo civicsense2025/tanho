@@ -16,6 +16,10 @@ const DEFAULT_CONTENT: Record<BlockType, Record<string, unknown>> = {
   video: {},
   metric: { metrics: [{ label: "", value: "" }] },
   gallery: { images: [] },
+  richtext: {},
+  code: {},
+  callout: {},
+  checklist: { items: [] },
 };
 
 /** Generic block-tree editor consuming the shared block-type registry.

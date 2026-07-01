@@ -1,20 +1,20 @@
-import { marked } from "marked";
+import { renderRichText } from "@/lib/richtext/renderRichText";
 import { readPostMdx, writePostMdx, renamePostMdx } from "./store";
-import { sanitizeHtml } from "@/lib/sanitize";
 
-/** Reads a post's markdown body from content/posts/<slug>.mdx. Empty string if none yet. */
+/** Reads a post's body from content/posts/<slug>.mdx. Empty string if none yet. Returns the raw
+ * stored source, which the admin editor needs unmodified. */
 export async function getPostBody(slug: string): Promise<string> {
   return (await readPostMdx(slug)) ?? "";
 }
 
-/** Renders a post's markdown to sanitized HTML. Posts are authored as markdown (unlike the
- * raw-HTML project bodies), so we run marked → sanitizeHtml; the DOMPurify allowlist is the
- * same trust boundary used everywhere else content becomes HTML. */
+/** Renders a post's body to sanitized HTML via the shared renderRichText trust boundary. Post
+ * bodies are stored sanitized-HTML-shaped (the same treatment as TipTap output and the HTML-mode
+ * textarea's freeform input), so rendering is just re-sanitizing at the trust boundary -- the
+ * DOMPurify allowlist is the same one used everywhere else content becomes HTML. */
 export async function renderPostBody(slug: string): Promise<string> {
-  const md = await getPostBody(slug);
-  if (!md) return "";
-  const html = await marked.parse(md);
-  return sanitizeHtml(html);
+  const body = await getPostBody(slug);
+  if (!body) return "";
+  return renderRichText(body);
 }
 
 export async function savePostBody(slug: string, body: string): Promise<void> {

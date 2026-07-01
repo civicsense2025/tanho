@@ -55,4 +55,28 @@ describe("block bundle split", () => {
     const leaks = graph.filter((f) => FORBIDDEN.some((re) => re.test(f)));
     expect(leaks).toEqual([]);
   });
+
+  it("the server-only block renderers never transitively import TipTap or a 'use client' module", () => {
+    const entry = resolve(SRC, "lib/blocks/renderers.ts");
+    const graph = [...collectGraph(entry)];
+
+    // @tiptap/* is a bare import (skipped by resolveImport), so scan raw specifiers, not graph paths.
+    const tiptapLeaks: string[] = [];
+    const useClientLeaks: string[] = [];
+    const importRe = /import[\s\S]*?from\s*["']([^"']+)["']/g;
+    for (const file of graph) {
+      const src = readFileSync(file, "utf8");
+      const head = src.trimStart();
+      if (head.startsWith('"use client"') || head.startsWith("'use client'")) {
+        useClientLeaks.push(file);
+      }
+      importRe.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = importRe.exec(src))) {
+        if (m[1].includes("@tiptap")) tiptapLeaks.push(`${file} -> ${m[1]}`);
+      }
+    }
+    expect(tiptapLeaks, `renderers.ts graph pulled @tiptap: ${tiptapLeaks.join(", ")}`).toEqual([]);
+    expect(useClientLeaks, `renderers.ts graph pulled a "use client" module: ${useClientLeaks.join(", ")}`).toEqual([]);
+  });
 });

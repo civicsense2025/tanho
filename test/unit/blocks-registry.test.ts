@@ -37,8 +37,28 @@ describe("defineBlock guardrails", () => {
 });
 
 describe("block registry", () => {
-  it("registers exactly the five content blocks in order", () => {
-    expect(BLOCK_TYPES).toEqual(["text", "image", "video", "metric", "gallery"]);
+  it("registers the core content blocks (in registry order, tolerant of added types)", () => {
+    // The five original blocks must remain registered; additional block types may be appended.
+    for (const core of ["text", "image", "video", "metric", "gallery"]) {
+      expect(BLOCK_TYPES).toContain(core);
+    }
+    // First five keep their canonical order.
+    expect(BLOCK_TYPES.slice(0, 5)).toEqual(["text", "image", "video", "metric", "gallery"]);
+  });
+
+  it("registers the rich-content block kinds (richtext, code, callout, checklist)", () => {
+    // Appended after the five originals; only presence (not inter-kind order) is pinned here.
+    for (const type of ["richtext", "code", "callout", "checklist"]) {
+      expect(BLOCK_TYPES).toContain(type);
+      expect(getBlockSpec(type)).toBeDefined();
+    }
+  });
+
+  it("each rich-content kind's default content parses to its documented shape", () => {
+    expect(blockSpecs.richtext.schema.parse(blockSpecs.richtext.defaultContent)).toEqual({ html: "" });
+    expect(blockSpecs.code.schema.parse(blockSpecs.code.defaultContent)).toEqual({ code: "" });
+    expect(blockSpecs.callout.schema.parse(blockSpecs.callout.defaultContent)).toEqual({ html: "", variant: "default" });
+    expect(blockSpecs.checklist.schema.parse(blockSpecs.checklist.defaultContent)).toEqual({ items: [] });
   });
 
   it("every spec's default content parses (defineBlock enforces this at load)", () => {

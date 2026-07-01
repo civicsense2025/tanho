@@ -4,6 +4,10 @@ import { ImageRenderer } from "./renderers/ImageRenderer";
 import { VideoRenderer } from "./renderers/VideoRenderer";
 import { MetricRenderer } from "./renderers/MetricRenderer";
 import { GalleryRenderer } from "./renderers/GalleryRenderer";
+import { RichTextRenderer } from "./renderers/RichTextRenderer";
+import { CodeRenderer } from "./renderers/CodeRenderer";
+import { CalloutRenderer } from "./renderers/CalloutRenderer";
+import { ChecklistRenderer } from "./renderers/ChecklistRenderer";
 import type { BlockType } from "./types";
 
 /** Shared render signature. `content` is the block's own content (widened to one type across
@@ -29,4 +33,8 @@ export const blockRenderers: Record<BlockType, ComponentType<BlockRendererProps>
   video: VideoRenderer as ComponentType<BlockRendererProps>,
   metric: MetricRenderer as ComponentType<BlockRendererProps>,
   gallery: GalleryRenderer as ComponentType<BlockRendererProps>,
+  richtext: RichTextRenderer as ComponentType<BlockRendererProps>,
+  code: CodeRenderer as ComponentType<BlockRendererProps>,
+  callout: CalloutRenderer as ComponentType<BlockRendererProps>,
+  checklist: ChecklistRenderer as ComponentType<BlockRendererProps>,
 };
