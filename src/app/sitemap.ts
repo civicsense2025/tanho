@@ -1,24 +1,26 @@
 import type { MetadataRoute } from "next";
-import { getPage, listGuides, listPosts, listProjects } from "@/lib/db";
+import { listContentEntries, getContentTypeBySlug } from "@/lib/db";
 import { SITE_URL } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
 
-// Resources have no standalone detail route -- they only ever appear inline via
-// /guides/resources and a guide's "further reading" list -- so they're intentionally
-// excluded here, matching the task's directive to skip entities with no own page.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSettings();
-  const [homepage, projects, guides, posts] = await Promise.all([
-    getPage("home"),
-    listProjects(true),
-    listGuides({ publishedOnly: true }),
-    settings.features.newsletter ? listPosts(true) : Promise.resolve([]),
+  const [projectType, guideType, postType] = await Promise.all([
+    getContentTypeBySlug("project"),
+    getContentTypeBySlug("guide"),
+    getContentTypeBySlug("post"),
+  ]);
+
+  const [projects, guides, posts] = await Promise.all([
+    projectType ? listContentEntries({ contentTypeId: projectType.id, publishedOnly: true }) : Promise.resolve([]),
+    guideType ? listContentEntries({ contentTypeId: guideType.id, publishedOnly: true }) : Promise.resolve([]),
+    postType && settings.features.newsletter ? listContentEntries({ contentTypeId: postType.id, publishedOnly: true }) : Promise.resolve([]),
   ]);
 
   const entries: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
-      lastModified: homepage ? new Date(homepage.updatedAt) : undefined,
+      lastModified: undefined,
       changeFrequency: "monthly",
       priority: 1,
     },

@@ -8,6 +8,7 @@ import { sql as newsletter } from "./0006_newsletter";
 import { sql as payments } from "./0007_payments";
 import { sql as siteSettings } from "./0008_site_settings";
 import { sql as contentTypes } from "./0009_content_types";
+import { seedBuiltinTypes } from "./0010_seed_builtin_types";
 
 export const postgresMigrations: SqlMigration[] = [
   { name: "0001_init", sql: init },
@@ -19,4 +20,5 @@ export const postgresMigrations: SqlMigration[] = [
   { name: "0007_payments", sql: payments },
   { name: "0008_site_settings", sql: siteSettings },
   { name: "0009_content_types", sql: contentTypes },
+  seedBuiltinTypes,
 ];

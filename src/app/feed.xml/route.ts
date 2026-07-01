@@ -1,11 +1,10 @@
-import { listPosts } from "@/lib/db";
-import { renderPostBody } from "@/lib/content/post-content";
+import { listContentEntries, getContentTypeBySlug } from "@/lib/db";
 import { SITE_URL } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
+import { renderRichText } from "@/lib/richtext/renderRichText";
 
 export const dynamic = "force-dynamic";
 
-/** Escapes text for safe inclusion in XML character data / attributes. */
 function xml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -15,36 +14,41 @@ function xml(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/** RSS 2.0 feed of published posts. PAID posts emit title + excerpt only — never the body — so
- * the feed can't be used to bypass the paywall. Public posts include the full rendered, sanitized
- * HTML body in a CDATA <content:encoded>. When newsletter is off, returns 404. */
+function parseData(dataJson: string): Record<string, unknown> {
+  try {
+    return JSON.parse(dataJson) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export async function GET() {
   const settings = await getSettings();
   if (!settings.features.newsletter) {
     return new Response("Not found", { status: 404 });
   }
 
-  const posts = await listPosts(true);
+  const postType = await getContentTypeBySlug("post");
+  const posts = postType ? await listContentEntries({ contentTypeId: postType.id, publishedOnly: true }) : [];
 
-  const items = await Promise.all(
-    posts.map(async (p) => {
-      const link = `${SITE_URL}/posts/${p.slug}`;
-      const pubDate = p.publishedAt ? new Date(p.publishedAt).toUTCString() : new Date(p.createdAt).toUTCString();
-      const isPaid = p.visibility === "paid";
-      const bodyHtml = isPaid ? "" : await renderPostBody(p.slug);
-      const description = p.excerpt ?? "";
-      const contentBlock = bodyHtml
-        ? `\n      <content:encoded><![CDATA[${bodyHtml}]]></content:encoded>`
-        : "";
-      return `    <item>
+  const items = posts.map((p) => {
+    const data = parseData(p.data);
+    const link = `${SITE_URL}/posts/${p.slug}`;
+    const pubDate = p.publishedAt ? new Date(p.publishedAt).toUTCString() : new Date(p.createdAt).toUTCString();
+    const isPaid = data.visibility === "paid";
+    const bodyHtml = isPaid ? "" : renderRichText(String(data.body || ""));
+    const description = data.excerpt ? String(data.excerpt) : "";
+    const contentBlock = bodyHtml
+      ? `\n      <content:encoded><![CDATA[${bodyHtml}]]></content:encoded>`
+      : "";
+    return `    <item>
       <title>${xml(p.title)}</title>
       <link>${xml(link)}</link>
       <guid isPermaLink="true">${xml(link)}</guid>
       <pubDate>${pubDate}</pubDate>
       <description>${xml(description)}</description>${contentBlock}
     </item>`;
-    })
-  );
+  });
 
   const feed = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
