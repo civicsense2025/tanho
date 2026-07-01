@@ -43,5 +43,19 @@ for (const harness of harnesses) {
       const fields = JSON.parse(types[0].fields);
       expect(fields.some((f: { key: string; kind: string }) => f.key === "blocks" && f.kind === "block-list")).toBe(true);
     });
+
+    it("seeds every built-in content type with a real, non-empty id", async () => {
+      // Regression test: the mongo seed migration used $setOnInsert with no `id` field, and
+      // mongoRepository's fromDoc() never synthesizes one from _id -- every built-in content
+      // type had id === undefined on Mongo, breaking any content_entries.contentTypeId
+      // reference, the admin UI, and every other id-keyed lookup for that entire backend.
+      const db = await harness.make();
+      const types = await db.contentTypes.list();
+      expect(types.length).toBeGreaterThanOrEqual(5);
+      for (const t of types) {
+        expect(t.id, `content type "${t.slug}" has an invalid id`).toBeTruthy();
+        expect(typeof t.id).toBe("string");
+      }
+    });
   });
 }

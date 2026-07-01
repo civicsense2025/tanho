@@ -10,6 +10,7 @@ import { sql as siteSettings } from "./0008_site_settings";
 import { sql as contentTypes } from "./0009_content_types";
 import { seedBuiltinTypes } from "./0010_seed_builtin_types";
 import { fixGuideSeedBlocksField } from "./fix_guide_seed_blocks_field";
+import { backfillLegacyData } from "./backfill_legacy_data";
 import { dropLegacyTables } from "./0011_drop_legacy_tables";
 
 export const postgresMigrations: PostgresMigration[] = [
@@ -24,5 +25,6 @@ export const postgresMigrations: PostgresMigration[] = [
   { name: "0009_content_types", sql: contentTypes },
   seedBuiltinTypes,
   fixGuideSeedBlocksField,
+  ...backfillLegacyData,
   dropLegacyTables,
 ];
