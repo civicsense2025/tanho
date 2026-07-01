@@ -9,6 +9,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const project = await getProjectById(id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Draft bodies are admin-only, matching the public project page's own
+  // published-only gate -- unlike the list/detail metadata routes, this can
+  // return substantial unpublished prose, so it doesn't inherit their
+  // (pre-existing, out of scope here) unauthenticated-GET pattern.
+  if (project.status !== "published" && !(await getAdminSession())) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const body = await getProjectBody(project);
   return NextResponse.json({ body });
 }

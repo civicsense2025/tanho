@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/auth";
 import { getProjectById, updateProject, deleteProject, getBlocks, upsertBlocks } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 import { handleSlugRename } from "@/lib/content/project-content";
+import { deleteProjectMdx } from "@/lib/content/store";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,6 +42,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
+  const project = await getProjectById(id);
   await deleteProject(id);
+  if (project) await deleteProjectMdx(project.slug);
   return NextResponse.json({ ok: true });
 }
