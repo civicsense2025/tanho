@@ -294,10 +294,6 @@ export interface DbAdapter {
   subscribers: Repository<Subscriber>;
   orders: Repository<Order>;
   subscriptions: Repository<Subscription>;
-  /** resource_platforms is a plain many-to-many join with no payload of its own. */
-  getPlatformsForResource(resourceId: string): Promise<Platform[]>;
-  setResourcePlatforms(resourceId: string, platformIds: string[]): Promise<void>;
-  getResourcesForPlatform(platformSlug: string, publicOnly?: boolean): Promise<ContentEntry[]>;
   getPlatformBySlug(slug: string): Promise<Platform | undefined>;
   /** Upsert-by-slug, used by scripts/seed-platforms.ts to make seeding idempotent. */
   upsertPlatform(data: Omit<Platform, "id">): Promise<Platform>;

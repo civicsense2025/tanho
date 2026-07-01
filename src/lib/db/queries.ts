@@ -161,21 +161,6 @@ export async function upsertPlatform(data: Omit<Platform, "id">): Promise<Platfo
   return adapter.upsertPlatform(data);
 }
 
-export async function getPlatformsForResource(resourceId: string): Promise<Platform[]> {
-  const adapter = await getAdapter();
-  return adapter.getPlatformsForResource(resourceId);
-}
-
-export async function setResourcePlatforms(resourceId: string, platformIds: string[]): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.setResourcePlatforms(resourceId, platformIds);
-}
-
-export async function getResourcesForPlatform(platformSlug: string, publicOnly?: boolean): Promise<ContentEntry[]> {
-  const adapter = await getAdapter();
-  return adapter.getResourcesForPlatform(platformSlug, publicOnly);
-}
-
 export async function listTags(): Promise<Tag[]> {
   const adapter = await getAdapter();
   return adapter.tags.list({ orderBy: [{ field: "name" as keyof Tag, direction: "asc" }] });

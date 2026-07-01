@@ -268,36 +268,6 @@ export function createMongoAdapter(): DbAdapter {
     };
   }
 
-  /** resource_platforms is modeled as its own collection of plain {resourceId, platformId} docs. */
-  async function getPlatformsForResource(resourceId: string): Promise<Platform[]> {
-    const joins = await getDb().collection("resource_platforms").find({ resourceId }).toArray();
-    const platformIds = joins.map((j) => j.platformId as string);
-    if (platformIds.length === 0) return [];
-    const docs = await getDb().collection("platforms").find({ id: { $in: platformIds } }).sort({ name: 1 }).toArray();
-    return docs.map((d) => platformFromDoc(d as Record<string, unknown>));
-  }
-
-  async function setResourcePlatforms(resourceId: string, platformIds: string[]): Promise<void> {
-    const collection = getDb().collection("resource_platforms");
-    await collection.deleteMany({ resourceId });
-    if (platformIds.length === 0) return;
-    await collection.insertMany(platformIds.map((platformId) => ({ resourceId, platformId })));
-  }
-
-  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<ContentEntry[]> {
-    const platformDoc = await getDb().collection("platforms").findOne({ slug: platformSlug });
-    if (!platformDoc) return [];
-    const joins = await getDb().collection("resource_platforms").find({ platformId: platformDoc.id }).toArray();
-    const resourceIds = joins.map((j) => j.resourceId as string);
-    if (resourceIds.length === 0) return [];
-    const where: { id: { in: string[] }; status?: ContentEntryStatus } = { id: { in: resourceIds } };
-    if (publicOnly) where.status = "published";
-    return contentEntries.list({
-      where,
-      orderBy: [{ field: "createdAt", direction: "desc" }],
-    });
-  }
-
   async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
     const [p] = await platforms.list({ where: { slug } });
     return p;
@@ -418,9 +388,6 @@ export function createMongoAdapter(): DbAdapter {
     getOrdersByEmail,
     getSubscriptionByStripeId,
     getActiveSubscriptionByEmail,
-    getPlatformsForResource,
-    setResourcePlatforms,
-    getResourcesForPlatform,
     getPlatformBySlug,
     upsertPlatform,
     upsertTag,
