@@ -93,7 +93,7 @@ function sqlRepository<T extends { id: string }>(
     },
 
     async update(id: string, data) {
-      const keys = Object.keys(data) as (keyof Omit<T, "id">)[];
+      const keys = (Object.keys(data) as (keyof Omit<T, "id">)[]).filter((k) => fields.includes(k));
       const setCols = keys.map((k) => `${colFor(k)} = ?`);
       const setVals: InValue[] = keys.map((k) => ((data as Record<string, unknown>)[k as string] ?? null) as InValue);
       if (fields.includes("updatedAt" as never)) {
