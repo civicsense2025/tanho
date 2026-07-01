@@ -1,5 +1,5 @@
 import { getAdminSession } from "@/lib/auth";
-import { listProjects, listExperience, listSkills, listAwards, listEducation } from "@/lib/db";
+import { listProjects, listExperience, listSkills, listAwards, listEducation, listGuides, listResources } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Badge, Button, TextLink } from "@/components/ui";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -16,12 +16,14 @@ const sectionHead = {
 export default async function AdminPage() {
   const authed = await getAdminSession();
   if (!authed) redirect("/admin/login");
-  const [projects, experiences, skills, awards, education] = await Promise.all([
+  const [projects, experiences, skills, awards, education, guides, resources] = await Promise.all([
     listProjects(false),
     listExperience(),
     listSkills(),
     listAwards(),
     listEducation(),
+    listGuides({ publishedOnly: false }),
+    listResources(false),
   ]);
 
   const summary = `${experiences.length} roles · ${skills.length} skills · ${awards.length} awards · ${education.length} schools`;
@@ -200,9 +202,9 @@ export default async function AdminPage() {
         </Button>
       </div>
       {education.length === 0 ? (
-        <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>No schools yet.</p>
+        <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginBottom: "var(--space-8)" }}>No schools yet.</p>
       ) : (
-        <div>
+        <div style={{ marginBottom: "var(--space-8)" }}>
           {education.map((ed, i) => (
             <div
               key={ed.id}
@@ -213,6 +215,62 @@ export default async function AdminPage() {
                 {ed.span && <span style={{ fontSize: "var(--text-xs)", color: "var(--text-faint)" }}>{ed.span}</span>}
               </div>
               <TextLink arrow="forward" muted href={`/admin/education/${ed.id}`} style={{ fontSize: "var(--text-xs)" }}>
+                Edit
+              </TextLink>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Guides */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
+        <h2 style={sectionHead}>Guides</h2>
+        <Button as="a" href="/admin/guides/new" size="sm" variant="outline">
+          + New
+        </Button>
+      </div>
+      {guides.length === 0 ? (
+        <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginBottom: "var(--space-8)" }}>No guides yet.</p>
+      ) : (
+        <div style={{ marginBottom: "var(--space-8)" }}>
+          {guides.map((g, i) => (
+            <div
+              key={g.id}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-4) 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text)" }}>{g.title}</span>
+                <Badge status={g.status === "published" ? "published" : "draft"}>{g.status === "published" ? "Published" : "Draft"}</Badge>
+              </div>
+              <TextLink arrow="forward" muted href={`/admin/guides/${g.id}`} style={{ fontSize: "var(--text-xs)" }}>
+                Edit
+              </TextLink>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Resources */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
+        <h2 style={sectionHead}>Resources</h2>
+        <Button as="a" href="/admin/resources/new" size="sm" variant="outline">
+          + New
+        </Button>
+      </div>
+      {resources.length === 0 ? (
+        <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>No resources yet.</p>
+      ) : (
+        <div>
+          {resources.map((r, i) => (
+            <div
+              key={r.id}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-4) 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text)" }}>{r.title}</span>
+                <Badge status={r.status === "published" ? "published" : "draft"}>{r.status === "published" ? "Published" : "Draft"}</Badge>
+              </div>
+              <TextLink arrow="forward" muted href={`/admin/resources/${r.id}`} style={{ fontSize: "var(--text-xs)" }}>
                 Edit
               </TextLink>
             </div>
