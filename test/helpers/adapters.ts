@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import postgres from "postgres";
 import type { DbAdapter } from "@/lib/db/types";
 
 /**
@@ -94,8 +95,17 @@ export function postgresHarness(): BackendHarness {
     available: Boolean(url),
     async make() {
       // Isolate each run in its own schema so parallel test files never collide and cleanup
-      // is a single DROP SCHEMA CASCADE.
+      // is a single DROP SCHEMA CASCADE. Postgres doesn't auto-create a schema just because
+      // search_path names it -- every CREATE TABLE would otherwise fail with "no schema has
+      // been selected to create in", which is exactly what happened here before this fix: the
+      // schema was never actually created, only pointed at. Date.now().toString(36) is always
+      // alphanumeric (base-36 encoding of a timestamp), so it's a safe bare identifier with no
+      // quoting/escaping needed.
       schema = `tanho_test_${Date.now().toString(36)}`;
+      const setupSql = postgres(url!);
+      await setupSql.unsafe(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+      await setupSql.end();
+
       const { createPostgresAdapter } = await import("@/lib/db/adapters/postgres");
       const adapter = withEnv(
         { POSTGRES_URL: `${url}?options=-c%20search_path%3D${schema}` },
@@ -105,6 +115,11 @@ export function postgresHarness(): BackendHarness {
       return adapter;
     },
     async teardown() {
+      if (schema) {
+        const teardownSql = postgres(url!);
+        await teardownSql.unsafe(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+        await teardownSql.end();
+      }
       schema = null;
     },
   };
