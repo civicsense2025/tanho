@@ -11,7 +11,7 @@ interface Block {
 }
 
 interface ProjectData {
-  title: string; slug: string; tagline: string; description: string;
+  title: string; slug: string; tagline: string;
   coverImage: string; logoUrl: string; tags: string[]; githubUrl: string; liveUrl: string;
   year: number; status: "draft" | "published"; sortOrder: number; blocks: Block[];
 }
@@ -20,10 +20,14 @@ interface Props {
   projectId?: string;
   initial?: Partial<ProjectData>;
   initialBlocks?: Array<{ type: string; content: string; sortOrder: number }>;
+  /** Loaded separately from /api/projects/[id]/content -- this is file-backed
+   * (MDX), not a field on the structured-fields save payload. See ProjectForm's
+   * saveBody(), which PATCHes it independently of the main form save. */
+  initialBody?: string;
 }
 
 const DEFAULT: ProjectData = {
-  title: "", slug: "", tagline: "", description: "", coverImage: "", logoUrl: "",
+  title: "", slug: "", tagline: "", coverImage: "", logoUrl: "",
   tags: [], githubUrl: "", liveUrl: "", year: new Date().getFullYear(),
   status: "draft", sortOrder: 0, blocks: [],
 };
@@ -47,14 +51,16 @@ const sectionLabel: CSSProperties = {
   color: "var(--text-muted)",
 };
 
-export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
+export function ProjectForm({ projectId, initial, initialBlocks = [], initialBody = "" }: Props) {
   const router = useRouter();
   const [data, setData] = useState<ProjectData>({
     ...DEFAULT, ...initial,
     blocks: initialBlocks.map((b) => ({ type: b.type as Block["type"], content: JSON.parse(b.content), sortOrder: b.sortOrder })),
   });
+  const [body, setBody] = useState(initialBody);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingBody, setSavingBody] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -100,6 +106,18 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
       : await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (res.ok) { router.push("/admin"); router.refresh(); }
     else { alert("Save failed"); setSaving(false); }
+  }
+
+  async function saveBody() {
+    if (!projectId) return;
+    setSavingBody(true);
+    const res = await fetch(`/api/projects/${projectId}/content`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    if (!res.ok) alert("Description save failed");
+    setSavingBody(false);
   }
 
   async function handleDelete() {
@@ -178,10 +196,23 @@ export function ProjectForm({ projectId, initial, initialBlocks = [] }: Props) {
             </div>
           </div>
         </div>
+      </section>
 
-        <Field label="Description" hint="HTML allowed">
-          <Textarea mono rows={4} value={data.description} onChange={(e) => set("description", e.target.value)} placeholder="<p>Project overview…</p>" />
-        </Field>
+      {/* description -- file-backed (MDX), saved independently of the fields above */}
+      <section>
+        <h2 style={sectionLabel}>Description</h2>
+        {projectId ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            <Textarea mono rows={6} value={body} onChange={(e) => setBody(e.target.value)} placeholder="<p>Project overview…</p> (HTML allowed)" />
+            <div>
+              <Button type="button" variant="outline" size="sm" onClick={saveBody} disabled={savingBody}>
+                {savingBody ? "Saving…" : "Save description"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>Save the project first to add a description.</p>
+        )}
       </section>
 
       {/* case study blocks */}

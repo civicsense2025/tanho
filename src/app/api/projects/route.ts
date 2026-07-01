@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const project = await createProject({
     slug: body.slug || slugify(body.title),
     title: body.title, tagline: body.tagline || null,
-    description: body.description || null, coverImage: body.coverImage || null,
+    description: null, coverImage: body.coverImage || null,
     logoUrl: body.logoUrl || null,
     tags: JSON.stringify(body.tags || []), githubUrl: body.githubUrl || null,
     liveUrl: body.liveUrl || null, year: body.year || new Date().getFullYear(),

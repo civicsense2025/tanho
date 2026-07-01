@@ -1,5 +1,6 @@
 import { getAdminSession } from "@/lib/auth";
 import { getProjectById, getBlocks } from "@/lib/db";
+import { getProjectBody } from "@/lib/content/project-content";
 import { parseTags } from "@/lib/utils";
 import { redirect, notFound } from "next/navigation";
 import { AdminPageShell } from "@/components/AdminPageShell";
@@ -15,7 +16,7 @@ export default async function EditProjectPage({ params }: Props) {
   const { id } = await params;
   const project = await getProjectById(id);
   if (!project) notFound();
-  const blocks = await getBlocks(project.id);
+  const [blocks, body] = await Promise.all([getBlocks(project.id), getProjectBody(project)]);
 
   return (
     <AdminPageShell title={project.title}>
@@ -23,13 +24,14 @@ export default async function EditProjectPage({ params }: Props) {
         projectId={project.id}
         initial={{
           title: project.title, slug: project.slug,
-          tagline: project.tagline || "", description: project.description || "",
+          tagline: project.tagline || "",
           coverImage: project.coverImage || "", logoUrl: project.logoUrl || "", tags: parseTags(project.tags),
           githubUrl: project.githubUrl || "", liveUrl: project.liveUrl || "",
           year: project.year || new Date().getFullYear(),
           status: project.status, sortOrder: project.sortOrder,
         }}
         initialBlocks={blocks}
+        initialBody={body}
       />
     </AdminPageShell>
   );

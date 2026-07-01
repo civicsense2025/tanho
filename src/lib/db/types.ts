@@ -20,6 +20,7 @@ export interface Project {
   slug: string;
   title: string;
   tagline: string | null;
+  /** @deprecated Long-form project descriptions now live in content/projects/<slug>.mdx (see src/lib/content/store.ts). This column is kept only as a read fallback for rows saved before that change. */
   description: string | null;
   coverImage: string | null;
   logoUrl: string | null;

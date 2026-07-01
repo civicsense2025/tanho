@@ -1,4 +1,5 @@
 import { getProject, getBlocks } from "@/lib/db";
+import { getProjectBody } from "@/lib/content/project-content";
 import { parseTags } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Image from "next/image";
@@ -13,7 +14,7 @@ export default async function ProjectPage({ params }: Props) {
   const project = await getProject(slug);
   if (!project || project.status !== "published") notFound();
 
-  const blocks = await getBlocks(project.id);
+  const [blocks, body] = await Promise.all([getBlocks(project.id), getProjectBody(project)]);
   const tags = parseTags(project.tags);
 
   return (
@@ -107,8 +108,8 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       )}
 
-      {project.description && (
-        <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: project.description }} />
+      {body && (
+        <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: body }} />
       )}
 
       {blocks.length > 0 && (
