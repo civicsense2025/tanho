@@ -3,7 +3,8 @@ import { getProjectBody } from "@/lib/content/project-content";
 import { parseTags } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { Avatar, Tag, Button, TextLink, MetricGrid, type Metric } from "@/components/ui";
+import { Avatar, Tag, Button, TextLink } from "@/components/ui";
+import { BlockTree } from "@/components/BlockTree";
 
 export const dynamic = "force-dynamic";
 
@@ -113,51 +114,7 @@ export default async function ProjectPage({ params }: Props) {
       )}
 
       {blocks.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-10)" }}>
-          {blocks.map((block) => {
-            const content = JSON.parse(block.content);
-            if (block.type === "text")
-              return <div key={block.id} className="prose" dangerouslySetInnerHTML={{ __html: content.html || "" }} />;
-            if (block.type === "image")
-              return (
-                <figure key={block.id} style={{ margin: 0 }}>
-                  <div style={{ position: "relative", overflow: "hidden", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)" }}>
-                    <Image src={content.url} alt={content.caption || ""} width={900} height={600} style={{ width: "100%", height: "auto" }} />
-                  </div>
-                  {content.caption && (
-                    <figcaption style={{ fontSize: "var(--text-xs)", color: "var(--text-faint)", marginTop: "var(--space-2)", textAlign: "center" }}>{content.caption}</figcaption>
-                  )}
-                </figure>
-              );
-            if (block.type === "video")
-              return (
-                <figure key={block.id} style={{ margin: 0 }}>
-                  <video src={content.url} controls style={{ width: "100%", borderRadius: "var(--radius-sm)", background: "var(--surface)" }} poster={content.poster} />
-                  {content.caption && (
-                    <figcaption style={{ fontSize: "var(--text-xs)", color: "var(--text-faint)", marginTop: "var(--space-2)", textAlign: "center" }}>{content.caption}</figcaption>
-                  )}
-                </figure>
-              );
-            if (block.type === "metric") {
-              const metrics = (content.metrics as Metric[]) || [];
-              return <MetricGrid key={block.id} metrics={metrics} columns={metrics.length >= 3 ? 3 : 2} />;
-            }
-            if (block.type === "gallery")
-              return (
-                <div key={block.id} style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "var(--space-2)" }}>
-                  {(content.images as { url: string; caption?: string }[]).map((img, i) => (
-                    <figure key={i} style={{ margin: 0 }}>
-                      <div style={{ position: "relative", aspectRatio: "1 / 1", overflow: "hidden", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)" }}>
-                        <Image src={img.url} alt={img.caption || ""} fill style={{ objectFit: "cover" }} />
-                      </div>
-                      {img.caption && <figcaption style={{ fontSize: "var(--text-xs)", color: "var(--text-faint)", marginTop: "var(--space-1)" }}>{img.caption}</figcaption>}
-                    </figure>
-                  ))}
-                </div>
-              );
-            return null;
-          })}
-        </div>
+        <BlockTree blocks={blocks.map((b) => ({ id: b.id, type: b.type, content: JSON.parse(b.content) }))} />
       )}
     </main>
   );
