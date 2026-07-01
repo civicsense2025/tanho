@@ -10,6 +10,7 @@ import { sql as payments } from "./0008_payments";
 import { sql as siteSettings } from "./0009_site_settings";
 import { sql as contentTypes } from "./0010_content_types";
 import { seedBuiltinTypes } from "./0011_seed_builtin_types";
+import { fixGuideSeedBlocksField } from "./fix_guide_seed_blocks_field";
 import { dropLegacyTables } from "./0012_drop_legacy_tables";
 
 export const libsqlMigrations: SqlMigration[] = [
@@ -24,5 +25,6 @@ export const libsqlMigrations: SqlMigration[] = [
   { name: "0009_site_settings", sql: siteSettings },
   { name: "0010_content_types", sql: contentTypes },
   seedBuiltinTypes,
+  fixGuideSeedBlocksField,
   dropLegacyTables,
 ];

@@ -1,4 +1,4 @@
-import type { SqlMigration } from "../../migrate-runner";
+import type { PostgresMigration } from "../../migrate-runner-postgres";
 
 const BUILTIN_TYPES: { slug: string; name: string; icon: string; fields: string; sortOrder: number }[] = [
   {
@@ -76,7 +76,7 @@ const BUILTIN_TYPES: { slug: string; name: string; icon: string; fields: string;
   },
 ];
 
-export const seedBuiltinTypes: SqlMigration = {
+export const seedBuiltinTypes: PostgresMigration = {
   name: "0010_seed_builtin_types",
   sql: BUILTIN_TYPES.map(
     (t) =>

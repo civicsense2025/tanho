@@ -10,6 +10,7 @@ import Image from "next/image";
 import { renderRichText } from "@/lib/richtext/renderRichText";
 import type { Block } from "@/lib/blocks/types";
 import { BlockTree } from "@/components/BlockTree";
+import { Tag } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default async function GuidePage({ params }: Props) {
   const tagline = data.tagline ? String(data.tagline) : null;
   const summary = data.summary ? String(data.summary) : null;
   const blocks = ((data.blocks as Block[]) || []).map((b, i) => ({ ...b, id: i }));
+  const skillsRequired = Array.isArray(data.skillsRequired) ? (data.skillsRequired as string[]) : [];
+  const requirements = Array.isArray(data.requirements) ? (data.requirements as string[]) : [];
 
   return (
     <main style={{ maxWidth: "var(--width-prose)", margin: "0 auto", padding: "var(--space-10) var(--gutter)" }}>
@@ -90,6 +93,31 @@ export default async function GuidePage({ params }: Props) {
       {coverImage && (
         <div style={{ position: "relative", aspectRatio: "16 / 9", overflow: "hidden", borderRadius: "var(--radius-sm)", marginBottom: "var(--space-10)" }}>
           <Image src={coverImage} alt={entry.title} fill style={{ objectFit: "cover" }} />
+        </div>
+      )}
+
+      {(skillsRequired.length > 0 || requirements.length > 0) && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-8)", marginBottom: "var(--space-10)", paddingBottom: "var(--space-8)", borderBottom: "1px solid var(--border)" }}>
+          {skillsRequired.length > 0 && (
+            <div>
+              <h2 style={{ margin: "0 0 var(--space-3)", fontFamily: "var(--font-label)", fontSize: "var(--text-xs)", textTransform: "uppercase", letterSpacing: "var(--tracking-widest)", color: "var(--text-muted)" }}>
+                Skills required
+              </h2>
+              <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                {skillsRequired.map((s) => <Tag key={s}>{s}</Tag>)}
+              </div>
+            </div>
+          )}
+          {requirements.length > 0 && (
+            <div>
+              <h2 style={{ margin: "0 0 var(--space-3)", fontFamily: "var(--font-label)", fontSize: "var(--text-xs)", textTransform: "uppercase", letterSpacing: "var(--tracking-widest)", color: "var(--text-muted)" }}>
+                Requirements
+              </h2>
+              <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                {requirements.map((r) => <Tag key={r}>{r}</Tag>)}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
