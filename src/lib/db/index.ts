@@ -32,6 +32,7 @@ export type {
   ResourceType,
   SeoEntityType,
   SeoTemplate,
+  SiteSetting,
   Skill,
   Subscriber,
   SubscriberStatus,
