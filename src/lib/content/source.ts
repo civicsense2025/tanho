@@ -1,7 +1,9 @@
 import { readFile } from "fs/promises";
 import path from "path";
+import { unstable_cache } from "next/cache";
 import type { ContentEntry } from "@/lib/db";
 import * as db from "@/lib/db";
+import { TAG_CONTENT, tagForType } from "@/lib/cache";
 
 /**
  * Content-source indirection for the static-vs-dynamic build mode. Data-bound blocks (and any
@@ -29,19 +31,33 @@ async function readSnapshot<T>(name: string): Promise<T[]> {
 }
 
 export async function getContentEntries(typeSlug: string, publishedOnly = true): Promise<ContentEntry[]> {
-  if (!isStatic) {
-    const type = await db.getContentTypeBySlug(typeSlug);
-    if (!type) return [];
-    return db.listContentEntries({ contentTypeId: type.id, publishedOnly });
+  if (isStatic) {
+    const all = await readSnapshot<ContentEntry>(typeSlug);
+    return publishedOnly ? all.filter((e) => e.status === "published") : all;
   }
-  const all = await readSnapshot<ContentEntry>(typeSlug);
-  return publishedOnly ? all.filter((e) => e.status === "published") : all;
+  // Dynamic mode: cache the DB read under content tags so ISR pages can be statically generated
+  // and an admin write (revalidateContent) busts exactly the affected type.
+  return unstable_cache(
+    async () => {
+      const type = await db.getContentTypeBySlug(typeSlug);
+      if (!type) return [];
+      return db.listContentEntries({ contentTypeId: type.id, publishedOnly });
+    },
+    ["content-entries", typeSlug, String(publishedOnly)],
+    { tags: [TAG_CONTENT, tagForType(typeSlug)] }
+  )();
 }
 
 export async function getContentEntry(typeSlug: string, slug: string): Promise<ContentEntry | undefined> {
-  if (!isStatic) return db.getContentEntry(typeSlug, slug);
-  const all = await readSnapshot<ContentEntry>(typeSlug);
-  return all.find((e) => e.slug === slug);
+  if (isStatic) {
+    const all = await readSnapshot<ContentEntry>(typeSlug);
+    return all.find((e) => e.slug === slug);
+  }
+  return unstable_cache(
+    async () => db.getContentEntry(typeSlug, slug),
+    ["content-entry", typeSlug, slug],
+    { tags: [TAG_CONTENT, tagForType(typeSlug)] }
+  )();
 }
 
 // Legacy entity reads — experience, skills, awards, education stay as bespoke entities.

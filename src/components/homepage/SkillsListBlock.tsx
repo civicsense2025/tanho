@@ -1,9 +1,9 @@
-import { listSkills } from "@/lib/db";
+import { getSkills } from "@/lib/content/source";
 import { Tag } from "@/components/ui";
 import { Eyebrow } from "./Eyebrow";
 
 export async function SkillsListBlock({ heading = "Skills" }: { heading?: string }) {
-  const skills = await listSkills();
+  const skills = await getSkills();
   const skillsByCategory = skills.reduce((acc, s) => {
     const cat = s.category || "Other";
     if (!acc[cat]) acc[cat] = [];

@@ -1,4 +1,4 @@
-import { listContentEntries, getContentTypeBySlug } from "@/lib/db";
+import { getContentEntries } from "@/lib/content/source";
 import { ProjectRow } from "@/components/ui";
 import { Eyebrow } from "./Eyebrow";
 
@@ -11,8 +11,8 @@ function parseData(dataJson: string): Record<string, unknown> {
 }
 
 export async function ProjectListBlock({ heading = "Selected Work" }: { heading?: string }) {
-  const projectType = await getContentTypeBySlug("project");
-  const entries = projectType ? await listContentEntries({ contentTypeId: projectType.id, publishedOnly: true }) : [];
+  // Via the content-source indirection: dynamic mode → DB, static mode → content/data snapshot.
+  const entries = await getContentEntries("project", true);
 
   return (
     <section style={{ marginBottom: "var(--space-12)" }}>

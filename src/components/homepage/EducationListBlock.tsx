@@ -1,9 +1,9 @@
-import { listEducation } from "@/lib/db";
+import { getEducation } from "@/lib/content/source";
 import { Eyebrow } from "./Eyebrow";
 import { Row } from "./Row";
 
 export async function EducationListBlock({ heading = "Education" }: { heading?: string }) {
-  const education = await listEducation();
+  const education = await getEducation();
   if (education.length === 0) return null;
 
   return (
