@@ -9,15 +9,21 @@ import type {
   GuideFilter,
   GuideStep,
   ListQuery,
+  Order,
   Page,
   Platform,
+  Post,
+  PostDelivery,
   Project,
   ProjectBlock,
   Repository,
   Resource,
   SeoEntityType,
   SeoTemplate,
+  SiteSetting,
   Skill,
+  Subscriber,
+  Subscription,
   Tag,
 } from "../types";
 import { applyMongoMigrations } from "../migrate-runner-mongodb";
@@ -116,6 +122,82 @@ export function createMongoAdapter(): DbAdapter {
   const platforms = mongoRepository<Platform>(getDb().collection("platforms"));
   const tags = mongoRepository<Tag>(getDb().collection("tags"));
   const resources = mongoRepository<Resource>(getDb().collection("resources"));
+  const posts = mongoRepository<Post>(getDb().collection("posts"));
+  const subscribers = mongoRepository<Subscriber>(getDb().collection("subscribers"));
+  const orders = mongoRepository<Order>(getDb().collection("orders"));
+  const subscriptions = mongoRepository<Subscription>(getDb().collection("subscriptions"));
+
+  async function getOrderByCheckoutSession(sessionId: string): Promise<Order | undefined> {
+    const [o] = await orders.list({ where: { stripeCheckoutSessionId: sessionId } });
+    return o;
+  }
+
+  async function getOrdersByEmail(email: string): Promise<Order[]> {
+    return orders.list({ where: { customerEmail: email }, orderBy: [{ field: "createdAt", direction: "desc" }] });
+  }
+
+  async function getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined> {
+    const [s] = await subscriptions.list({ where: { stripeSubscriptionId } });
+    return s;
+  }
+
+  async function getActiveSubscriptionByEmail(email: string): Promise<Subscription | undefined> {
+    const rows = await subscriptions.list({ where: { customerEmail: email, status: "active" } });
+    return rows[0];
+  }
+
+  async function getSubscriberByEmail(email: string): Promise<Subscriber | undefined> {
+    const [s] = await subscribers.list({ where: { email } });
+    return s;
+  }
+
+  async function getSubscriberByToken(token: string): Promise<Subscriber | undefined> {
+    // $or over the two token fields; token is Zod-narrowed upstream so it can't be an operator.
+    const doc = await getDb()
+      .collection("subscribers")
+      .findOne({ $or: [{ confirmToken: token }, { unsubscribeToken: token }] });
+    if (!doc) return undefined;
+    return subscribers.get(doc.id as string);
+  }
+
+  async function listActiveSubscribers(): Promise<Subscriber[]> {
+    return subscribers.list({ where: { status: "active" } });
+  }
+
+  async function getDeliveriesForPost(postId: string): Promise<PostDelivery[]> {
+    const docs = await getDb().collection("post_deliveries").find({ postId }).toArray();
+    return docs.map((d) => ({
+      id: d.id as string,
+      postId: d.postId as string,
+      subscriberId: d.subscriberId as string,
+      status: d.status as PostDelivery["status"],
+      providerMessageId: (d.providerMessageId as string) ?? null,
+      sentAt: (d.sentAt as string) ?? null,
+      error: (d.error as string) ?? null,
+    }));
+  }
+
+  async function recordDelivery(
+    postId: string,
+    subscriberId: string,
+    patch: Partial<Omit<PostDelivery, "id" | "postId" | "subscriberId">>
+  ): Promise<void> {
+    await getDb()
+      .collection("post_deliveries")
+      .updateOne(
+        { postId, subscriberId },
+        {
+          $set: {
+            status: patch.status ?? "queued",
+            providerMessageId: patch.providerMessageId ?? null,
+            sentAt: patch.sentAt ?? null,
+            error: patch.error ?? null,
+          },
+          $setOnInsert: { id: randomUUID(), postId, subscriberId },
+        },
+        { upsert: true }
+      );
+  }
 
   async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
     const docs = await getDb()
@@ -394,6 +476,39 @@ export function createMongoAdapter(): DbAdapter {
     return (await getSeoTemplate(entityType))!;
   }
 
+  function siteSettingFromDoc(d: Record<string, unknown>): SiteSetting {
+    return {
+      id: d.id as string,
+      key: d.key as string,
+      value: (d.value as string | null) ?? null,
+      isSecret: Number(d.isSecret),
+      updatedAt: d.updatedAt as string,
+    };
+  }
+
+  async function listSiteSettings(): Promise<SiteSetting[]> {
+    const docs = await getDb().collection("site_settings").find({}).sort({ key: 1 }).toArray();
+    return docs.map((d) => siteSettingFromDoc(d as Record<string, unknown>));
+  }
+
+  async function getSiteSetting(key: string): Promise<SiteSetting | undefined> {
+    const doc = await getDb().collection("site_settings").findOne({ key });
+    return doc ? siteSettingFromDoc(doc as Record<string, unknown>) : undefined;
+  }
+
+  async function upsertSiteSetting(key: string, data: { value: string | null; isSecret: number }): Promise<SiteSetting> {
+    const collection = getDb().collection("site_settings");
+    const existing = await collection.findOne({ key });
+    const id = (existing?.id as string) ?? randomUUID();
+    const now = new Date().toISOString();
+    await collection.updateOne(
+      { key },
+      { $set: { id, key, ...data, updatedAt: now } },
+      { upsert: true }
+    );
+    return (await getSiteSetting(key))!;
+  }
+
   return {
     projects,
     experience,
@@ -405,6 +520,19 @@ export function createMongoAdapter(): DbAdapter {
     platforms,
     tags,
     resources,
+    posts,
+    subscribers,
+    orders,
+    subscriptions,
+    getSubscriberByEmail,
+    getSubscriberByToken,
+    listActiveSubscribers,
+    getDeliveriesForPost,
+    recordDelivery,
+    getOrderByCheckoutSession,
+    getOrdersByEmail,
+    getSubscriptionByStripeId,
+    getActiveSubscriptionByEmail,
     getProjectBlocks,
     replaceProjectBlocks,
     getGuideSteps,
@@ -426,6 +554,9 @@ export function createMongoAdapter(): DbAdapter {
     listSeoTemplates,
     getSeoTemplate,
     upsertSeoTemplate,
+    listSiteSettings,
+    getSiteSetting,
+    upsertSiteSetting,
     async migrate() {
       await client.connect();
       await applyMongoMigrations(getDb(), mongoMigrations);

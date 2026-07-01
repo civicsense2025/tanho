@@ -9,108 +9,42 @@ import type {
   GuideFilter,
   GuideStep,
   ListQuery,
+  Order,
   Page,
   Platform,
+  Post,
+  PostDelivery,
   Project,
   ProjectBlock,
   Repository,
   Resource,
   SeoEntityType,
   SeoTemplate,
+  SiteSetting,
   Skill,
+  Subscriber,
+  Subscription,
   Tag,
 } from "../types";
 import { applyMigrations } from "../migrate-runner";
 import { libsqlMigrations } from "../migrations/libsql";
+import { sqlRepository as sharedSqlRepository, type ColumnMap, type SqlDialect } from "./sql-core";
 
-/** Maps camelCase TS field names to this table's snake_case SQL columns. */
-type ColumnMap<T> = { [K in keyof Omit<T, "id">]: string };
-
-function sqlRepository<T extends { id: string }>(
-  client: Client,
-  table: string,
-  columns: ColumnMap<T>
-): Repository<T> {
-  const fields = Object.keys(columns) as (keyof Omit<T, "id">)[];
-  const colFor = (f: keyof Omit<T, "id">) => columns[f];
-
-  function fromRow(row: Record<string, unknown>): T {
-    const out: Record<string, unknown> = { id: row.id };
-    for (const f of fields) out[f as string] = row[colFor(f)];
-    return out as T;
-  }
-
+/** libsql dialect for the shared SQL repository: positional "?" placeholders, executed via
+ * client.execute. */
+function libsqlDialect(client: Client): SqlDialect {
   return {
-    async list(query?: ListQuery<T>) {
-      const clauses: string[] = [];
-      const args: InValue[] = [];
-      if (query?.where) {
-        for (const [key, value] of Object.entries(query.where)) {
-          const col = key === "id" ? "id" : colFor(key as keyof Omit<T, "id">);
-          if (value && typeof value === "object" && "in" in (value as object)) {
-            const list = (value as { in: InValue[] }).in;
-            clauses.push(`${col} IN (${list.map(() => "?").join(",")})`);
-            args.push(...list);
-          } else {
-            clauses.push(`${col} = ?`);
-            args.push(value as InValue);
-          }
-        }
-      }
-      const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-      const order = query?.orderBy?.length
-        ? `ORDER BY ${query.orderBy
-            .map((o) => `${o.field === "id" ? "id" : colFor(o.field as keyof Omit<T, "id">)} ${o.direction.toUpperCase()}`)
-            .join(", ")}`
-        : "";
-      const limit = query?.limit ? `LIMIT ${query.limit}` : "";
-      const offset = query?.offset ? `OFFSET ${query.offset}` : "";
-      const result = await client.execute({
-        sql: `SELECT * FROM ${table} ${where} ${order} ${limit} ${offset}`,
-        args,
-      });
-      return result.rows.map((r) => fromRow(r as Record<string, unknown>));
-    },
-
-    async get(id: string) {
-      const result = await client.execute({ sql: `SELECT * FROM ${table} WHERE id = ?`, args: [id] });
-      return result.rows[0] ? fromRow(result.rows[0] as Record<string, unknown>) : undefined;
-    },
-
-    async create(data) {
-      const id = randomUUID();
-      const now = new Date().toISOString();
-      const insertCols = fields.map(colFor);
-      const insertVals: InValue[] = fields.map((f) => {
-        if (f === "createdAt" || f === "updatedAt") return now;
-        return ((data as Record<string, unknown>)[f as string] ?? null) as InValue;
-      });
-      await client.execute({
-        sql: `INSERT INTO ${table} (id, ${insertCols.join(", ")}) VALUES (?, ${insertCols.map(() => "?").join(", ")})`,
-        args: [id, ...insertVals],
-      });
-      return (await this.get(id))!;
-    },
-
-    async update(id: string, data) {
-      const keys = (Object.keys(data) as (keyof Omit<T, "id">)[]).filter((k) => fields.includes(k));
-      const setCols = keys.map((k) => `${colFor(k)} = ?`);
-      const setVals: InValue[] = keys.map((k) => ((data as Record<string, unknown>)[k as string] ?? null) as InValue);
-      if (fields.includes("updatedAt" as never)) {
-        setCols.push(`${colFor("updatedAt" as keyof Omit<T, "id">)} = ?`);
-        setVals.push(new Date().toISOString());
-      }
-      await client.execute({
-        sql: `UPDATE ${table} SET ${setCols.join(", ")} WHERE id = ?`,
-        args: [...setVals, id],
-      });
-      return (await this.get(id))!;
-    },
-
-    async delete(id: string) {
-      await client.execute({ sql: `DELETE FROM ${table} WHERE id = ?`, args: [id] });
+    placeholder: () => "?",
+    async query(text, args) {
+      const result = await client.execute({ sql: text, args: args as InValue[] });
+      return result.rows as unknown as Record<string, unknown>[];
     },
   };
+}
+
+/** Builds a generic repository bound to this client's dialect. */
+function makeSqlRepository<T extends { id: string }>(client: Client, table: string, columns: ColumnMap<T>): Repository<T> {
+  return sharedSqlRepository<T>(libsqlDialect(client), table, columns);
 }
 
 export function createLibsqlAdapter(): DbAdapter {
@@ -118,7 +52,7 @@ export function createLibsqlAdapter(): DbAdapter {
   const authToken = process.env.TURSO_AUTH_TOKEN;
   const client = createClient({ url, authToken });
 
-  const projects = sqlRepository<Project>(client, "projects", {
+  const projects = makeSqlRepository<Project>(client, "projects", {
     slug: "slug",
     title: "title",
     tagline: "tagline",
@@ -140,7 +74,7 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const experience = sqlRepository<Experience>(client, "experience", {
+  const experience = makeSqlRepository<Experience>(client, "experience", {
     company: "company",
     role: "role",
     description: "description",
@@ -152,7 +86,7 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const skills = sqlRepository<Skill>(client, "skills", {
+  const skills = makeSqlRepository<Skill>(client, "skills", {
     name: "name",
     category: "category",
     sortOrder: "sort_order",
@@ -160,7 +94,7 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const awards = sqlRepository<Award>(client, "awards", {
+  const awards = makeSqlRepository<Award>(client, "awards", {
     title: "title",
     organization: "organization",
     description: "description",
@@ -171,7 +105,7 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const education = sqlRepository<Education>(client, "education", {
+  const education = makeSqlRepository<Education>(client, "education", {
     school: "school",
     degree: "degree",
     span: "span",
@@ -180,7 +114,7 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const pages = sqlRepository<Page>(client, "pages", {
+  const pages = makeSqlRepository<Page>(client, "pages", {
     slug: "slug",
     title: "title",
     route: "route",
@@ -195,7 +129,7 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const guides = sqlRepository<Guide>(client, "guides", {
+  const guides = makeSqlRepository<Guide>(client, "guides", {
     slug: "slug",
     title: "title",
     tagline: "tagline",
@@ -222,7 +156,7 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const platforms = sqlRepository<Platform>(client, "platforms", {
+  const platforms = makeSqlRepository<Platform>(client, "platforms", {
     slug: "slug",
     name: "name",
     kind: "kind",
@@ -237,12 +171,12 @@ export function createLibsqlAdapter(): DbAdapter {
     githubUrl: "github_url",
   });
 
-  const tags = sqlRepository<Tag>(client, "tags", {
+  const tags = makeSqlRepository<Tag>(client, "tags", {
     slug: "slug",
     name: "name",
   });
 
-  const resources = sqlRepository<Resource>(client, "resources", {
+  const resources = makeSqlRepository<Resource>(client, "resources", {
     title: "title",
     url: "url",
     sourceName: "source_name",
@@ -259,6 +193,144 @@ export function createLibsqlAdapter(): DbAdapter {
     createdAt: "created_at",
     updatedAt: "updated_at",
   });
+
+  const posts = makeSqlRepository<Post>(client, "posts", {
+    slug: "slug",
+    title: "title",
+    subtitle: "subtitle",
+    excerpt: "excerpt",
+    coverImage: "cover_image",
+    status: "status",
+    visibility: "visibility",
+    publishedAt: "published_at",
+    sortOrder: "sort_order",
+    seoTitle: "seo_title",
+    seoDescription: "seo_description",
+    ogImage: "og_image",
+    canonicalUrl: "canonical_url",
+    noIndex: "no_index",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const subscribers = makeSqlRepository<Subscriber>(client, "subscribers", {
+    email: "email",
+    status: "status",
+    confirmToken: "confirm_token",
+    unsubscribeToken: "unsubscribe_token",
+    source: "source",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const orders = makeSqlRepository<Order>(client, "orders", {
+    stripeCheckoutSessionId: "stripe_checkout_session_id",
+    stripeCustomerId: "stripe_customer_id",
+    stripePaymentIntentId: "stripe_payment_intent_id",
+    customerEmail: "customer_email",
+    kind: "kind",
+    status: "status",
+    postId: "post_id",
+    priceId: "price_id",
+    amountTotal: "amount_total",
+    currency: "currency",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const subscriptions = makeSqlRepository<Subscription>(client, "subscriptions", {
+    stripeSubscriptionId: "stripe_subscription_id",
+    stripeCustomerId: "stripe_customer_id",
+    customerEmail: "customer_email",
+    status: "status",
+    currentPeriodEnd: "current_period_end",
+    priceId: "price_id",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  async function getOrderByCheckoutSession(sessionId: string): Promise<Order | undefined> {
+    const [o] = await orders.list({ where: { stripeCheckoutSessionId: sessionId } });
+    return o;
+  }
+
+  async function getOrdersByEmail(email: string): Promise<Order[]> {
+    return orders.list({ where: { customerEmail: email }, orderBy: [{ field: "createdAt", direction: "desc" }] });
+  }
+
+  async function getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined> {
+    const [s] = await subscriptions.list({ where: { stripeSubscriptionId } });
+    return s;
+  }
+
+  async function getActiveSubscriptionByEmail(email: string): Promise<Subscription | undefined> {
+    const rows = await subscriptions.list({ where: { customerEmail: email, status: "active" } });
+    return rows[0];
+  }
+
+  async function getSubscriberByEmail(email: string): Promise<Subscriber | undefined> {
+    const [s] = await subscribers.list({ where: { email } });
+    return s;
+  }
+
+  async function getSubscriberByToken(token: string): Promise<Subscriber | undefined> {
+    // Match either token — confirm (double-opt-in) or unsubscribe.
+    const result = await client.execute({
+      sql: "SELECT * FROM subscribers WHERE confirm_token = ? OR unsubscribe_token = ? LIMIT 1",
+      args: [token, token],
+    });
+    if (!result.rows[0]) return undefined;
+    const [s] = await subscribers.list({ where: { id: String(result.rows[0].id) } as never });
+    return s;
+  }
+
+  async function listActiveSubscribers(): Promise<Subscriber[]> {
+    return subscribers.list({ where: { status: "active" } });
+  }
+
+  function deliveryRow(row: Record<string, unknown>): PostDelivery {
+    return {
+      id: String(row.id),
+      postId: String(row.post_id),
+      subscriberId: String(row.subscriber_id),
+      status: row.status as PostDelivery["status"],
+      providerMessageId: (row.provider_message_id as string) ?? null,
+      sentAt: (row.sent_at as string) ?? null,
+      error: (row.error as string) ?? null,
+    };
+  }
+
+  async function getDeliveriesForPost(postId: string): Promise<PostDelivery[]> {
+    const result = await client.execute({
+      sql: "SELECT * FROM post_deliveries WHERE post_id = ?",
+      args: [postId],
+    });
+    return result.rows.map((r) => deliveryRow(r as Record<string, unknown>));
+  }
+
+  async function recordDelivery(
+    postId: string,
+    subscriberId: string,
+    patch: Partial<Omit<PostDelivery, "id" | "postId" | "subscriberId">>
+  ): Promise<void> {
+    // Upsert one delivery row for (post, subscriber); the unique constraint makes retries safe.
+    await client.execute({
+      sql: `INSERT INTO post_deliveries (id, post_id, subscriber_id, status, provider_message_id, sent_at, error)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(post_id, subscriber_id) DO UPDATE SET
+              status=excluded.status,
+              provider_message_id=excluded.provider_message_id,
+              sent_at=excluded.sent_at,
+              error=excluded.error`,
+      args: [
+        randomUUID(), postId, subscriberId,
+        patch.status ?? "queued",
+        patch.providerMessageId ?? null,
+        patch.sentAt ?? null,
+        patch.error ?? null,
+      ],
+    });
+  }
 
   async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
     const result = await client.execute({
@@ -578,6 +650,38 @@ export function createLibsqlAdapter(): DbAdapter {
     return (await getSeoTemplate(entityType))!;
   }
 
+  function siteSettingRow(row: Record<string, unknown>): SiteSetting {
+    return {
+      id: String(row.id),
+      key: row.key as string,
+      value: (row.value as string | null) ?? null,
+      isSecret: Number(row.is_secret),
+      updatedAt: row.updated_at as string,
+    };
+  }
+
+  async function listSiteSettings(): Promise<SiteSetting[]> {
+    const result = await client.execute("SELECT * FROM site_settings ORDER BY key ASC");
+    return result.rows.map((r) => siteSettingRow(r as Record<string, unknown>));
+  }
+
+  async function getSiteSetting(key: string): Promise<SiteSetting | undefined> {
+    const result = await client.execute({ sql: "SELECT * FROM site_settings WHERE key = ?", args: [key] });
+    return result.rows[0] ? siteSettingRow(result.rows[0] as Record<string, unknown>) : undefined;
+  }
+
+  async function upsertSiteSetting(key: string, data: { value: string | null; isSecret: number }): Promise<SiteSetting> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await client.execute({
+      sql: `INSERT INTO site_settings (id, key, value, is_secret, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value, is_secret=excluded.is_secret, updated_at=excluded.updated_at`,
+      args: [id, key, data.value, data.isSecret, now],
+    });
+    return (await getSiteSetting(key))!;
+  }
+
   return {
     projects,
     experience,
@@ -589,6 +693,19 @@ export function createLibsqlAdapter(): DbAdapter {
     platforms,
     tags,
     resources,
+    posts,
+    subscribers,
+    orders,
+    subscriptions,
+    getSubscriberByEmail,
+    getSubscriberByToken,
+    listActiveSubscribers,
+    getDeliveriesForPost,
+    recordDelivery,
+    getOrderByCheckoutSession,
+    getOrdersByEmail,
+    getSubscriptionByStripeId,
+    getActiveSubscriptionByEmail,
     getProjectBlocks,
     replaceProjectBlocks,
     getGuideSteps,
@@ -610,6 +727,9 @@ export function createLibsqlAdapter(): DbAdapter {
     listSeoTemplates,
     getSeoTemplate,
     upsertSeoTemplate,
+    listSiteSettings,
+    getSiteSetting,
+    upsertSiteSetting,
     migrate: () => applyMigrations(client, libsqlMigrations),
   };
 }

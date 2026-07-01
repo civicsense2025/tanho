@@ -9,119 +9,62 @@ import type {
   GuideFilter,
   GuideStep,
   ListQuery,
+  Order,
   Page,
   Platform,
+  Post,
+  PostDelivery,
   Project,
   ProjectBlock,
   Repository,
   Resource,
   SeoEntityType,
   SeoTemplate,
+  SiteSetting,
   Skill,
+  Subscriber,
+  Subscription,
   Tag,
 } from "../types";
 import { applyPostgresMigrations } from "../migrate-runner-postgres";
 import { postgresMigrations } from "../migrations/postgres";
+import { sqlRepository as sharedSqlRepository, type ColumnMap, type SqlDialect } from "./sql-core";
 
-/** Maps camelCase TS field names to this table's snake_case SQL columns. */
-type ColumnMap<T> = { [K in keyof Omit<T, "id">]: string };
-
-function sqlRepository<T extends { id: string }>(
-  sql: Sql,
-  table: string,
-  columns: ColumnMap<T>
-): Repository<T> {
-  const fields = Object.keys(columns) as (keyof Omit<T, "id">)[];
-  const colFor = (f: keyof Omit<T, "id">) => columns[f];
-
-  function fromRow(row: Record<string, unknown>): T {
-    const out: Record<string, unknown> = { id: row.id };
-    for (const f of fields) out[f as string] = row[colFor(f)];
-    return out as T;
-  }
-
+/** postgres dialect for the shared SQL repository: "$n" placeholders, executed via sql.unsafe. */
+function postgresDialect(sql: Sql): SqlDialect {
   return {
-    async list(query?: ListQuery<T>) {
-      const clauses: string[] = [];
-      const args: unknown[] = [];
-      let paramIndex = 1;
-      if (query?.where) {
-        for (const [key, value] of Object.entries(query.where)) {
-          const col = key === "id" ? "id" : colFor(key as keyof Omit<T, "id">);
-          if (value && typeof value === "object" && "in" in (value as object)) {
-            const list = (value as { in: unknown[] }).in;
-            const placeholders = list.map(() => `$${paramIndex++}`).join(",");
-            clauses.push(`${col} IN (${placeholders})`);
-            args.push(...list);
-          } else {
-            clauses.push(`${col} = $${paramIndex++}`);
-            args.push(value);
-          }
-        }
-      }
-      const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-      const order = query?.orderBy?.length
-        ? `ORDER BY ${query.orderBy
-            .map((o) => `${o.field === "id" ? "id" : colFor(o.field as keyof Omit<T, "id">)} ${o.direction.toUpperCase()}`)
-            .join(", ")}`
-        : "";
-      const limit = query?.limit ? `LIMIT ${query.limit}` : "";
-      const offset = query?.offset ? `OFFSET ${query.offset}` : "";
-      const rows = await sql.unsafe<Record<string, unknown>[]>(
-        `SELECT * FROM ${table} ${where} ${order} ${limit} ${offset}`,
-        args as never[]
-      );
-      return rows.map(fromRow);
-    },
-
-    async get(id: string) {
-      const rows = await sql.unsafe<Record<string, unknown>[]>(`SELECT * FROM ${table} WHERE id = $1`, [id] as never[]);
-      return rows[0] ? fromRow(rows[0]) : undefined;
-    },
-
-    async create(data) {
-      const id = randomUUID();
-      const now = new Date().toISOString();
-      const insertCols = fields.map(colFor);
-      const insertVals = fields.map((f) => {
-        if (f === "createdAt" || f === "updatedAt") return now;
-        return (data as Record<string, unknown>)[f as string] ?? null;
-      });
-      const placeholders = [id, ...insertVals].map((_, i) => `$${i + 1}`).join(", ");
-      await sql.unsafe(
-        `INSERT INTO ${table} (id, ${insertCols.join(", ")}) VALUES (${placeholders})`,
-        [id, ...insertVals] as never[]
-      );
-      return (await this.get(id))!;
-    },
-
-    async update(id: string, data) {
-      const keys = (Object.keys(data) as (keyof Omit<T, "id">)[]).filter((k) => fields.includes(k));
-      const setVals = keys.map((k) => (data as Record<string, unknown>)[k as string] ?? null);
-      if (fields.includes("updatedAt" as never)) {
-        keys.push("updatedAt" as keyof Omit<T, "id">);
-        setVals.push(new Date().toISOString());
-      }
-      const setCols = keys.map((k, i) => `${colFor(k)} = $${i + 1}`);
-      await sql.unsafe(
-        `UPDATE ${table} SET ${setCols.join(", ")} WHERE id = $${keys.length + 1}`,
-        [...setVals, id] as never[]
-      );
-      return (await this.get(id))!;
-    },
-
-    async delete(id: string) {
-      await sql.unsafe(`DELETE FROM ${table} WHERE id = $1`, [id] as never[]);
+    placeholder: (i) => `$${i}`,
+    async query(text, args) {
+      return sql.unsafe<Record<string, unknown>[]>(text, args as never[]);
     },
   };
+}
+
+function makeSqlRepository<T extends { id: string }>(sql: Sql, table: string, columns: ColumnMap<T>): Repository<T> {
+  return sharedSqlRepository<T>(postgresDialect(sql), table, columns);
 }
 
 export function createPostgresAdapter(): DbAdapter {
   const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;
   if (!url) throw new Error("POSTGRES_URL or DATABASE_URL must be set when DB_PROVIDER=postgres");
-  const sql = postgres(url);
+  // Return timestamptz/timestamp as ISO strings (not Date objects) so every backend agrees on
+  // the string-typed createdAt/updatedAt the app and the adapter contract expect. Without this
+  // the postgres driver hands back Date instances and callers diverge from libsql/mongo.
+  const sql = postgres(url, {
+    types: {
+      // Emit timestamp/timestamptz as ISO strings. OID 1114 = timestamp, 1184 = timestamptz.
+      // Plain `date` (1082) is intentionally left to the driver's default so date-only columns
+      // (e.g. Award.date) aren't reshaped into full datetimes.
+      timestamp: {
+        to: 1184,
+        from: [1114, 1184],
+        serialize: (v: unknown) => (v instanceof Date ? v.toISOString() : String(v)),
+        parse: (v: string) => new Date(v).toISOString(),
+      },
+    },
+  });
 
-  const projects = sqlRepository<Project>(sql, "projects", {
+  const projects = makeSqlRepository<Project>(sql, "projects", {
     slug: "slug",
     title: "title",
     tagline: "tagline",
@@ -143,7 +86,7 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const experience = sqlRepository<Experience>(sql, "experience", {
+  const experience = makeSqlRepository<Experience>(sql, "experience", {
     company: "company",
     role: "role",
     description: "description",
@@ -155,7 +98,7 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const skills = sqlRepository<Skill>(sql, "skills", {
+  const skills = makeSqlRepository<Skill>(sql, "skills", {
     name: "name",
     category: "category",
     sortOrder: "sort_order",
@@ -163,7 +106,7 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const awards = sqlRepository<Award>(sql, "awards", {
+  const awards = makeSqlRepository<Award>(sql, "awards", {
     title: "title",
     organization: "organization",
     description: "description",
@@ -174,7 +117,7 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const education = sqlRepository<Education>(sql, "education", {
+  const education = makeSqlRepository<Education>(sql, "education", {
     school: "school",
     degree: "degree",
     span: "span",
@@ -183,7 +126,7 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const pages = sqlRepository<Page>(sql, "pages", {
+  const pages = makeSqlRepository<Page>(sql, "pages", {
     slug: "slug",
     title: "title",
     route: "route",
@@ -198,7 +141,7 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const guides = sqlRepository<Guide>(sql, "guides", {
+  const guides = makeSqlRepository<Guide>(sql, "guides", {
     slug: "slug",
     title: "title",
     tagline: "tagline",
@@ -225,7 +168,7 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const platforms = sqlRepository<Platform>(sql, "platforms", {
+  const platforms = makeSqlRepository<Platform>(sql, "platforms", {
     slug: "slug",
     name: "name",
     kind: "kind",
@@ -240,12 +183,12 @@ export function createPostgresAdapter(): DbAdapter {
     githubUrl: "github_url",
   });
 
-  const tags = sqlRepository<Tag>(sql, "tags", {
+  const tags = makeSqlRepository<Tag>(sql, "tags", {
     slug: "slug",
     name: "name",
   });
 
-  const resources = sqlRepository<Resource>(sql, "resources", {
+  const resources = makeSqlRepository<Resource>(sql, "resources", {
     title: "title",
     url: "url",
     sourceName: "source_name",
@@ -262,6 +205,141 @@ export function createPostgresAdapter(): DbAdapter {
     createdAt: "created_at",
     updatedAt: "updated_at",
   });
+
+  const posts = makeSqlRepository<Post>(sql, "posts", {
+    slug: "slug",
+    title: "title",
+    subtitle: "subtitle",
+    excerpt: "excerpt",
+    coverImage: "cover_image",
+    status: "status",
+    visibility: "visibility",
+    publishedAt: "published_at",
+    sortOrder: "sort_order",
+    seoTitle: "seo_title",
+    seoDescription: "seo_description",
+    ogImage: "og_image",
+    canonicalUrl: "canonical_url",
+    noIndex: "no_index",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const subscribers = makeSqlRepository<Subscriber>(sql, "subscribers", {
+    email: "email",
+    status: "status",
+    confirmToken: "confirm_token",
+    unsubscribeToken: "unsubscribe_token",
+    source: "source",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const orders = makeSqlRepository<Order>(sql, "orders", {
+    stripeCheckoutSessionId: "stripe_checkout_session_id",
+    stripeCustomerId: "stripe_customer_id",
+    stripePaymentIntentId: "stripe_payment_intent_id",
+    customerEmail: "customer_email",
+    kind: "kind",
+    status: "status",
+    postId: "post_id",
+    priceId: "price_id",
+    amountTotal: "amount_total",
+    currency: "currency",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const subscriptions = makeSqlRepository<Subscription>(sql, "subscriptions", {
+    stripeSubscriptionId: "stripe_subscription_id",
+    stripeCustomerId: "stripe_customer_id",
+    customerEmail: "customer_email",
+    status: "status",
+    currentPeriodEnd: "current_period_end",
+    priceId: "price_id",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  async function getOrderByCheckoutSession(sessionId: string): Promise<Order | undefined> {
+    const [o] = await orders.list({ where: { stripeCheckoutSessionId: sessionId } });
+    return o;
+  }
+
+  async function getOrdersByEmail(email: string): Promise<Order[]> {
+    return orders.list({ where: { customerEmail: email }, orderBy: [{ field: "createdAt", direction: "desc" }] });
+  }
+
+  async function getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined> {
+    const [s] = await subscriptions.list({ where: { stripeSubscriptionId } });
+    return s;
+  }
+
+  async function getActiveSubscriptionByEmail(email: string): Promise<Subscription | undefined> {
+    const rows = await subscriptions.list({ where: { customerEmail: email, status: "active" } });
+    return rows[0];
+  }
+
+  async function getSubscriberByEmail(email: string): Promise<Subscriber | undefined> {
+    const [s] = await subscribers.list({ where: { email } });
+    return s;
+  }
+
+  async function getSubscriberByToken(token: string): Promise<Subscriber | undefined> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>(
+      "SELECT id FROM subscribers WHERE confirm_token = $1 OR unsubscribe_token = $1 LIMIT 1",
+      [token] as never[]
+    );
+    if (!rows[0]) return undefined;
+    return subscribers.get(String(rows[0].id));
+  }
+
+  async function listActiveSubscribers(): Promise<Subscriber[]> {
+    return subscribers.list({ where: { status: "active" } });
+  }
+
+  function deliveryRow(row: Record<string, unknown>): PostDelivery {
+    return {
+      id: String(row.id),
+      postId: String(row.post_id),
+      subscriberId: String(row.subscriber_id),
+      status: row.status as PostDelivery["status"],
+      providerMessageId: (row.provider_message_id as string) ?? null,
+      sentAt: (row.sent_at as string) ?? null,
+      error: (row.error as string) ?? null,
+    };
+  }
+
+  async function getDeliveriesForPost(postId: string): Promise<PostDelivery[]> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>(
+      "SELECT * FROM post_deliveries WHERE post_id = $1",
+      [postId] as never[]
+    );
+    return rows.map(deliveryRow);
+  }
+
+  async function recordDelivery(
+    postId: string,
+    subscriberId: string,
+    patch: Partial<Omit<PostDelivery, "id" | "postId" | "subscriberId">>
+  ): Promise<void> {
+    await sql.unsafe(
+      `INSERT INTO post_deliveries (id, post_id, subscriber_id, status, provider_message_id, sent_at, error)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (post_id, subscriber_id) DO UPDATE SET
+         status=excluded.status,
+         provider_message_id=excluded.provider_message_id,
+         sent_at=excluded.sent_at,
+         error=excluded.error`,
+      [
+        randomUUID(), postId, subscriberId,
+        patch.status ?? "queued",
+        patch.providerMessageId ?? null,
+        patch.sentAt ?? null,
+        patch.error ?? null,
+      ] as never[]
+    );
+  }
 
   async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
     const rows = await sql.unsafe<Record<string, unknown>[]>(
@@ -578,6 +656,38 @@ export function createPostgresAdapter(): DbAdapter {
     return (await getSeoTemplate(entityType))!;
   }
 
+  function siteSettingRow(row: Record<string, unknown>): SiteSetting {
+    return {
+      id: String(row.id),
+      key: row.key as string,
+      value: (row.value as string | null) ?? null,
+      isSecret: Number(row.is_secret),
+      updatedAt: row.updated_at as string,
+    };
+  }
+
+  async function listSiteSettings(): Promise<SiteSetting[]> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>("SELECT * FROM site_settings ORDER BY key ASC");
+    return rows.map(siteSettingRow);
+  }
+
+  async function getSiteSetting(key: string): Promise<SiteSetting | undefined> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>("SELECT * FROM site_settings WHERE key = $1", [key] as never[]);
+    return rows[0] ? siteSettingRow(rows[0]) : undefined;
+  }
+
+  async function upsertSiteSetting(key: string, data: { value: string | null; isSecret: number }): Promise<SiteSetting> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await sql.unsafe(
+      `INSERT INTO site_settings (id, key, value, is_secret, updated_at)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (key) DO UPDATE SET value=excluded.value, is_secret=excluded.is_secret, updated_at=excluded.updated_at`,
+      [id, key, data.value, data.isSecret, now] as never[]
+    );
+    return (await getSiteSetting(key))!;
+  }
+
   return {
     projects,
     experience,
@@ -589,6 +699,19 @@ export function createPostgresAdapter(): DbAdapter {
     platforms,
     tags,
     resources,
+    posts,
+    subscribers,
+    orders,
+    subscriptions,
+    getSubscriberByEmail,
+    getSubscriberByToken,
+    listActiveSubscribers,
+    getDeliveriesForPost,
+    recordDelivery,
+    getOrderByCheckoutSession,
+    getOrdersByEmail,
+    getSubscriptionByStripeId,
+    getActiveSubscriptionByEmail,
     getProjectBlocks,
     replaceProjectBlocks,
     getGuideSteps,
@@ -610,6 +733,9 @@ export function createPostgresAdapter(): DbAdapter {
     listSeoTemplates,
     getSeoTemplate,
     upsertSeoTemplate,
+    listSiteSettings,
+    getSiteSetting,
+    upsertSiteSetting,
     migrate: () => applyPostgresMigrations(sql, postgresMigrations),
   };
 }
