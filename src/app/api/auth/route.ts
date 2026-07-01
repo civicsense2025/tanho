@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { signAdminToken, getAdminPassword, COOKIE_NAME } from "@/lib/auth";
+import { signAdminToken, COOKIE_NAME } from "@/lib/auth";
+import { verifyAdminPassword } from "@/lib/admin-password";
 import { parseBody } from "@/lib/validation/parse";
 import { adminLoginSchema } from "@/lib/validation/schemas";
 import {
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
   const parsed = await parseBody(req, adminLoginSchema);
   if (!parsed.ok) return parsed.response;
 
-  if (parsed.data.password !== getAdminPassword()) {
+  if (!verifyAdminPassword(parsed.data.password)) {
     recordFailedAttempt(key);
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }

@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -30,4 +30,14 @@ export function decryptSecret(stored: string): string {
   decipher.setAuthTag(Buffer.from(authTagB64, "base64"));
   const plaintext = Buffer.concat([decipher.update(Buffer.from(ciphertextB64, "base64")), decipher.final()]);
   return plaintext.toString("utf-8");
+}
+
+/** Constant-time string comparison for secrets. Never use `===`/`!==` on a secret —
+ * that leaks length and matching-prefix length via timing. Returns false on any
+ * length mismatch (timingSafeEqual requires equal-length buffers). */
+export function safeSecretEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, "utf-8");
+  const bb = Buffer.from(b, "utf-8");
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
 }

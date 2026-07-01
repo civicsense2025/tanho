@@ -36,6 +36,41 @@ function isProtectedApiRequest(pathname: string, method: string): boolean {
   return PROTECTED_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+/** CSRF defense-in-depth for state-changing admin requests: the request must
+ * originate from the site's own origin. Complements the httpOnly + SameSite=Lax
+ * session cookie. Edge-safe (string/URL only — this runs in middleware).
+ *
+ * Accepts a request whose Origin (preferred) or, if absent, Referer origin equals
+ * the request's own origin or the configured NEXT_PUBLIC_SITE_URL origin. A
+ * missing Origin AND missing Referer is allowed: same-origin non-browser callers
+ * (the CLI, server-to-server) legitimately omit both, and the session cookie is
+ * still required — this check only rejects a *present, foreign* origin, which is
+ * the cross-site-form-post signature. */
+export function isSameOriginRequest(req: NextRequest): boolean {
+  const allowed = new Set<string>();
+  allowed.add(req.nextUrl.origin);
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) {
+    try {
+      allowed.add(new URL(configured).origin);
+    } catch {
+      /* misconfigured URL — ignore, req.nextUrl.origin still applies */
+    }
+  }
+  const origin = req.headers.get("origin");
+  if (origin) return allowed.has(origin);
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      return allowed.has(new URL(referer).origin);
+    } catch {
+      return false;
+    }
+  }
+  // No Origin and no Referer: not a cross-site browser form post.
+  return true;
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -55,6 +90,11 @@ export async function proxy(req: NextRequest) {
   }
 
   if (isProtectedApiRequest(pathname, req.method)) {
+    // CSRF: reject a state-changing request whose (present) Origin/Referer is a
+    // foreign site, before the auth check. Defense-in-depth over SameSite=Lax.
+    if (!isSameOriginRequest(req)) {
+      return NextResponse.json({ error: "Cross-origin request forbidden" }, { status: 403 });
+    }
     if (!authed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     return NextResponse.next();
   }
