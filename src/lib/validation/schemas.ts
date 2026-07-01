@@ -17,5 +17,13 @@ export const tokenSchema = z.object({
   token: z.string().uuid(),
 });
 
+/** Admin login. Password must be a non-empty string (capped to bound work) so a
+ * missing/non-string body is a clean 400 rather than an unhandled 500 from
+ * destructuring, and never reaches the credential comparison as `undefined`. */
+export const adminLoginSchema = z.object({
+  password: z.string().min(1).max(1024),
+});
+
 export type SubscribeInput = z.infer<typeof subscribeSchema>;
 export type TokenInput = z.infer<typeof tokenSchema>;
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
