@@ -1,4 +1,4 @@
-import { getGuide, getGuideSteps, getResourcesForGuide } from "@/lib/db";
+import { getGuide, getGuideSteps, getResourcesForGuide, getSeoTemplate } from "@/lib/db";
 import { parseTags } from "@/lib/utils";
 import { buildMetadata } from "@/lib/seo";
 import { GuideMeta } from "@/components/GuideMeta";
@@ -14,9 +14,13 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const guide = await getGuide(slug);
+  const [guide, template] = await Promise.all([getGuide(slug), getSeoTemplate("guide")]);
   if (!guide) return {};
-  return buildMetadata(guide, { title: guide.title, tagline: guide.tagline, coverImage: guide.coverImage });
+  return buildMetadata(
+    guide,
+    { title: guide.title, tagline: guide.tagline, coverImage: guide.coverImage, vars: { summary: guide.summary } },
+    template
+  );
 }
 
 export default async function GuidePage({ params }: Props) {

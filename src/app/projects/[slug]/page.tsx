@@ -1,4 +1,4 @@
-import { getProject, getProjectById, getBlocks } from "@/lib/db";
+import { getProject, getProjectById, getBlocks, getSeoTemplate } from "@/lib/db";
 import { getProjectBody } from "@/lib/content/project-content";
 import { getAdminSession } from "@/lib/auth";
 import { parseTags } from "@/lib/utils";
@@ -17,9 +17,9 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ previe
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const project = await getProject(slug);
+  const [project, template] = await Promise.all([getProject(slug), getSeoTemplate("project")]);
   if (!project) return {};
-  return buildMetadata(project, { title: project.title, tagline: project.tagline, coverImage: project.coverImage });
+  return buildMetadata(project, { title: project.title, tagline: project.tagline, coverImage: project.coverImage }, template);
 }
 
 export default async function ProjectPage({ params, searchParams }: Props) {
