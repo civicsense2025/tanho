@@ -73,7 +73,16 @@ function mongoRepository<T extends { id: string }>(collection: Collection): Repo
     },
 
     async update(id: string, data) {
-      const update: Record<string, unknown> = { ...data };
+      // Whitelist against the existing document's own fields so an admin PATCH body
+      // can't mass-assign arbitrary new top-level fields into the collection (id/_id
+      // are never assignable this way, matching the ColumnMap-based SQL adapters).
+      const existing = await collection.findOne({ id });
+      if (!existing) return (await this.get(id))!;
+      const allowed = new Set(Object.keys(existing).filter((k) => k !== "_id" && k !== "id"));
+      const update: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+        if (allowed.has(key)) update[key] = value;
+      }
       update.updatedAt = new Date().toISOString();
       await collection.updateOne({ id }, { $set: update });
       return (await this.get(id))!;
