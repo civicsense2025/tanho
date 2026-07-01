@@ -1,9 +1,9 @@
-import { listExperience } from "@/lib/db";
+import { getExperience } from "@/lib/content/source";
 import { Eyebrow } from "./Eyebrow";
 import { Row } from "./Row";
 
 export async function ExperienceListBlock({ heading = "Experience" }: { heading?: string }) {
-  const experiences = await listExperience();
+  const experiences = await getExperience();
   if (experiences.length === 0) return null;
 
   return (

@@ -1,10 +1,10 @@
-import { listAwards } from "@/lib/db";
+import { getAwards } from "@/lib/content/source";
 import { Tag } from "@/components/ui";
 import { Eyebrow } from "./Eyebrow";
 import { Row } from "./Row";
 
 export async function AwardListBlock({ heading = "Awards" }: { heading?: string }) {
-  const awards = await listAwards();
+  const awards = await getAwards();
   if (awards.length === 0) return null;
 
   return (
