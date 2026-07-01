@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import type { MongoMigration } from "../../migrate-runner-mongodb";
 
 const BUILTIN_TYPES: { slug: string; name: string; icon: string; fields: object; sortOrder: number }[] = [
@@ -82,6 +83,7 @@ export const seedBuiltinTypes: MongoMigration = {
         { slug: t.slug },
         {
           $setOnInsert: {
+            id: randomUUID(),
             name: t.name,
             icon: t.icon,
             fields: JSON.stringify(t.fields),
