@@ -4,6 +4,7 @@
  * switch pattern. When unconfigured, the noop provider logs instead of sending, so nothing
  * crashes and local/static setups work without keys. Keys are server-only (never NEXT_PUBLIC_).
  */
+import { log } from "@/lib/log";
 
 export interface EmailRecipient {
   email: string;
@@ -120,11 +121,11 @@ function createPostmarkProvider(): EmailProvider {
 function createNoopProvider(): EmailProvider {
   return {
     async sendTransactional(to, subject) {
-      console.info(`[email:noop] transactional → ${to}: ${subject}`);
+      log.info("email:noop transactional", { to, subject });
       return { messageId: "noop" };
     },
     async sendBroadcast(recipients, subject) {
-      console.info(`[email:noop] broadcast → ${recipients.length} recipients: ${subject}`);
+      log.info("email:noop broadcast", { recipientCount: recipients.length, subject });
       return recipients.map((r) => ({ email: r.email, ok: true, messageId: "noop" }));
     },
   };

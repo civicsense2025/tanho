@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/settings";
 import { verifyEvent, handleEvent } from "@/lib/stripe/webhook";
+import { log } from "@/lib/log";
 
 // Node.js runtime (not edge) so constructEvent's sync crypto works — the async SubtleCrypto path
 // is only needed on edge runtimes.
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
     await handleEvent(event);
   } catch (err) {
     // Return 500 so Stripe retries; handlers are idempotent so a retry is safe.
-    console.error(`[stripe webhook] handler failed for ${event.type}`, err);
+    log.error("stripe webhook handler failed", { eventType: event.type, err });
     return new NextResponse("Webhook handler error", { status: 500 });
   }
 

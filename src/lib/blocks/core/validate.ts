@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getBlockSpec } from "../registry";
 import { styleSchema, type StyleProps } from "./style-schema";
+import { log } from "@/lib/log";
 
 /**
  * Validates a persisted block tree at the trust boundary. Replaces the old unchecked
@@ -34,7 +35,7 @@ const rawBlockSchema = z.object({
 
 function warn(msg: string) {
   // Server-side visibility without crashing the render.
-  console.warn(`[blocks] ${msg}`);
+  log.warn(msg);
 }
 
 /** Parse a raw JSON string (or already-parsed value) holding `{ blocks: [...] }` into a

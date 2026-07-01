@@ -3,6 +3,7 @@ import { getSettings } from "@/lib/settings";
 import { checkoutSchema } from "@/lib/stripe/schemas";
 import { createOneTimeCheckout, createSubscriptionCheckout, createDonationCheckout } from "@/lib/stripe/checkout";
 import { createOrder } from "@/lib/db";
+import { log } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("[checkout] failed", err);
+    log.error("checkout failed", { err });
     return NextResponse.json({ error: "Checkout could not be created" }, { status: 500 });
   }
 }
