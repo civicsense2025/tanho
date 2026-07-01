@@ -117,6 +117,110 @@ export interface Page {
   updatedAt: string;
 }
 
+export type GuideStatus = "draft" | "published";
+export type GuideDifficulty = "beginner" | "intermediate" | "advanced";
+export type CostPeriod = "monthly" | "one_time";
+
+export interface Guide {
+  id: string;
+  slug: string;
+  title: string;
+  tagline: string | null;
+  summary: string | null;
+  sourcePlatform: string;
+  targetPlatform: string;
+  difficulty: GuideDifficulty;
+  effortHoursMin: number | null;
+  effortHoursMax: number | null;
+  costMinUsd: number | null;
+  costMaxUsd: number | null;
+  costPeriod: CostPeriod;
+  /** JSON-encoded string[] -- see parseTags() in src/lib/utils.ts. */
+  skillsRequired: string;
+  /** JSON-encoded string[] -- see parseTags() in src/lib/utils.ts. */
+  requirements: string;
+  coverImage: string | null;
+  status: GuideStatus;
+  sortOrder: number;
+  /** Overrides <title>/og:title; falls back to title when unset. */
+  seoTitle: string | null;
+  /** Overrides <meta description>/og:description; falls back to tagline when unset. */
+  seoDescription: string | null;
+  /** Overrides og:image; falls back to coverImage when unset. */
+  ogImage: string | null;
+  canonicalUrl: string | null;
+  noIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GuideStep {
+  id: string;
+  guideId: string;
+  title: string | null;
+  type: "text" | "image" | "video" | "code" | "callout" | "checklist";
+  /** JSON-encoded, shape depends on `type` (see GuideMeta/GuideForm/step renderer). */
+  content: string;
+  sortOrder: number;
+}
+
+export type PlatformKind = "source" | "target" | "both";
+export type PricingModel = "free_oss" | "freemium" | "paid_saas" | "usage_based";
+
+export interface Platform {
+  id: string;
+  slug: string;
+  name: string;
+  kind: PlatformKind;
+  category: string | null;
+  logoUrl: string | null;
+  description: string | null;
+  sortOrder: number;
+  officialUrl: string | null;
+  isOpenSource: number;
+  pricingModel: PricingModel | null;
+  pricingNotes: string | null;
+  githubUrl: string | null;
+}
+
+export interface Tag {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+export type ResourceType = "article" | "video" | "forum_thread" | "docs" | "tool";
+
+export interface Resource {
+  id: string;
+  title: string;
+  url: string;
+  sourceName: string | null;
+  summary: string | null;
+  resourceType: ResourceType;
+  internalNotes: string | null;
+  isPublic: number;
+  status: GuideStatus;
+  /** Overrides <title>/og:title; falls back to title when unset. */
+  seoTitle: string | null;
+  /** Overrides <meta description>/og:description; falls back to summary when unset. */
+  seoDescription: string | null;
+  /** Overrides og:image; there's no cover image on a Resource, so this has no fallback. */
+  ogImage: string | null;
+  canonicalUrl: string | null;
+  noIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GuideFilter {
+  /** Defaults to true -- pass false for admin listings that should include drafts. */
+  publishedOnly?: boolean;
+  sourcePlatform?: string;
+  targetPlatform?: string;
+  maxDifficulty?: GuideDifficulty;
+}
+
 export interface DbAdapter {
   projects: Repository<Project>;
   experience: Repository<Experience>;
@@ -124,8 +228,32 @@ export interface DbAdapter {
   awards: Repository<Award>;
   education: Repository<Education>;
   pages: Repository<Page>;
+  guides: Repository<Guide>;
+  platforms: Repository<Platform>;
+  tags: Repository<Tag>;
+  resources: Repository<Resource>;
   /** Project blocks are keyed off projectId but have no independent sort-stable list-replace semantics in the generic Repository shape, so they get one bespoke method here rather than forcing a relational concept into the storage-agnostic interface. */
   getProjectBlocks(projectId: string): Promise<ProjectBlock[]>;
   replaceProjectBlocks(projectId: string, blocks: Omit<ProjectBlock, "id" | "projectId">[]): Promise<void>;
+  /** Guide steps are keyed off guideId with the same sort-stable list-replace shape as project blocks. */
+  getGuideSteps(guideId: string): Promise<GuideStep[]>;
+  replaceGuideSteps(guideId: string, steps: Omit<GuideStep, "id" | "guideId">[]): Promise<void>;
+  /** guide_tags is a plain many-to-many join with no payload of its own. */
+  getGuideTags(guideId: string): Promise<Tag[]>;
+  setGuideTags(guideId: string, tagIds: string[]): Promise<void>;
+  /** resource_platforms is a plain many-to-many join with no payload of its own. */
+  getPlatformsForResource(resourceId: string): Promise<Platform[]>;
+  setResourcePlatforms(resourceId: string, platformIds: string[]): Promise<void>;
+  getResourcesForPlatform(platformSlug: string, publicOnly?: boolean): Promise<Resource[]>;
+  /** guide_resources is a many-to-many join with a sortOrder payload, so it gets its own replace-in-order method rather than being folded into setGuideTags-style set semantics. */
+  getResourcesForGuide(guideId: string, publicOnly?: boolean): Promise<Resource[]>;
+  setGuideResources(guideId: string, resourceIds: string[]): Promise<void>;
+  listGuides(filter?: GuideFilter): Promise<Guide[]>;
+  getGuideBySlug(slug: string): Promise<Guide | undefined>;
+  /** Upsert-by-slug, used by scripts/seed-platforms.ts to make seeding idempotent. */
+  upsertPlatform(data: Omit<Platform, "id">): Promise<Platform>;
+  upsertTag(data: Omit<Tag, "id">): Promise<Tag>;
+  listResources(publicOnly?: boolean): Promise<Resource[]>;
+  logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void>;
   migrate(): Promise<void>;
 }
