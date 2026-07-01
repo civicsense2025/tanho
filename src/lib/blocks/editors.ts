@@ -4,6 +4,10 @@ import { ImageEditor } from "./editors/ImageEditor";
 import { VideoEditor } from "./editors/VideoEditor";
 import { MetricEditor } from "./editors/MetricEditor";
 import { GalleryEditor } from "./editors/GalleryEditor";
+import { RichTextEditor } from "./editors/RichTextEditor";
+import { CodeEditor } from "./editors/CodeEditor";
+import { CalloutEditor } from "./editors/CalloutEditor";
+import { ChecklistEditor } from "./editors/ChecklistEditor";
 import type { BlockType } from "./types";
 
 export interface BlockEditorProps {
