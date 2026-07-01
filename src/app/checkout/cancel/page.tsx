@@ -1,11 +1,14 @@
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 import { TextLink } from "@/components/ui";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Checkout canceled", robots: { index: false, follow: false } };
 
-export default function CheckoutCancelPage() {
+export default async function CheckoutCancelPage() {
+  const siteConfig = await getSettings();
   if (!siteConfig.features.payments) notFound();
   return (
     <main style={{ maxWidth: "var(--width-prose)", margin: "0 auto", padding: "var(--space-12) var(--gutter)", textAlign: "center" }}>

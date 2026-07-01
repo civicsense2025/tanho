@@ -39,6 +39,7 @@ const ENTITY_VAR_HINTS: Record<SeoEntityType, string> = {
   guide: "{{title}}, {{tagline}}, {{summary}}",
   resource: "{{title}}, {{summary}}",
   page: "{{title}}",
+  post: "{{title}}, {{excerpt}}",
 };
 
 /** Reusable "SEO" form section: raw override inputs (seoTitle/seoDescription/ogImage/canonicalUrl/

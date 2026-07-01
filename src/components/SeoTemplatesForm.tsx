@@ -21,6 +21,7 @@ const ENTITY_LABELS: Record<SeoEntityType, string> = {
   guide: "Guide",
   resource: "Resource",
   page: "Page",
+  post: "Post",
 };
 
 /** Sample values used only to render the live preview -- not saved anywhere. */
@@ -40,6 +41,10 @@ const SAMPLE_VARS: Record<SeoEntityType, { hint: string; sample: Record<string, 
   page: {
     hint: "{{title}}",
     sample: { title: "Home" },
+  },
+  post: {
+    hint: "{{title}}, {{excerpt}}",
+    sample: { title: "Why I left Substack", excerpt: "Owning your list and your platform, explained." },
   },
 };
 

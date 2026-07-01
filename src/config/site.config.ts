@@ -28,6 +28,10 @@ export interface SiteFeatures {
   guides: boolean;
   /** Newsletter primitives: posts/issues, subscribers, RSS. */
   newsletter: boolean;
+  /** Blocks named AI-training/scraping crawlers (see src/lib/ai-crawlers.ts) via robots.txt
+   * disallow rules and a proxy-level 403. Off by default -- unlike the scaffolding flags above,
+   * this is a behavior-changing choice some site owners want and others don't. */
+  blockAiCrawlers: boolean;
 }
 
 /** How the instance is built and served. `dynamic` uses the runtime DB adapters; `static`
@@ -121,6 +125,7 @@ export const siteConfig: SiteConfig = Object.freeze({
     ai: envFlag(process.env.NEXT_PUBLIC_FEATURE_AI, false),
     guides: envFlag(process.env.NEXT_PUBLIC_FEATURE_GUIDES, true),
     newsletter: envFlag(process.env.NEXT_PUBLIC_FEATURE_NEWSLETTER, false),
+    blockAiCrawlers: envFlag(process.env.NEXT_PUBLIC_FEATURE_BLOCK_AI_CRAWLERS, false),
   },
   mode,
   theme: {
