@@ -30,6 +30,9 @@ export default async function EditProjectPage({ params }: Props) {
           githubUrl: project.githubUrl || "", liveUrl: project.liveUrl || "",
           year: project.year || new Date().getFullYear(),
           status: project.status, sortOrder: project.sortOrder,
+          seoTitle: project.seoTitle || "", seoDescription: project.seoDescription || "",
+          ogImage: project.ogImage || "", canonicalUrl: project.canonicalUrl || "",
+          noIndex: project.noIndex === 1,
         }}
         initialBlocks={blocks}
         initialBody={body}

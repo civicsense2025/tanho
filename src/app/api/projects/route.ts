@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
     tags: JSON.stringify(body.tags || []), githubUrl: body.githubUrl || null,
     liveUrl: body.liveUrl || null, year: body.year || new Date().getFullYear(),
     status: body.status || "draft", sortOrder: body.sortOrder || 0,
+    seoTitle: body.seoTitle || null, seoDescription: body.seoDescription || null,
+    ogImage: body.ogImage || null, canonicalUrl: body.canonicalUrl || null,
+    noIndex: body.noIndex ? 1 : 0,
   });
   return NextResponse.json(project, { status: 201 });
 }

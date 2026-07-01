@@ -123,6 +123,11 @@ export function createLibsqlAdapter(): DbAdapter {
     year: "year",
     status: "status",
     sortOrder: "sort_order",
+    seoTitle: "seo_title",
+    seoDescription: "seo_description",
+    ogImage: "og_image",
+    canonicalUrl: "canonical_url",
+    noIndex: "no_index",
     createdAt: "created_at",
     updatedAt: "updated_at",
   });
@@ -173,6 +178,11 @@ export function createLibsqlAdapter(): DbAdapter {
     route: "route",
     status: "status",
     sortOrder: "sort_order",
+    seoTitle: "seo_title",
+    seoDescription: "seo_description",
+    ogImage: "og_image",
+    canonicalUrl: "canonical_url",
+    noIndex: "no_index",
     createdAt: "created_at",
     updatedAt: "updated_at",
   });

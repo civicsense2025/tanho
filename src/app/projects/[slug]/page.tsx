@@ -2,7 +2,9 @@ import { getProject, getProjectById, getBlocks } from "@/lib/db";
 import { getProjectBody } from "@/lib/content/project-content";
 import { getAdminSession } from "@/lib/auth";
 import { parseTags } from "@/lib/utils";
+import { buildMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Image from "next/image";
 import { Avatar, Tag, Button, TextLink } from "@/components/ui";
 import { BlockTree } from "@/components/BlockTree";
@@ -11,6 +13,13 @@ import { PreviewFrame } from "@/components/PreviewFrame";
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ preview?: string; id?: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await getProject(slug);
+  if (!project) return {};
+  return buildMetadata(project, { title: project.title, tagline: project.tagline, coverImage: project.coverImage });
+}
 
 export default async function ProjectPage({ params, searchParams }: Props) {
   const { slug } = await params;

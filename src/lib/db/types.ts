@@ -30,6 +30,14 @@ export interface Project {
   year: number | null;
   status: ProjectStatus;
   sortOrder: number;
+  /** Overrides <title>/og:title; falls back to title when unset. */
+  seoTitle: string | null;
+  /** Overrides <meta description>/og:description; falls back to tagline when unset. */
+  seoDescription: string | null;
+  /** Overrides og:image; falls back to coverImage when unset. */
+  ogImage: string | null;
+  canonicalUrl: string | null;
+  noIndex: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -100,6 +108,11 @@ export interface Page {
   route: string;
   status: PageStatus;
   sortOrder: number;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  ogImage: string | null;
+  canonicalUrl: string | null;
+  noIndex: number;
   createdAt: string;
   updatedAt: string;
 }

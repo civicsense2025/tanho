@@ -11,6 +11,7 @@ interface ProjectData {
   title: string; slug: string; tagline: string;
   coverImage: string; logoUrl: string; tags: string[]; githubUrl: string; liveUrl: string;
   year: number; status: "draft" | "published"; sortOrder: number; blocks: Block[];
+  seoTitle: string; seoDescription: string; ogImage: string; canonicalUrl: string; noIndex: boolean;
 }
 
 interface Props {
@@ -31,6 +32,7 @@ const DEFAULT: ProjectData = {
   title: "", slug: "", tagline: "", coverImage: "", logoUrl: "",
   tags: [], githubUrl: "", liveUrl: "", year: new Date().getFullYear(),
   status: "draft", sortOrder: 0, blocks: [],
+  seoTitle: "", seoDescription: "", ogImage: "", canonicalUrl: "", noIndex: false,
 };
 
 const labelStyle: CSSProperties = {
@@ -101,7 +103,11 @@ export function ProjectForm({ projectId, initial, initialBlocks = [], initialBod
 
   async function save() {
     setSaving(true);
-    const payload = { ...data, blocks: data.blocks.map((b, i) => ({ type: b.type, content: JSON.stringify(b.content), sortOrder: i })) };
+    const payload = {
+      ...data,
+      blocks: data.blocks.map((b, i) => ({ type: b.type, content: JSON.stringify(b.content), sortOrder: i })),
+      noIndex: data.noIndex ? 1 : 0,
+    };
     const res = projectId
       ? await fetch(`/api/projects/${projectId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       : await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -220,6 +226,31 @@ export function ProjectForm({ projectId, initial, initialBlocks = [], initialBod
       <section>
         <h2 style={sectionLabel}>Case Study Blocks</h2>
         <PageBuilder blocks={data.blocks} onChange={(blocks) => set("blocks", blocks)} onUpload={uploadFile} />
+      </section>
+
+      {/* SEO -- collapsed by default, secondary to the fields above */}
+      <section>
+        <details>
+          <summary style={{ ...sectionLabel, cursor: "pointer", display: "list-item" }}>SEO</summary>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)", marginTop: "var(--space-5)" }}>
+            <Field label="SEO title" hint="Falls back to Title when blank">
+              <Input value={data.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} placeholder={data.title || "Project title"} />
+            </Field>
+            <Field label="SEO description" hint="Falls back to Tagline when blank">
+              <Textarea rows={2} value={data.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} placeholder={data.tagline || "One-line summary"} />
+            </Field>
+            <Field label="OG image" hint="Falls back to Cover image when blank">
+              <Input value={data.ogImage} onChange={(e) => set("ogImage", e.target.value)} placeholder="https://…" />
+            </Field>
+            <Field label="Canonical URL">
+              <Input value={data.canonicalUrl} onChange={(e) => set("canonicalUrl", e.target.value)} placeholder="https://…" />
+            </Field>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <input type="checkbox" checked={data.noIndex} onChange={(e) => set("noIndex", e.target.checked)} />
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>Hide from search engines (noindex)</span>
+            </label>
+          </div>
+        </details>
       </section>
 
       {/* footer */}
