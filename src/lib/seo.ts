@@ -10,6 +10,16 @@ export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** Normalizes an image URL to absolute: already-absolute http(s) URLs (e.g. an external image
+ * host) pass through unchanged, relative URLs (e.g. `/uploads/<uuid>.ext` from the local-fs
+ * upload route) are resolved against SITE_URL. Required for openGraph.images and JSON-LD
+ * `image` fields, which per spec/Rich Results validation must be absolute -- mirrors the
+ * canonicalUrl normalization below. Returns undefined unchanged so callers can keep using
+ * `image ? absoluteImage(image) : undefined`-style optional chaining. */
+export function absoluteImage(image: string): string {
+  return image.startsWith("http") ? image : absoluteUrl(image);
+}
+
 interface SeoFields {
   seoTitle: string | null;
   seoDescription: string | null;
@@ -45,7 +55,8 @@ export function buildMetadata(fields: SeoFields, fallbacks: SeoFallbacks, templa
 
   const title = fields.seoTitle || templateTitle || fallbacks.title;
   const description = fields.seoDescription || templateDescription || fallbacks.tagline || undefined;
-  const image = fields.ogImage || fallbacks.coverImage || undefined;
+  const rawImage = fields.ogImage || fallbacks.coverImage || undefined;
+  const image = rawImage ? absoluteImage(rawImage) : undefined;
 
   const metadata: Metadata = {
     title,
