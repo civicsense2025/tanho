@@ -4,15 +4,15 @@ import type { HomepageBlock } from "@/components/homepage/registry";
 import { getPage, getSeoTemplate } from "@/lib/db";
 import { absoluteUrl, buildMetadata, SITE_URL } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
+import { siteConfig } from "@/config/site.config";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 // Site-wide fallback identity (matches layout.tsx's static <head> metadata) used for the
 // Person/ProfilePage JSON-LD when there's no `pages` row yet to resolve title/description from.
-const SITE_TITLE = "Tan Ho — Product Designer & Digital Marketer";
-const SITE_DESCRIPTION =
-  "I'm a Forbes 30 Under 30 product designer and front-end developer. I co-founded Fiveable, scaled it to 15M+ students, and secured $15M in funding. I build products at the intersection of design, growth, and engineering.";
+const SITE_TITLE = siteConfig.title;
+const SITE_DESCRIPTION = siteConfig.description;
 
 export async function generateMetadata(): Promise<Metadata> {
   const [page, template] = await Promise.all([getPage("home"), getSeoTemplate("page")]);
