@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BlockTree } from "@/components/BlockTree";
 import type { Block } from "@/lib/blocks/types";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export interface ProjectDraftMessage {
   type: "project-draft-update";
@@ -38,7 +39,7 @@ export function PreviewFrame({ initialBody, initialBlocks }: Props) {
 
   return (
     <>
-      {body && <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: body }} />}
+      {body && <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }} />}
       {blocks.length > 0 && <BlockTree blocks={blocks} />}
     </>
   );

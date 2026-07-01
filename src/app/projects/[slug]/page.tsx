@@ -9,6 +9,7 @@ import Image from "next/image";
 import { Avatar, Tag, Button, TextLink } from "@/components/ui";
 import { BlockTree } from "@/components/BlockTree";
 import { PreviewFrame } from "@/components/PreviewFrame";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -139,7 +140,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
       ) : (
         <>
           {body && (
-            <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: body }} />
+            <div className="prose" style={{ marginBottom: "var(--space-10)" }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }} />
           )}
           {blocks.length > 0 && (
             <BlockTree blocks={blocks.map((b) => ({ id: b.id, type: b.type, content: JSON.parse(b.content) }))} />
