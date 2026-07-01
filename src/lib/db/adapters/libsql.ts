@@ -11,19 +11,11 @@ import type {
   DbAdapter,
   Education,
   Experience,
-  Guide,
-  GuideFilter,
-  GuideStep,
   ListQuery,
   Order,
-  Page,
   Platform,
-  Post,
   PostDelivery,
-  Project,
-  ProjectBlock,
   Repository,
-  Resource,
   SeoEntityType,
   SeoTemplate,
   SiteSetting,
@@ -57,28 +49,6 @@ export function createLibsqlAdapter(): DbAdapter {
   const url = process.env.TURSO_DATABASE_URL || "file:./db/portfolio.db";
   const authToken = process.env.TURSO_AUTH_TOKEN;
   const client = createClient({ url, authToken });
-
-  const projects = makeSqlRepository<Project>(client, "projects", {
-    slug: "slug",
-    title: "title",
-    tagline: "tagline",
-    description: "description",
-    coverImage: "cover_image",
-    logoUrl: "logo_url",
-    tags: "tags",
-    githubUrl: "github_url",
-    liveUrl: "live_url",
-    year: "year",
-    status: "status",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
 
   const experience = makeSqlRepository<Experience>(client, "experience", {
     company: "company",
@@ -120,48 +90,6 @@ export function createLibsqlAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const pages = makeSqlRepository<Page>(client, "pages", {
-    slug: "slug",
-    title: "title",
-    route: "route",
-    status: "status",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
-
-  const guides = makeSqlRepository<Guide>(client, "guides", {
-    slug: "slug",
-    title: "title",
-    tagline: "tagline",
-    summary: "summary",
-    sourcePlatform: "source_platform",
-    targetPlatform: "target_platform",
-    difficulty: "difficulty",
-    effortHoursMin: "effort_hours_min",
-    effortHoursMax: "effort_hours_max",
-    costMinUsd: "cost_min_usd",
-    costMaxUsd: "cost_max_usd",
-    costPeriod: "cost_period",
-    skillsRequired: "skills_required",
-    requirements: "requirements",
-    coverImage: "cover_image",
-    status: "status",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
-
   const platforms = makeSqlRepository<Platform>(client, "platforms", {
     slug: "slug",
     name: "name",
@@ -180,43 +108,6 @@ export function createLibsqlAdapter(): DbAdapter {
   const tags = makeSqlRepository<Tag>(client, "tags", {
     slug: "slug",
     name: "name",
-  });
-
-  const resources = makeSqlRepository<Resource>(client, "resources", {
-    title: "title",
-    url: "url",
-    sourceName: "source_name",
-    summary: "summary",
-    resourceType: "resource_type",
-    internalNotes: "internal_notes",
-    isPublic: "is_public",
-    status: "status",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
-
-  const posts = makeSqlRepository<Post>(client, "posts", {
-    slug: "slug",
-    title: "title",
-    subtitle: "subtitle",
-    excerpt: "excerpt",
-    coverImage: "cover_image",
-    status: "status",
-    visibility: "visibility",
-    publishedAt: "published_at",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
   });
 
   const subscribers = makeSqlRepository<Subscriber>(client, "subscribers", {
@@ -378,87 +269,8 @@ export function createLibsqlAdapter(): DbAdapter {
     });
   }
 
-  async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
-    const result = await client.execute({
-      sql: "SELECT * FROM project_blocks WHERE project_id = ? ORDER BY sort_order ASC",
-      args: [projectId],
-    });
-    return result.rows.map((r) => {
-      const row = r as Record<string, unknown>;
-      return {
-        id: String(row.id),
-        projectId: String(row.project_id),
-        type: row.type as ProjectBlock["type"],
-        content: row.content as string,
-        sortOrder: Number(row.sort_order),
-      };
-    });
-  }
-
-  async function replaceProjectBlocks(projectId: string, blocks: Omit<ProjectBlock, "id" | "projectId">[]): Promise<void> {
-    await client.batch(
-      [
-        { sql: "DELETE FROM project_blocks WHERE project_id = ?", args: [projectId] },
-        ...blocks.map((b, i) => ({
-          sql: "INSERT INTO project_blocks (id, project_id, type, content, sort_order) VALUES (?, ?, ?, ?, ?)",
-          args: [randomUUID(), projectId, b.type, b.content, i],
-        })),
-      ],
-      "write"
-    );
-  }
-
-  async function getGuideSteps(guideId: string): Promise<GuideStep[]> {
-    const result = await client.execute({
-      sql: "SELECT * FROM guide_steps WHERE guide_id = ? ORDER BY sort_order ASC",
-      args: [guideId],
-    });
-    return result.rows.map((r) => {
-      const row = r as Record<string, unknown>;
-      return {
-        id: String(row.id),
-        guideId: String(row.guide_id),
-        title: (row.title as string) ?? null,
-        type: row.type as GuideStep["type"],
-        content: row.content as string,
-        sortOrder: Number(row.sort_order),
-      };
-    });
-  }
-
-  async function replaceGuideSteps(guideId: string, steps: Omit<GuideStep, "id" | "guideId">[]): Promise<void> {
-    await client.batch(
-      [
-        { sql: "DELETE FROM guide_steps WHERE guide_id = ?", args: [guideId] },
-        ...steps.map((s, i) => ({
-          sql: "INSERT INTO guide_steps (id, guide_id, title, type, content, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
-          args: [randomUUID(), guideId, s.title, s.type, s.content, i],
-        })),
-      ],
-      "write"
-    );
-  }
-
   function tagRow(row: Record<string, unknown>): Tag {
     return { id: String(row.id), slug: row.slug as string, name: row.name as string };
-  }
-
-  async function getGuideTags(guideId: string): Promise<Tag[]> {
-    const result = await client.execute({
-      sql: "SELECT t.* FROM tags t JOIN guide_tags gt ON gt.tag_id = t.id WHERE gt.guide_id = ? ORDER BY t.name ASC",
-      args: [guideId],
-    });
-    return result.rows.map((r) => tagRow(r as Record<string, unknown>));
-  }
-
-  async function setGuideTags(guideId: string, tagIds: string[]): Promise<void> {
-    await client.batch(
-      [
-        { sql: "DELETE FROM guide_tags WHERE guide_id = ?", args: [guideId] },
-        ...tagIds.map((tagId) => ({ sql: "INSERT INTO guide_tags (guide_id, tag_id) VALUES (?, ?)", args: [guideId, tagId] })),
-      ],
-      "write"
-    );
   }
 
   async function getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]> {
@@ -573,116 +385,38 @@ export function createLibsqlAdapter(): DbAdapter {
     );
   }
 
-  function resourceRow(row: Record<string, unknown>): Resource {
+  function contentEntryRow(row: Record<string, unknown>): ContentEntry {
     return {
       id: String(row.id),
-      title: row.title as string,
-      url: row.url as string,
-      sourceName: (row.source_name as string) ?? null,
-      summary: (row.summary as string) ?? null,
-      resourceType: row.resource_type as Resource["resourceType"],
-      internalNotes: (row.internal_notes as string) ?? null,
-      isPublic: Number(row.is_public),
-      status: row.status as Resource["status"],
-      seoTitle: (row.seo_title as string) ?? null,
-      seoDescription: (row.seo_description as string) ?? null,
-      ogImage: (row.og_image as string) ?? null,
-      canonicalUrl: (row.canonical_url as string) ?? null,
-      noIndex: Number(row.no_index),
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
-    };
-  }
-
-  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<Resource[]> {
-    const where = publicOnly ? "AND r.is_public = 1 AND r.status = 'published'" : "";
-    const result = await client.execute({
-      sql: `SELECT r.* FROM resources r
-            JOIN resource_platforms rp ON rp.resource_id = r.id
-            JOIN platforms p ON p.id = rp.platform_id
-            WHERE p.slug = ? ${where}
-            ORDER BY r.created_at DESC`,
-      args: [platformSlug],
-    });
-    return result.rows.map((r) => resourceRow(r as Record<string, unknown>));
-  }
-
-  async function getResourcesForGuide(guideId: string, publicOnly = true): Promise<Resource[]> {
-    const where = publicOnly ? "AND r.is_public = 1 AND r.status = 'published'" : "";
-    const result = await client.execute({
-      sql: `SELECT r.* FROM resources r
-            JOIN guide_resources gr ON gr.resource_id = r.id
-            WHERE gr.guide_id = ? ${where}
-            ORDER BY gr.sort_order ASC`,
-      args: [guideId],
-    });
-    return result.rows.map((r) => resourceRow(r as Record<string, unknown>));
-  }
-
-  async function setGuideResources(guideId: string, resourceIds: string[]): Promise<void> {
-    await client.batch(
-      [
-        { sql: "DELETE FROM guide_resources WHERE guide_id = ?", args: [guideId] },
-        ...resourceIds.map((resourceId, i) => ({
-          sql: "INSERT INTO guide_resources (guide_id, resource_id, sort_order) VALUES (?, ?, ?)",
-          args: [guideId, resourceId, i],
-        })),
-      ],
-      "write"
-    );
-  }
-
-  function guideRow(row: Record<string, unknown>): Guide {
-    return {
-      id: String(row.id),
+      contentTypeId: String(row.content_type_id),
       slug: row.slug as string,
       title: row.title as string,
-      tagline: (row.tagline as string) ?? null,
-      summary: (row.summary as string) ?? null,
-      sourcePlatform: row.source_platform as string,
-      targetPlatform: row.target_platform as string,
-      difficulty: row.difficulty as Guide["difficulty"],
-      effortHoursMin: row.effort_hours_min == null ? null : Number(row.effort_hours_min),
-      effortHoursMax: row.effort_hours_max == null ? null : Number(row.effort_hours_max),
-      costMinUsd: row.cost_min_usd == null ? null : Number(row.cost_min_usd),
-      costMaxUsd: row.cost_max_usd == null ? null : Number(row.cost_max_usd),
-      costPeriod: row.cost_period as Guide["costPeriod"],
-      skillsRequired: row.skills_required as string,
-      requirements: row.requirements as string,
-      coverImage: (row.cover_image as string) ?? null,
-      status: row.status as Guide["status"],
+      status: row.status as ContentEntryStatus,
+      scheduledAt: (row.scheduled_at as string) ?? null,
+      publishedAt: (row.published_at as string) ?? null,
       sortOrder: Number(row.sort_order),
       seoTitle: (row.seo_title as string) ?? null,
       seoDescription: (row.seo_description as string) ?? null,
       ogImage: (row.og_image as string) ?? null,
       canonicalUrl: (row.canonical_url as string) ?? null,
       noIndex: Number(row.no_index),
+      data: row.data as string,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
     };
   }
 
-  const DIFFICULTY_RANK: Record<Guide["difficulty"], number> = { beginner: 0, intermediate: 1, advanced: 2 };
-
-  async function listGuides(filter: GuideFilter = {}): Promise<Guide[]> {
-    const where: string[] = [];
-    const args: InValue[] = [];
-    if (filter.publishedOnly !== false) where.push("status = 'published'");
-    if (filter.sourcePlatform) { where.push("source_platform = ?"); args.push(filter.sourcePlatform); }
-    if (filter.targetPlatform) { where.push("target_platform = ?"); args.push(filter.targetPlatform); }
-    const sql = `SELECT * FROM guides ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY sort_order ASC, id DESC`;
-    const result = await client.execute({ sql, args });
-    let list = result.rows.map((r) => guideRow(r as Record<string, unknown>));
-    if (filter.maxDifficulty) {
-      const ceiling = DIFFICULTY_RANK[filter.maxDifficulty];
-      list = list.filter((g) => DIFFICULTY_RANK[g.difficulty] <= ceiling);
-    }
-    return list;
-  }
-
-  async function getGuideBySlug(slug: string): Promise<Guide | undefined> {
-    const [g] = await guides.list({ where: { slug } });
-    return g;
+  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<ContentEntry[]> {
+    const where = publicOnly ? "AND e.status = 'published'" : "";
+    const result = await client.execute({
+      sql: `SELECT e.* FROM content_entries e
+            JOIN resource_platforms rp ON rp.resource_id = e.id
+            JOIN platforms p ON p.id = rp.platform_id
+            WHERE p.slug = ? ${where}
+            ORDER BY e.created_at DESC`,
+      args: [platformSlug],
+    });
+    return result.rows.map((r) => contentEntryRow(r as Record<string, unknown>));
   }
 
   async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
@@ -717,12 +451,6 @@ export function createLibsqlAdapter(): DbAdapter {
     });
     const result = await client.execute({ sql: "SELECT * FROM tags WHERE slug = ?", args: [data.slug] });
     return tagRow(result.rows[0] as Record<string, unknown>);
-  }
-
-  async function listResources(publicOnly = true): Promise<Resource[]> {
-    const where = publicOnly ? "WHERE is_public = 1 AND status = 'published'" : "";
-    const result = await client.execute(`SELECT * FROM resources ${where} ORDER BY created_at DESC`);
-    return result.rows.map((r) => resourceRow(r as Record<string, unknown>));
   }
 
   async function logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void> {
@@ -802,17 +530,12 @@ export function createLibsqlAdapter(): DbAdapter {
   }
 
   return {
-    projects,
     experience,
     skills,
     awards,
     education,
-    pages,
-    guides,
     platforms,
     tags,
-    resources,
-    posts,
     subscribers,
     orders,
     subscriptions,
@@ -825,23 +548,12 @@ export function createLibsqlAdapter(): DbAdapter {
     getOrdersByEmail,
     getSubscriptionByStripeId,
     getActiveSubscriptionByEmail,
-    getProjectBlocks,
-    replaceProjectBlocks,
-    getGuideSteps,
-    replaceGuideSteps,
-    getGuideTags,
-    setGuideTags,
     getPlatformsForResource,
     setResourcePlatforms,
     getResourcesForPlatform,
-    getResourcesForGuide,
-    setGuideResources,
-    listGuides,
-    getGuideBySlug,
     getPlatformBySlug,
     upsertPlatform,
     upsertTag,
-    listResources,
     logQuizResponse,
     listSeoTemplates,
     getSeoTemplate,

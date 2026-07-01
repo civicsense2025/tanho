@@ -9,17 +9,9 @@ import type {
   ContentType,
   Education,
   Experience,
-  Guide,
-  GuideFilter,
-  GuideStep,
   Order,
-  Page,
   Platform,
-  Post,
   PostDelivery,
-  Project,
-  ProjectBlock,
-  Resource,
   SeoEntityType,
   SeoTemplate,
   SiteSetting,
@@ -28,56 +20,6 @@ import type {
   Subscription,
   Tag,
 } from "./types";
-
-export async function listProjects(publishedOnly = true): Promise<Project[]> {
-  const adapter = await getAdapter();
-  return adapter.projects.list({
-    where: publishedOnly ? { status: "published" } : undefined,
-    orderBy: [
-      { field: "sortOrder", direction: "asc" },
-      { field: "id", direction: "desc" },
-    ],
-  });
-}
-
-// Wrapped in React's cache() for request-level memoization -- generateMetadata() and the page
-// body both call getProject(slug)/getGuide(slug) with the same argument for the same request,
-// so without this every page view issued two identical SELECTs.
-export const getProject = cache(async (slug: string): Promise<Project | undefined> => {
-  const adapter = await getAdapter();
-  const [project] = await adapter.projects.list({ where: { slug } });
-  return project;
-});
-
-export async function getProjectById(id: string): Promise<Project | undefined> {
-  const adapter = await getAdapter();
-  return adapter.projects.get(id);
-}
-
-export async function createProject(data: Omit<Project, "id" | "createdAt" | "updatedAt">): Promise<Project> {
-  const adapter = await getAdapter();
-  return adapter.projects.create(data);
-}
-
-export async function updateProject(id: string, data: Partial<Omit<Project, "id" | "createdAt" | "updatedAt">>): Promise<Project> {
-  const adapter = await getAdapter();
-  return adapter.projects.update(id, data);
-}
-
-export async function deleteProject(id: string): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.projects.delete(id);
-}
-
-export async function getBlocks(projectId: string): Promise<ProjectBlock[]> {
-  const adapter = await getAdapter();
-  return adapter.getProjectBlocks(projectId);
-}
-
-export async function upsertBlocks(projectId: string, blocks: Omit<ProjectBlock, "id" | "projectId">[]): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.replaceProjectBlocks(projectId, blocks);
-}
 
 export async function listExperience(): Promise<Experience[]> {
   const adapter = await getAdapter();
@@ -199,97 +141,6 @@ export async function deleteEducation(id: string): Promise<void> {
   await adapter.education.delete(id);
 }
 
-// Wrapped in React's cache() for request-level memoization -- generateMetadata() and the page
-// body both call getPage("home") with the same argument for the same request, so without this
-// every homepage view issued two identical SELECTs.
-export const getPage = cache(async (slug: string): Promise<Page | undefined> => {
-  const adapter = await getAdapter();
-  const [page] = await adapter.pages.list({ where: { slug } });
-  return page;
-});
-
-export async function getPageById(id: string): Promise<Page | undefined> {
-  const adapter = await getAdapter();
-  return adapter.pages.get(id);
-}
-
-export async function listPages(): Promise<Page[]> {
-  const adapter = await getAdapter();
-  return adapter.pages.list({ orderBy: [{ field: "sortOrder", direction: "asc" }] });
-}
-
-export async function createPage(data: Omit<Page, "id" | "createdAt" | "updatedAt">): Promise<Page> {
-  const adapter = await getAdapter();
-  return adapter.pages.create(data);
-}
-
-export async function updatePage(id: string, data: Partial<Omit<Page, "id" | "createdAt" | "updatedAt">>): Promise<Page> {
-  const adapter = await getAdapter();
-  return adapter.pages.update(id, data);
-}
-
-export async function listGuides(filter?: GuideFilter): Promise<Guide[]> {
-  const adapter = await getAdapter();
-  return adapter.listGuides(filter);
-}
-
-// See getProject() above -- same request-level memoization rationale (generateMetadata() + page
-// body both call getGuide(slug) once per request).
-export const getGuide = cache(async (slug: string): Promise<Guide | undefined> => {
-  const adapter = await getAdapter();
-  return adapter.getGuideBySlug(slug);
-});
-
-export async function getGuideById(id: string): Promise<Guide | undefined> {
-  const adapter = await getAdapter();
-  return adapter.guides.get(id);
-}
-
-export async function createGuide(data: Omit<Guide, "id" | "createdAt" | "updatedAt">): Promise<Guide> {
-  const adapter = await getAdapter();
-  return adapter.guides.create(data);
-}
-
-export async function updateGuide(id: string, data: Partial<Omit<Guide, "id" | "createdAt" | "updatedAt">>): Promise<Guide> {
-  const adapter = await getAdapter();
-  return adapter.guides.update(id, data);
-}
-
-export async function deleteGuide(id: string): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.guides.delete(id);
-}
-
-export async function getGuideSteps(guideId: string): Promise<GuideStep[]> {
-  const adapter = await getAdapter();
-  return adapter.getGuideSteps(guideId);
-}
-
-export async function replaceGuideSteps(guideId: string, steps: Omit<GuideStep, "id" | "guideId">[]): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.replaceGuideSteps(guideId, steps);
-}
-
-export async function getGuideTags(guideId: string): Promise<Tag[]> {
-  const adapter = await getAdapter();
-  return adapter.getGuideTags(guideId);
-}
-
-export async function setGuideTags(guideId: string, tagIds: string[]): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.setGuideTags(guideId, tagIds);
-}
-
-export async function getResourcesForGuide(guideId: string, publicOnly?: boolean): Promise<Resource[]> {
-  const adapter = await getAdapter();
-  return adapter.getResourcesForGuide(guideId, publicOnly);
-}
-
-export async function setGuideResources(guideId: string, resourceIds: string[]): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.setGuideResources(guideId, resourceIds);
-}
-
 export async function listPlatforms(): Promise<Platform[]> {
   const adapter = await getAdapter();
   return adapter.platforms.list({ orderBy: [{ field: "sortOrder", direction: "asc" }, { field: "name" as keyof Platform, direction: "asc" }] });
@@ -320,7 +171,7 @@ export async function setResourcePlatforms(resourceId: string, platformIds: stri
   await adapter.setResourcePlatforms(resourceId, platformIds);
 }
 
-export async function getResourcesForPlatform(platformSlug: string, publicOnly?: boolean): Promise<Resource[]> {
+export async function getResourcesForPlatform(platformSlug: string, publicOnly?: boolean): Promise<ContentEntry[]> {
   const adapter = await getAdapter();
   return adapter.getResourcesForPlatform(platformSlug, publicOnly);
 }
@@ -333,72 +184,6 @@ export async function listTags(): Promise<Tag[]> {
 export async function upsertTag(data: Omit<Tag, "id">): Promise<Tag> {
   const adapter = await getAdapter();
   return adapter.upsertTag(data);
-}
-
-export async function listResources(publicOnly?: boolean): Promise<Resource[]> {
-  const adapter = await getAdapter();
-  return adapter.listResources(publicOnly);
-}
-
-export async function getResourceById(id: string): Promise<Resource | undefined> {
-  const adapter = await getAdapter();
-  return adapter.resources.get(id);
-}
-
-export async function createResource(data: Omit<Resource, "id" | "createdAt" | "updatedAt">): Promise<Resource> {
-  const adapter = await getAdapter();
-  return adapter.resources.create(data);
-}
-
-export async function updateResource(id: string, data: Partial<Omit<Resource, "id" | "createdAt" | "updatedAt">>): Promise<Resource> {
-  const adapter = await getAdapter();
-  return adapter.resources.update(id, data);
-}
-
-export async function deleteResource(id: string): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.resources.delete(id);
-}
-
-// ---------- Newsletter: posts ----------
-
-export async function listPosts(publishedOnly = true): Promise<Post[]> {
-  const adapter = await getAdapter();
-  return adapter.posts.list({
-    where: publishedOnly ? { status: "published" } : undefined,
-    orderBy: [
-      { field: "publishedAt", direction: "desc" },
-      { field: "sortOrder", direction: "asc" },
-    ],
-  });
-}
-
-// Request-level memoized like getProject/getGuide: generateMetadata() and the post body both
-// resolve the same slug once per request.
-export const getPost = cache(async (slug: string): Promise<Post | undefined> => {
-  const adapter = await getAdapter();
-  const [post] = await adapter.posts.list({ where: { slug } });
-  return post;
-});
-
-export async function getPostById(id: string): Promise<Post | undefined> {
-  const adapter = await getAdapter();
-  return adapter.posts.get(id);
-}
-
-export async function createPost(data: Omit<Post, "id" | "createdAt" | "updatedAt">): Promise<Post> {
-  const adapter = await getAdapter();
-  return adapter.posts.create(data);
-}
-
-export async function updatePost(id: string, data: Partial<Omit<Post, "id" | "createdAt" | "updatedAt">>): Promise<Post> {
-  const adapter = await getAdapter();
-  return adapter.posts.update(id, data);
-}
-
-export async function deletePost(id: string): Promise<void> {
-  const adapter = await getAdapter();
-  await adapter.posts.delete(id);
 }
 
 // ---------- Newsletter: subscribers ----------

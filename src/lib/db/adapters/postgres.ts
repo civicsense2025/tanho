@@ -11,19 +11,11 @@ import type {
   DbAdapter,
   Education,
   Experience,
-  Guide,
-  GuideFilter,
-  GuideStep,
   ListQuery,
   Order,
-  Page,
   Platform,
-  Post,
   PostDelivery,
-  Project,
-  ProjectBlock,
   Repository,
-  Resource,
   SeoEntityType,
   SeoTemplate,
   SiteSetting,
@@ -70,28 +62,6 @@ export function createPostgresAdapter(): DbAdapter {
     },
   });
 
-  const projects = makeSqlRepository<Project>(sql, "projects", {
-    slug: "slug",
-    title: "title",
-    tagline: "tagline",
-    description: "description",
-    coverImage: "cover_image",
-    logoUrl: "logo_url",
-    tags: "tags",
-    githubUrl: "github_url",
-    liveUrl: "live_url",
-    year: "year",
-    status: "status",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
-
   const experience = makeSqlRepository<Experience>(sql, "experience", {
     company: "company",
     role: "role",
@@ -132,48 +102,6 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
-  const pages = makeSqlRepository<Page>(sql, "pages", {
-    slug: "slug",
-    title: "title",
-    route: "route",
-    status: "status",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
-
-  const guides = makeSqlRepository<Guide>(sql, "guides", {
-    slug: "slug",
-    title: "title",
-    tagline: "tagline",
-    summary: "summary",
-    sourcePlatform: "source_platform",
-    targetPlatform: "target_platform",
-    difficulty: "difficulty",
-    effortHoursMin: "effort_hours_min",
-    effortHoursMax: "effort_hours_max",
-    costMinUsd: "cost_min_usd",
-    costMaxUsd: "cost_max_usd",
-    costPeriod: "cost_period",
-    skillsRequired: "skills_required",
-    requirements: "requirements",
-    coverImage: "cover_image",
-    status: "status",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
-
   const platforms = makeSqlRepository<Platform>(sql, "platforms", {
     slug: "slug",
     name: "name",
@@ -192,43 +120,6 @@ export function createPostgresAdapter(): DbAdapter {
   const tags = makeSqlRepository<Tag>(sql, "tags", {
     slug: "slug",
     name: "name",
-  });
-
-  const resources = makeSqlRepository<Resource>(sql, "resources", {
-    title: "title",
-    url: "url",
-    sourceName: "source_name",
-    summary: "summary",
-    resourceType: "resource_type",
-    internalNotes: "internal_notes",
-    isPublic: "is_public",
-    status: "status",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-  });
-
-  const posts = makeSqlRepository<Post>(sql, "posts", {
-    slug: "slug",
-    title: "title",
-    subtitle: "subtitle",
-    excerpt: "excerpt",
-    coverImage: "cover_image",
-    status: "status",
-    visibility: "visibility",
-    publishedAt: "published_at",
-    sortOrder: "sort_order",
-    seoTitle: "seo_title",
-    seoDescription: "seo_description",
-    ogImage: "og_image",
-    canonicalUrl: "canonical_url",
-    noIndex: "no_index",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
   });
 
   const subscribers = makeSqlRepository<Subscriber>(sql, "subscribers", {
@@ -387,81 +278,8 @@ export function createPostgresAdapter(): DbAdapter {
     );
   }
 
-  async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
-    const rows = await sql.unsafe<Record<string, unknown>[]>(
-      "SELECT * FROM project_blocks WHERE project_id = $1 ORDER BY sort_order ASC",
-      [projectId] as never[]
-    );
-    return rows.map((row) => ({
-      id: String(row.id),
-      projectId: String(row.project_id),
-      type: row.type as ProjectBlock["type"],
-      content: row.content as string,
-      sortOrder: Number(row.sort_order),
-    }));
-  }
-
-  async function replaceProjectBlocks(projectId: string, blocks: Omit<ProjectBlock, "id" | "projectId">[]): Promise<void> {
-    await sql.begin(async (tx) => {
-      await tx.unsafe("DELETE FROM project_blocks WHERE project_id = $1", [projectId] as never[]);
-      for (const [i, b] of blocks.entries()) {
-        await tx.unsafe(
-          "INSERT INTO project_blocks (id, project_id, type, content, sort_order) VALUES ($1, $2, $3, $4, $5)",
-          [randomUUID(), projectId, b.type, b.content, i] as never[]
-        );
-      }
-    });
-  }
-
-  async function getGuideSteps(guideId: string): Promise<GuideStep[]> {
-    const rows = await sql.unsafe<Record<string, unknown>[]>(
-      "SELECT * FROM guide_steps WHERE guide_id = $1 ORDER BY sort_order ASC",
-      [guideId] as never[]
-    );
-    return rows.map((row) => ({
-      id: String(row.id),
-      guideId: String(row.guide_id),
-      title: (row.title as string) ?? null,
-      type: row.type as GuideStep["type"],
-      content: row.content as string,
-      sortOrder: Number(row.sort_order),
-    }));
-  }
-
-  async function replaceGuideSteps(guideId: string, steps: Omit<GuideStep, "id" | "guideId">[]): Promise<void> {
-    await sql.begin(async (tx) => {
-      await tx.unsafe("DELETE FROM guide_steps WHERE guide_id = $1", [guideId] as never[]);
-      for (const [i, s] of steps.entries()) {
-        await tx.unsafe(
-          "INSERT INTO guide_steps (id, guide_id, title, type, content, sort_order) VALUES ($1, $2, $3, $4, $5, $6)",
-          [randomUUID(), guideId, s.title, s.type, s.content, i] as never[]
-        );
-      }
-    });
-  }
-
   function tagRow(row: Record<string, unknown>): Tag {
     return { id: String(row.id), slug: row.slug as string, name: row.name as string };
-  }
-
-  async function getGuideTags(guideId: string): Promise<Tag[]> {
-    const rows = await sql.unsafe<Record<string, unknown>[]>(
-      "SELECT t.* FROM tags t JOIN guide_tags gt ON gt.tag_id = t.id WHERE gt.guide_id = $1 ORDER BY t.name ASC",
-      [guideId] as never[]
-    );
-    return rows.map(tagRow);
-  }
-
-  async function setGuideTags(guideId: string, tagIds: string[]): Promise<void> {
-    await sql.begin(async (tx) => {
-      await tx.unsafe("DELETE FROM guide_tags WHERE guide_id = $1", [guideId] as never[]);
-      if (tagIds.length === 0) return;
-      const values = tagIds.map((_, i) => `($1, $${i + 2})`).join(", ");
-      await tx.unsafe(
-        `INSERT INTO guide_tags (guide_id, tag_id) VALUES ${values}`,
-        [guideId, ...tagIds] as never[]
-      );
-    });
   }
 
   async function getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]> {
@@ -574,117 +392,38 @@ export function createPostgresAdapter(): DbAdapter {
     });
   }
 
-  function resourceRow(row: Record<string, unknown>): Resource {
+  function contentEntryRow(row: Record<string, unknown>): ContentEntry {
     return {
       id: String(row.id),
-      title: row.title as string,
-      url: row.url as string,
-      sourceName: (row.source_name as string) ?? null,
-      summary: (row.summary as string) ?? null,
-      resourceType: row.resource_type as Resource["resourceType"],
-      internalNotes: (row.internal_notes as string) ?? null,
-      isPublic: Number(row.is_public),
-      status: row.status as Resource["status"],
-      seoTitle: (row.seo_title as string) ?? null,
-      seoDescription: (row.seo_description as string) ?? null,
-      ogImage: (row.og_image as string) ?? null,
-      canonicalUrl: (row.canonical_url as string) ?? null,
-      noIndex: Number(row.no_index),
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
-    };
-  }
-
-  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<Resource[]> {
-    const where = publicOnly ? "AND r.is_public = 1 AND r.status = 'published'" : "";
-    const rows = await sql.unsafe<Record<string, unknown>[]>(
-      `SELECT r.* FROM resources r
-       JOIN resource_platforms rp ON rp.resource_id = r.id
-       JOIN platforms p ON p.id = rp.platform_id
-       WHERE p.slug = $1 ${where}
-       ORDER BY r.created_at DESC`,
-      [platformSlug] as never[]
-    );
-    return rows.map(resourceRow);
-  }
-
-  async function getResourcesForGuide(guideId: string, publicOnly = true): Promise<Resource[]> {
-    const where = publicOnly ? "AND r.is_public = 1 AND r.status = 'published'" : "";
-    const rows = await sql.unsafe<Record<string, unknown>[]>(
-      `SELECT r.* FROM resources r
-       JOIN guide_resources gr ON gr.resource_id = r.id
-       WHERE gr.guide_id = $1 ${where}
-       ORDER BY gr.sort_order ASC`,
-      [guideId] as never[]
-    );
-    return rows.map(resourceRow);
-  }
-
-  async function setGuideResources(guideId: string, resourceIds: string[]): Promise<void> {
-    await sql.begin(async (tx) => {
-      await tx.unsafe("DELETE FROM guide_resources WHERE guide_id = $1", [guideId] as never[]);
-      if (resourceIds.length === 0) return;
-      const values = resourceIds.map((_, i) => `($1, $${i * 2 + 2}, $${i * 2 + 3})`).join(", ");
-      const args = resourceIds.flatMap((resourceId, i) => [resourceId, i]);
-      await tx.unsafe(
-        `INSERT INTO guide_resources (guide_id, resource_id, sort_order) VALUES ${values}`,
-        [guideId, ...args] as never[]
-      );
-    });
-  }
-
-  function guideRow(row: Record<string, unknown>): Guide {
-    return {
-      id: String(row.id),
+      contentTypeId: String(row.content_type_id),
       slug: row.slug as string,
       title: row.title as string,
-      tagline: (row.tagline as string) ?? null,
-      summary: (row.summary as string) ?? null,
-      sourcePlatform: row.source_platform as string,
-      targetPlatform: row.target_platform as string,
-      difficulty: row.difficulty as Guide["difficulty"],
-      effortHoursMin: row.effort_hours_min == null ? null : Number(row.effort_hours_min),
-      effortHoursMax: row.effort_hours_max == null ? null : Number(row.effort_hours_max),
-      costMinUsd: row.cost_min_usd == null ? null : Number(row.cost_min_usd),
-      costMaxUsd: row.cost_max_usd == null ? null : Number(row.cost_max_usd),
-      costPeriod: row.cost_period as Guide["costPeriod"],
-      skillsRequired: row.skills_required as string,
-      requirements: row.requirements as string,
-      coverImage: (row.cover_image as string) ?? null,
-      status: row.status as Guide["status"],
+      status: row.status as ContentEntryStatus,
+      scheduledAt: (row.scheduled_at as string) ?? null,
+      publishedAt: (row.published_at as string) ?? null,
       sortOrder: Number(row.sort_order),
       seoTitle: (row.seo_title as string) ?? null,
       seoDescription: (row.seo_description as string) ?? null,
       ogImage: (row.og_image as string) ?? null,
       canonicalUrl: (row.canonical_url as string) ?? null,
       noIndex: Number(row.no_index),
+      data: row.data as string,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
     };
   }
 
-  const DIFFICULTY_RANK: Record<Guide["difficulty"], number> = { beginner: 0, intermediate: 1, advanced: 2 };
-
-  async function listGuides(filter: GuideFilter = {}): Promise<Guide[]> {
-    const where: string[] = [];
-    const args: unknown[] = [];
-    let paramIndex = 1;
-    if (filter.publishedOnly !== false) where.push("status = 'published'");
-    if (filter.sourcePlatform) { where.push(`source_platform = $${paramIndex++}`); args.push(filter.sourcePlatform); }
-    if (filter.targetPlatform) { where.push(`target_platform = $${paramIndex++}`); args.push(filter.targetPlatform); }
-    const sqlText = `SELECT * FROM guides ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY sort_order ASC, id DESC`;
-    const rows = await sql.unsafe<Record<string, unknown>[]>(sqlText, args as never[]);
-    let list = rows.map(guideRow);
-    if (filter.maxDifficulty) {
-      const ceiling = DIFFICULTY_RANK[filter.maxDifficulty];
-      list = list.filter((g) => DIFFICULTY_RANK[g.difficulty] <= ceiling);
-    }
-    return list;
-  }
-
-  async function getGuideBySlug(slug: string): Promise<Guide | undefined> {
-    const [g] = await guides.list({ where: { slug } });
-    return g;
+  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<ContentEntry[]> {
+    const where = publicOnly ? "AND e.status = 'published'" : "";
+    const rows = await sql.unsafe<Record<string, unknown>[]>(
+      `SELECT e.* FROM content_entries e
+       JOIN resource_platforms rp ON rp.resource_id = e.id
+       JOIN platforms p ON p.id = rp.platform_id
+       WHERE p.slug = $1 ${where}
+       ORDER BY e.created_at DESC`,
+      [platformSlug] as never[]
+    );
+    return rows.map(contentEntryRow);
   }
 
   async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
@@ -719,12 +458,6 @@ export function createPostgresAdapter(): DbAdapter {
     );
     const rows = await sql.unsafe<Record<string, unknown>[]>("SELECT * FROM tags WHERE slug = $1", [data.slug] as never[]);
     return tagRow(rows[0]);
-  }
-
-  async function listResources(publicOnly = true): Promise<Resource[]> {
-    const where = publicOnly ? "WHERE is_public = 1 AND status = 'published'" : "";
-    const rows = await sql.unsafe<Record<string, unknown>[]>(`SELECT * FROM resources ${where} ORDER BY created_at DESC`);
-    return rows.map(resourceRow);
   }
 
   async function logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void> {
@@ -807,17 +540,12 @@ export function createPostgresAdapter(): DbAdapter {
   }
 
   return {
-    projects,
     experience,
     skills,
     awards,
     education,
-    pages,
-    guides,
     platforms,
     tags,
-    resources,
-    posts,
     subscribers,
     orders,
     subscriptions,
@@ -830,23 +558,12 @@ export function createPostgresAdapter(): DbAdapter {
     getOrdersByEmail,
     getSubscriptionByStripeId,
     getActiveSubscriptionByEmail,
-    getProjectBlocks,
-    replaceProjectBlocks,
-    getGuideSteps,
-    replaceGuideSteps,
-    getGuideTags,
-    setGuideTags,
     getPlatformsForResource,
     setResourcePlatforms,
     getResourcesForPlatform,
-    getResourcesForGuide,
-    setGuideResources,
-    listGuides,
-    getGuideBySlug,
     getPlatformBySlug,
     upsertPlatform,
     upsertTag,
-    listResources,
     logQuizResponse,
     listSeoTemplates,
     getSeoTemplate,

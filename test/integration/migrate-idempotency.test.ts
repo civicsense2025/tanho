@@ -22,13 +22,13 @@ for (const harness of harnesses) {
       await expect(db.migrate()).resolves.toBeUndefined(); // second run
       await expect(db.migrate()).resolves.toBeUndefined(); // third run
       // DB still works after repeated migrations.
-      const p = await db.projects.create({
-        slug: "idem", title: "Idem", tagline: null, description: null, coverImage: null,
-        logoUrl: null, tags: "[]", githubUrl: null, liveUrl: null, year: 2026,
-        status: "draft", sortOrder: 0, seoTitle: null, seoDescription: null, ogImage: null,
-        canonicalUrl: null, noIndex: 0,
+      const ct = await db.contentTypes.create({
+        slug: "idem-type", name: "Idem", icon: null,
+        fields: JSON.stringify([]), isBuiltIn: 0, sortOrder: 0,
+        seoTitleTemplate: null, seoDescriptionTemplate: null,
       });
-      expect(await db.projects.get(p.id)).toBeDefined();
+      expect(await db.contentTypes.get(ct.id)).toBeDefined();
+      await db.contentTypes.delete(ct.id);
     });
   });
 }

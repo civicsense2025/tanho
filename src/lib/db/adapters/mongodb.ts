@@ -11,19 +11,11 @@ import type {
   DbAdapter,
   Education,
   Experience,
-  Guide,
-  GuideFilter,
-  GuideStep,
   ListQuery,
   Order,
-  Page,
   Platform,
-  Post,
   PostDelivery,
-  Project,
-  ProjectBlock,
   Repository,
-  Resource,
   SeoEntityType,
   SeoTemplate,
   SiteSetting,
@@ -118,17 +110,12 @@ export function createMongoAdapter(): DbAdapter {
     return db;
   }
 
-  const projects = mongoRepository<Project>(getDb().collection("projects"));
   const experience = mongoRepository<Experience>(getDb().collection("experience"));
   const skills = mongoRepository<Skill>(getDb().collection("skills"));
   const awards = mongoRepository<Award>(getDb().collection("awards"));
   const education = mongoRepository<Education>(getDb().collection("education"));
-  const pages = mongoRepository<Page>(getDb().collection("pages"));
-  const guides = mongoRepository<Guide>(getDb().collection("guides"));
   const platforms = mongoRepository<Platform>(getDb().collection("platforms"));
   const tags = mongoRepository<Tag>(getDb().collection("tags"));
-  const resources = mongoRepository<Resource>(getDb().collection("resources"));
-  const posts = mongoRepository<Post>(getDb().collection("posts"));
   const subscribers = mongoRepository<Subscriber>(getDb().collection("subscribers"));
   const orders = mongoRepository<Order>(getDb().collection("orders"));
   const subscriptions = mongoRepository<Subscription>(getDb().collection("subscriptions"));
@@ -206,68 +193,6 @@ export function createMongoAdapter(): DbAdapter {
         },
         { upsert: true }
       );
-  }
-
-  async function getProjectBlocks(projectId: string): Promise<ProjectBlock[]> {
-    const docs = await getDb()
-      .collection("project_blocks")
-      .find({ projectId })
-      .sort({ sortOrder: 1 })
-      .toArray();
-    return docs.map((d) => ({
-      id: d.id as string,
-      projectId: d.projectId as string,
-      type: d.type as ProjectBlock["type"],
-      content: d.content as string,
-      sortOrder: d.sortOrder as number,
-    }));
-  }
-
-  async function replaceProjectBlocks(projectId: string, blocks: Omit<ProjectBlock, "id" | "projectId">[]): Promise<void> {
-    const collection = getDb().collection("project_blocks");
-    await collection.deleteMany({ projectId });
-    if (blocks.length === 0) return;
-    await collection.insertMany(
-      blocks.map((b, i) => ({ id: randomUUID(), projectId, type: b.type, content: b.content, sortOrder: i }))
-    );
-  }
-
-  async function getGuideSteps(guideId: string): Promise<GuideStep[]> {
-    const docs = await getDb().collection("guide_steps").find({ guideId }).sort({ sortOrder: 1 }).toArray();
-    return docs.map((d) => ({
-      id: d.id as string,
-      guideId: d.guideId as string,
-      title: (d.title as string) ?? null,
-      type: d.type as GuideStep["type"],
-      content: d.content as string,
-      sortOrder: d.sortOrder as number,
-    }));
-  }
-
-  async function replaceGuideSteps(guideId: string, steps: Omit<GuideStep, "id" | "guideId">[]): Promise<void> {
-    const collection = getDb().collection("guide_steps");
-    await collection.deleteMany({ guideId });
-    if (steps.length === 0) return;
-    await collection.insertMany(
-      steps.map((s, i) => ({ id: randomUUID(), guideId, title: s.title, type: s.type, content: s.content, sortOrder: i }))
-    );
-  }
-
-  /** guide_tags is modeled as its own collection of plain {guideId, tagId} docs, matching this
-   * file's existing style (no aggregation pipelines where two simple queries will do). */
-  async function getGuideTags(guideId: string): Promise<Tag[]> {
-    const joins = await getDb().collection("guide_tags").find({ guideId }).toArray();
-    const tagIds = joins.map((j) => j.tagId as string);
-    if (tagIds.length === 0) return [];
-    const docs = await getDb().collection("tags").find({ id: { $in: tagIds } }).sort({ name: 1 }).toArray();
-    return docs.map((d) => ({ id: d.id as string, slug: d.slug as string, name: d.name as string }));
-  }
-
-  async function setGuideTags(guideId: string, tagIds: string[]): Promise<void> {
-    const collection = getDb().collection("guide_tags");
-    await collection.deleteMany({ guideId });
-    if (tagIds.length === 0) return;
-    await collection.insertMany(tagIds.map((tagId) => ({ guideId, tagId })));
   }
 
   async function getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]> {
@@ -359,111 +284,18 @@ export function createMongoAdapter(): DbAdapter {
     await collection.insertMany(platformIds.map((platformId) => ({ resourceId, platformId })));
   }
 
-  function resourceFromDoc(d: Record<string, unknown>): Resource {
-    return {
-      id: d.id as string,
-      title: d.title as string,
-      url: d.url as string,
-      sourceName: (d.sourceName as string) ?? null,
-      summary: (d.summary as string) ?? null,
-      resourceType: d.resourceType as Resource["resourceType"],
-      internalNotes: (d.internalNotes as string) ?? null,
-      isPublic: d.isPublic as number,
-      status: d.status as Resource["status"],
-      seoTitle: (d.seoTitle as string) ?? null,
-      seoDescription: (d.seoDescription as string) ?? null,
-      ogImage: (d.ogImage as string) ?? null,
-      canonicalUrl: (d.canonicalUrl as string) ?? null,
-      noIndex: (d.noIndex as number) ?? 0,
-      createdAt: d.createdAt as string,
-      updatedAt: d.updatedAt as string,
-    };
-  }
-
-  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<Resource[]> {
+  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<ContentEntry[]> {
     const platformDoc = await getDb().collection("platforms").findOne({ slug: platformSlug });
     if (!platformDoc) return [];
     const joins = await getDb().collection("resource_platforms").find({ platformId: platformDoc.id }).toArray();
     const resourceIds = joins.map((j) => j.resourceId as string);
     if (resourceIds.length === 0) return [];
-    const filter: Filter<Record<string, unknown>> = { id: { $in: resourceIds } };
-    if (publicOnly) { filter.isPublic = 1; filter.status = "published"; }
-    const docs = await getDb().collection("resources").find(filter).sort({ createdAt: -1 }).toArray();
-    return docs.map((d) => resourceFromDoc(d as Record<string, unknown>));
-  }
-
-  /** guide_resources is modeled as its own collection of {guideId, resourceId, sortOrder} docs -- a
-   * many-to-many join with a payload, so it keeps its own sort order rather than being folded into
-   * the plain-join style used for guide_tags/resource_platforms. */
-  async function getResourcesForGuide(guideId: string, publicOnly = true): Promise<Resource[]> {
-    const joins = await getDb().collection("guide_resources").find({ guideId }).sort({ sortOrder: 1 }).toArray();
-    const resourceIds = joins.map((j) => j.resourceId as string);
-    if (resourceIds.length === 0) return [];
-    const filter: Filter<Record<string, unknown>> = { id: { $in: resourceIds } };
-    if (publicOnly) { filter.isPublic = 1; filter.status = "published"; }
-    const docs = await getDb().collection("resources").find(filter).toArray();
-    const bySortOrder = new Map(joins.map((j) => [j.resourceId as string, j.sortOrder as number]));
-    const list = docs.map((d) => resourceFromDoc(d as Record<string, unknown>));
-    list.sort((a, b) => (bySortOrder.get(a.id) ?? 0) - (bySortOrder.get(b.id) ?? 0));
-    return list;
-  }
-
-  async function setGuideResources(guideId: string, resourceIds: string[]): Promise<void> {
-    const collection = getDb().collection("guide_resources");
-    await collection.deleteMany({ guideId });
-    if (resourceIds.length === 0) return;
-    await collection.insertMany(resourceIds.map((resourceId, i) => ({ guideId, resourceId, sortOrder: i })));
-  }
-
-  function guideFromDoc(d: Record<string, unknown>): Guide {
-    return {
-      id: d.id as string,
-      slug: d.slug as string,
-      title: d.title as string,
-      tagline: (d.tagline as string) ?? null,
-      summary: (d.summary as string) ?? null,
-      sourcePlatform: d.sourcePlatform as string,
-      targetPlatform: d.targetPlatform as string,
-      difficulty: d.difficulty as Guide["difficulty"],
-      effortHoursMin: (d.effortHoursMin as number) ?? null,
-      effortHoursMax: (d.effortHoursMax as number) ?? null,
-      costMinUsd: (d.costMinUsd as number) ?? null,
-      costMaxUsd: (d.costMaxUsd as number) ?? null,
-      costPeriod: d.costPeriod as Guide["costPeriod"],
-      skillsRequired: d.skillsRequired as string,
-      requirements: d.requirements as string,
-      coverImage: (d.coverImage as string) ?? null,
-      status: d.status as Guide["status"],
-      sortOrder: d.sortOrder as number,
-      seoTitle: (d.seoTitle as string) ?? null,
-      seoDescription: (d.seoDescription as string) ?? null,
-      ogImage: (d.ogImage as string) ?? null,
-      canonicalUrl: (d.canonicalUrl as string) ?? null,
-      noIndex: (d.noIndex as number) ?? 0,
-      createdAt: d.createdAt as string,
-      updatedAt: d.updatedAt as string,
-    };
-  }
-
-  const DIFFICULTY_RANK: Record<Guide["difficulty"], number> = { beginner: 0, intermediate: 1, advanced: 2 };
-
-  async function listGuides(filter: GuideFilter = {}): Promise<Guide[]> {
-    const mongoFilter: Filter<Record<string, unknown>> = {};
-    if (filter.publishedOnly !== false) mongoFilter.status = "published";
-    if (filter.sourcePlatform) mongoFilter.sourcePlatform = filter.sourcePlatform;
-    if (filter.targetPlatform) mongoFilter.targetPlatform = filter.targetPlatform;
-    const docs = await getDb().collection("guides").find(mongoFilter).sort({ sortOrder: 1 }).toArray();
-    let list = docs.map((d) => guideFromDoc(d as Record<string, unknown>));
-    if (filter.maxDifficulty) {
-      const ceiling = DIFFICULTY_RANK[filter.maxDifficulty];
-      list = list.filter((g) => DIFFICULTY_RANK[g.difficulty] <= ceiling);
-    }
-    return list;
-  }
-
-  async function getGuideBySlug(slug: string): Promise<Guide | undefined> {
-    const [g] = await guides.list({ where: { slug } });
-    return g;
+    const where: { id: { in: string[] }; status?: ContentEntryStatus } = { id: { in: resourceIds } };
+    if (publicOnly) where.status = "published";
+    return contentEntries.list({
+      where,
+      orderBy: [{ field: "createdAt", direction: "desc" }],
+    });
   }
 
   async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
@@ -485,12 +317,6 @@ export function createMongoAdapter(): DbAdapter {
     const id = (existing?.id as string) ?? randomUUID();
     await collection.updateOne({ slug: data.slug }, { $set: { id, ...data } }, { upsert: true });
     return { id, ...data };
-  }
-
-  async function listResources(publicOnly = true): Promise<Resource[]> {
-    const filter: Filter<Record<string, unknown>> = publicOnly ? { isPublic: 1, status: "published" } : {};
-    const docs = await getDb().collection("resources").find(filter).sort({ createdAt: -1 }).toArray();
-    return docs.map((d) => resourceFromDoc(d as Record<string, unknown>));
   }
 
   async function logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void> {
@@ -574,17 +400,12 @@ export function createMongoAdapter(): DbAdapter {
   }
 
   return {
-    projects,
     experience,
     skills,
     awards,
     education,
-    pages,
-    guides,
     platforms,
     tags,
-    resources,
-    posts,
     subscribers,
     orders,
     subscriptions,
@@ -597,23 +418,12 @@ export function createMongoAdapter(): DbAdapter {
     getOrdersByEmail,
     getSubscriptionByStripeId,
     getActiveSubscriptionByEmail,
-    getProjectBlocks,
-    replaceProjectBlocks,
-    getGuideSteps,
-    replaceGuideSteps,
-    getGuideTags,
-    setGuideTags,
     getPlatformsForResource,
     setResourcePlatforms,
     getResourcesForPlatform,
-    getResourcesForGuide,
-    setGuideResources,
-    listGuides,
-    getGuideBySlug,
     getPlatformBySlug,
     upsertPlatform,
     upsertTag,
-    listResources,
     logQuizResponse,
     listSeoTemplates,
     getSeoTemplate,
