@@ -1,5 +1,19 @@
 import { getAdapter } from "./adapter-context";
-import type { Award, Education, Experience, Page, Project, ProjectBlock, Skill } from "./types";
+import type {
+  Award,
+  Education,
+  Experience,
+  Guide,
+  GuideFilter,
+  GuideStep,
+  Page,
+  Platform,
+  Project,
+  ProjectBlock,
+  Resource,
+  Skill,
+  Tag,
+} from "./types";
 
 export async function listProjects(publishedOnly = true): Promise<Project[]> {
   const adapter = await getAdapter();
@@ -192,4 +206,134 @@ export async function createPage(data: Omit<Page, "id" | "createdAt" | "updatedA
 export async function updatePage(id: string, data: Partial<Omit<Page, "id" | "createdAt" | "updatedAt">>): Promise<Page> {
   const adapter = await getAdapter();
   return adapter.pages.update(id, data);
+}
+
+export async function listGuides(filter?: GuideFilter): Promise<Guide[]> {
+  const adapter = await getAdapter();
+  return adapter.listGuides(filter);
+}
+
+export async function getGuide(slug: string): Promise<Guide | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getGuideBySlug(slug);
+}
+
+export async function getGuideById(id: string): Promise<Guide | undefined> {
+  const adapter = await getAdapter();
+  return adapter.guides.get(id);
+}
+
+export async function createGuide(data: Omit<Guide, "id" | "createdAt" | "updatedAt">): Promise<Guide> {
+  const adapter = await getAdapter();
+  return adapter.guides.create(data);
+}
+
+export async function updateGuide(id: string, data: Partial<Omit<Guide, "id" | "createdAt" | "updatedAt">>): Promise<Guide> {
+  const adapter = await getAdapter();
+  return adapter.guides.update(id, data);
+}
+
+export async function deleteGuide(id: string): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.guides.delete(id);
+}
+
+export async function getGuideSteps(guideId: string): Promise<GuideStep[]> {
+  const adapter = await getAdapter();
+  return adapter.getGuideSteps(guideId);
+}
+
+export async function replaceGuideSteps(guideId: string, steps: Omit<GuideStep, "id" | "guideId">[]): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.replaceGuideSteps(guideId, steps);
+}
+
+export async function getGuideTags(guideId: string): Promise<Tag[]> {
+  const adapter = await getAdapter();
+  return adapter.getGuideTags(guideId);
+}
+
+export async function setGuideTags(guideId: string, tagIds: string[]): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.setGuideTags(guideId, tagIds);
+}
+
+export async function getResourcesForGuide(guideId: string, publicOnly?: boolean): Promise<Resource[]> {
+  const adapter = await getAdapter();
+  return adapter.getResourcesForGuide(guideId, publicOnly);
+}
+
+export async function setGuideResources(guideId: string, resourceIds: string[]): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.setGuideResources(guideId, resourceIds);
+}
+
+export async function listPlatforms(): Promise<Platform[]> {
+  const adapter = await getAdapter();
+  return adapter.platforms.list({ orderBy: [{ field: "sortOrder", direction: "asc" }, { field: "name" as keyof Platform, direction: "asc" }] });
+}
+
+export async function getPlatformById(id: string): Promise<Platform | undefined> {
+  const adapter = await getAdapter();
+  return adapter.platforms.get(id);
+}
+
+export async function upsertPlatform(data: Omit<Platform, "id">): Promise<Platform> {
+  const adapter = await getAdapter();
+  return adapter.upsertPlatform(data);
+}
+
+export async function getPlatformsForResource(resourceId: string): Promise<Platform[]> {
+  const adapter = await getAdapter();
+  return adapter.getPlatformsForResource(resourceId);
+}
+
+export async function setResourcePlatforms(resourceId: string, platformIds: string[]): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.setResourcePlatforms(resourceId, platformIds);
+}
+
+export async function getResourcesForPlatform(platformSlug: string, publicOnly?: boolean): Promise<Resource[]> {
+  const adapter = await getAdapter();
+  return adapter.getResourcesForPlatform(platformSlug, publicOnly);
+}
+
+export async function listTags(): Promise<Tag[]> {
+  const adapter = await getAdapter();
+  return adapter.tags.list({ orderBy: [{ field: "name" as keyof Tag, direction: "asc" }] });
+}
+
+export async function upsertTag(data: Omit<Tag, "id">): Promise<Tag> {
+  const adapter = await getAdapter();
+  return adapter.upsertTag(data);
+}
+
+export async function listResources(publicOnly?: boolean): Promise<Resource[]> {
+  const adapter = await getAdapter();
+  return adapter.listResources(publicOnly);
+}
+
+export async function getResourceById(id: string): Promise<Resource | undefined> {
+  const adapter = await getAdapter();
+  return adapter.resources.get(id);
+}
+
+export async function createResource(data: Omit<Resource, "id" | "createdAt" | "updatedAt">): Promise<Resource> {
+  const adapter = await getAdapter();
+  return adapter.resources.create(data);
+}
+
+export async function updateResource(id: string, data: Partial<Omit<Resource, "id" | "createdAt" | "updatedAt">>): Promise<Resource> {
+  const adapter = await getAdapter();
+  return adapter.resources.update(id, data);
+}
+
+export async function deleteResource(id: string): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.resources.delete(id);
+}
+
+export async function logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.logQuizResponse(answers, recommendation, sourcePlatform);
 }
