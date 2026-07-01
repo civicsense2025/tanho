@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Static checks: lint + typecheck. Nothing enforced these before; now they gate merges.
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+
+  # Unit + integration + the 3-backend adapter contract suite. Postgres runs as a service
+  # container so the contract exercises all three backends (libsql + mongo are in-process).
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tanho_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tanho_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # End-to-end against a real production build, using a throwaway file-backed libsql DB so no
+  # external services are needed. Captures the pre-refactor behavioral baseline for Phase 3.
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: turso
+      TURSO_DATABASE_URL: file:./db/e2e.db
+      ADMIN_PASSWORD: e2e-test-password
+      ADMIN_SECRET: e2e-test-secret-at-least-32-characters-long
+      NEXT_PUBLIC_FEATURE_NEWSLETTER: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:e2e
