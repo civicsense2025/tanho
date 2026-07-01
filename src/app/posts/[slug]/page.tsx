@@ -15,7 +15,7 @@ import { verifyPostAccess, ACCESS_COOKIE_NAME } from "@/lib/stripe/entitlement";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ access?: string }> };
+type Props = { params: Promise<{ slug: string }> };
 
 function parseData(dataJson: string): Record<string, unknown> {
   try {
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   );
 }
 
-export default async function PostPage({ params, searchParams }: Props) {
+export default async function PostPage({ params }: Props) {
   const settings = await getSettings();
   if (!settings.features.newsletter) notFound();
   const { slug } = await params;
@@ -49,14 +49,14 @@ export default async function PostPage({ params, searchParams }: Props) {
   const visibility = data.visibility ? String(data.visibility) : "public";
 
   // Paid gating (subscription-only). A paid post's full body is served ONLY to an entitled
-  // reader — a valid subscriber access token (from ?access= or the post_access cookie) that
-  // still resolves to an ACTIVE subscription (verifyPostAccess does the live re-check, so a
-  // canceled subscriber loses access even with an unexpired token). Public posts are ungated.
-  // The body is never rendered for a non-entitled reader, so paid content can't leak.
+  // reader — a subscriber access token read from the httpOnly post_access cookie (set by the
+  // email-verified /api/unlock/confirm flow) that still resolves to an ACTIVE subscription
+  // (verifyPostAccess does the live re-check, so a canceled subscriber loses access even with an
+  // unexpired token). The token is NEVER accepted from the URL (leaks via referer/history/logs).
+  // Public posts are ungated. The body is never rendered for a non-entitled reader.
   let entitled = visibility === "public";
   if (!entitled) {
-    const { access } = await searchParams;
-    const token = access ?? (await cookies()).get(ACCESS_COOKIE_NAME)?.value;
+    const token = (await cookies()).get(ACCESS_COOKIE_NAME)?.value;
     entitled = await verifyPostAccess(token ?? undefined);
   }
   const bodyHtml = entitled ? renderRichText(String(data.body || "")) : "";
