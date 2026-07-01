@@ -146,9 +146,18 @@
     border-color var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
-/* ---------- Dark mode (re-warmed) ---------- */
-@media (prefers-color-scheme: dark) {
-  :root {
+/* ---------- Dark mode (re-warmed) ----------
+ * Data-driven, not a bare media query, so a white-label instance controls the mode explicitly
+ * via siteConfig.theme.defaultMode → <html data-theme>. The dark token values live in one
+ * @mixin-like custom-property list applied by three selectors:
+ *   - :root[data-theme="dark"]          — forced dark
+ *   - :root[data-theme="system"]        — follows the OS (via the media query below)
+ *   - [data-theme="dark"] / [data-theme="invert"] — per-block/section (BlockShell theme prop)
+ * These declarations are the exact former @media (prefers-color-scheme: dark) values, moved
+ * verbatim, so dark mode is unchanged for anyone relying on the OS setting. */
+@layer theme {
+  :root[data-theme="dark"],
+  [data-theme="dark"] {
     --paper-0: #14130f;
     --paper-1: #1c1a15;
     --paper-2: #25221b;
@@ -174,6 +183,37 @@
     --solid-hover: #ffffff;
     --selection-bg: #f0ede4;
     --selection-fg: #14130f;
+  }
+
+  /* system mode: follow the OS. Applies the same dark values only when the OS prefers dark. */
+  @media (prefers-color-scheme: dark) {
+    :root[data-theme="system"] {
+      --paper-0: #14130f;
+      --paper-1: #1c1a15;
+      --paper-2: #25221b;
+
+      --ink-0: #f0ede4;
+      --ink-1: #a8a294;
+      --ink-2: #75705f;
+
+      --line-0: #2c2920;
+      --line-1: #3a362b;
+
+      --olive-tint: #23271a;
+      --maroon-tint: #2a1a1b;
+      --olive-soft: #9aa06a;
+      --maroon-soft: #c06b73;
+
+      --surface-card: #1c1a15;
+      --text-on-accent: #14130f;
+      --accent: #c06b73;
+      --accent-hover: #d68a91;
+      --accent-2: #9aa06a;
+      --solid: #f0ede4;
+      --solid-hover: #ffffff;
+      --selection-bg: #f0ede4;
+      --selection-fg: #14130f;
+    }
   }
 }
 
