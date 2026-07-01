@@ -2,6 +2,11 @@ import { cache } from "react";
 import { getAdapter } from "./adapter-context";
 import type {
   Award,
+  Collection,
+  ContentEntry,
+  ContentEntryCollection,
+  ContentEntryStatus,
+  ContentType,
   Education,
   Experience,
   Guide,
@@ -534,4 +539,132 @@ export async function getSiteSetting(key: string): Promise<SiteSetting | undefin
 export async function upsertSiteSetting(key: string, data: { value: string | null; isSecret: number }): Promise<SiteSetting> {
   const adapter = await getAdapter();
   return adapter.upsertSiteSetting(key, data);
+}
+
+// ---------- Content types ----------
+
+export async function listContentTypes(): Promise<ContentType[]> {
+  const adapter = await getAdapter();
+  return adapter.contentTypes.list({
+    orderBy: [{ field: "sortOrder", direction: "asc" }, { field: "name" as keyof ContentType, direction: "asc" }],
+  });
+}
+
+export async function getContentTypeById(id: string): Promise<ContentType | undefined> {
+  const adapter = await getAdapter();
+  return adapter.contentTypes.get(id);
+}
+
+// Wrapped in React's cache() -- generateMetadata() and the page body both resolve the same
+// type slug once per request.
+export const getContentTypeBySlug = cache(async (slug: string): Promise<ContentType | undefined> => {
+  const adapter = await getAdapter();
+  return adapter.getContentTypeBySlug(slug);
+});
+
+export async function createContentType(data: Omit<ContentType, "id" | "createdAt" | "updatedAt">): Promise<ContentType> {
+  const adapter = await getAdapter();
+  return adapter.contentTypes.create(data);
+}
+
+export async function updateContentType(id: string, data: Partial<Omit<ContentType, "id" | "createdAt" | "updatedAt">>): Promise<ContentType> {
+  const adapter = await getAdapter();
+  return adapter.contentTypes.update(id, data);
+}
+
+export async function deleteContentType(id: string): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.contentTypes.delete(id);
+}
+
+// ---------- Content entries ----------
+
+export async function listContentEntries(filter?: { contentTypeId?: string; status?: ContentEntryStatus; publishedOnly?: boolean }): Promise<ContentEntry[]> {
+  const adapter = await getAdapter();
+  return adapter.listContentEntries(filter);
+}
+
+export async function getContentEntryById(id: string): Promise<ContentEntry | undefined> {
+  const adapter = await getAdapter();
+  return adapter.contentEntries.get(id);
+}
+
+// Wrapped in React's cache() -- generateMetadata() and the page body both resolve the same
+// type+entry slug pair once per request.
+export const getContentEntry = cache(async (typeSlug: string, slug: string): Promise<ContentEntry | undefined> => {
+  const adapter = await getAdapter();
+  return adapter.getContentEntry(typeSlug, slug);
+});
+
+export async function createContentEntry(data: Omit<ContentEntry, "id" | "createdAt" | "updatedAt">): Promise<ContentEntry> {
+  const adapter = await getAdapter();
+  return adapter.contentEntries.create(data);
+}
+
+export async function updateContentEntry(id: string, data: Partial<Omit<ContentEntry, "id" | "createdAt" | "updatedAt">>): Promise<ContentEntry> {
+  const adapter = await getAdapter();
+  return adapter.contentEntries.update(id, data);
+}
+
+export async function deleteContentEntry(id: string): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.contentEntries.delete(id);
+}
+
+// ---------- Collections ----------
+
+export async function listCollections(): Promise<Collection[]> {
+  const adapter = await getAdapter();
+  return adapter.collections.list({
+    orderBy: [{ field: "sortOrder", direction: "asc" }, { field: "name" as keyof Collection, direction: "asc" }],
+  });
+}
+
+export async function getCollectionById(id: string): Promise<Collection | undefined> {
+  const adapter = await getAdapter();
+  return adapter.collections.get(id);
+}
+
+// Wrapped in React's cache() -- same request-level memoization rationale as getProject/getPage.
+export const getCollectionBySlug = cache(async (slug: string): Promise<Collection | undefined> => {
+  const adapter = await getAdapter();
+  const [collection] = await adapter.collections.list({ where: { slug } });
+  return collection;
+});
+
+export async function createCollection(data: Omit<Collection, "id" | "createdAt" | "updatedAt">): Promise<Collection> {
+  const adapter = await getAdapter();
+  return adapter.collections.create(data);
+}
+
+export async function updateCollection(id: string, data: Partial<Omit<Collection, "id" | "createdAt" | "updatedAt">>): Promise<Collection> {
+  const adapter = await getAdapter();
+  return adapter.collections.update(id, data);
+}
+
+export async function deleteCollection(id: string): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.collections.delete(id);
+}
+
+// ---------- Content entry joins (collections + tags) ----------
+
+export async function getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]> {
+  const adapter = await getAdapter();
+  return adapter.getContentEntryCollections(entryId);
+}
+
+export async function setContentEntryCollections(entryId: string, collections: { collectionId: string; sortOrder: number }[]): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.setContentEntryCollections(entryId, collections);
+}
+
+export async function getContentEntryTags(entryId: string): Promise<Tag[]> {
+  const adapter = await getAdapter();
+  return adapter.getContentEntryTags(entryId);
+}
+
+export async function setContentEntryTags(entryId: string, tagIds: string[]): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.setContentEntryTags(entryId, tagIds);
 }

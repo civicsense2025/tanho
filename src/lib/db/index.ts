@@ -2,10 +2,18 @@ export { getAdapter } from "./adapter-context";
 
 export type {
   Award,
+  Collection,
+  ContentEntry,
+  ContentEntryCollection,
+  ContentEntryStatus,
+  ContentEntryTag,
+  ContentType,
   CostPeriod,
   DbAdapter,
   Education,
   Experience,
+  FieldDef,
+  FieldKind,
   Guide,
   GuideDifficulty,
   GuideFilter,

@@ -2,6 +2,12 @@ import postgres, { type Sql } from "postgres";
 import { randomUUID } from "crypto";
 import type {
   Award,
+  Collection,
+  ContentEntry,
+  ContentEntryCollection,
+  ContentEntryStatus,
+  ContentEntryTag,
+  ContentType,
   DbAdapter,
   Education,
   Experience,
@@ -261,6 +267,46 @@ export function createPostgresAdapter(): DbAdapter {
     updatedAt: "updated_at",
   });
 
+  const contentTypes = makeSqlRepository<ContentType>(sql, "content_types", {
+    slug: "slug",
+    name: "name",
+    icon: "icon",
+    fields: "fields",
+    isBuiltIn: "is_built_in",
+    sortOrder: "sort_order",
+    seoTitleTemplate: "seo_title_template",
+    seoDescriptionTemplate: "seo_description_template",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const contentEntries = makeSqlRepository<ContentEntry>(sql, "content_entries", {
+    contentTypeId: "content_type_id",
+    slug: "slug",
+    title: "title",
+    status: "status",
+    scheduledAt: "scheduled_at",
+    publishedAt: "published_at",
+    sortOrder: "sort_order",
+    seoTitle: "seo_title",
+    seoDescription: "seo_description",
+    ogImage: "og_image",
+    canonicalUrl: "canonical_url",
+    noIndex: "no_index",
+    data: "data",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
+  const collections = makeSqlRepository<Collection>(sql, "collections", {
+    slug: "slug",
+    name: "name",
+    description: "description",
+    sortOrder: "sort_order",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  });
+
   async function getOrderByCheckoutSession(sessionId: string): Promise<Order | undefined> {
     const [o] = await orders.list({ where: { stripeCheckoutSessionId: sessionId } });
     return o;
@@ -416,6 +462,78 @@ export function createPostgresAdapter(): DbAdapter {
         [guideId, ...tagIds] as never[]
       );
     });
+  }
+
+  async function getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>(
+      "SELECT * FROM content_entry_collections WHERE content_entry_id = $1 ORDER BY sort_order ASC",
+      [entryId] as never[]
+    );
+    return rows.map((row) => ({
+      id: String(row.id),
+      contentEntryId: String(row.content_entry_id),
+      collectionId: String(row.collection_id),
+      sortOrder: Number(row.sort_order),
+    }));
+  }
+
+  async function setContentEntryCollections(entryId: string, cols: { collectionId: string; sortOrder: number }[]): Promise<void> {
+    await sql.begin(async (tx) => {
+      await tx.unsafe("DELETE FROM content_entry_collections WHERE content_entry_id = $1", [entryId] as never[]);
+      if (cols.length === 0) return;
+      const ids = cols.map(() => randomUUID());
+      const values = cols.map((_, i) => `($${i * 3 + 2}, $1, $${i * 3 + 3}, $${i * 3 + 4})`).join(", ");
+      const args = ids.flatMap((id, i) => [id, cols[i].collectionId, cols[i].sortOrder]);
+      await tx.unsafe(
+        `INSERT INTO content_entry_collections (id, content_entry_id, collection_id, sort_order) VALUES ${values}`,
+        [entryId, ...args] as never[]
+      );
+    });
+  }
+
+  async function getContentEntryTags(entryId: string): Promise<Tag[]> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>(
+      "SELECT t.* FROM tags t JOIN content_entry_tags cet ON cet.tag_id = t.id WHERE cet.content_entry_id = $1 ORDER BY t.name ASC",
+      [entryId] as never[]
+    );
+    return rows.map(tagRow);
+  }
+
+  async function setContentEntryTags(entryId: string, tagIds: string[]): Promise<void> {
+    await sql.begin(async (tx) => {
+      await tx.unsafe("DELETE FROM content_entry_tags WHERE content_entry_id = $1", [entryId] as never[]);
+      if (tagIds.length === 0) return;
+      const ids = tagIds.map(() => randomUUID());
+      const values = tagIds.map((_, i) => `($${i * 2 + 2}, $1, $${i * 2 + 3})`).join(", ");
+      const args = ids.flatMap((id, i) => [id, tagIds[i]]);
+      await tx.unsafe(
+        `INSERT INTO content_entry_tags (id, content_entry_id, tag_id) VALUES ${values}`,
+        [entryId, ...args] as never[]
+      );
+    });
+  }
+
+  async function listContentEntries(filter: { contentTypeId?: string; status?: ContentEntryStatus; publishedOnly?: boolean } = {}): Promise<ContentEntry[]> {
+    const where: { contentTypeId?: string; status?: ContentEntryStatus } = {};
+    if (filter.contentTypeId) where.contentTypeId = filter.contentTypeId;
+    if (filter.publishedOnly) where.status = "published";
+    else if (filter.status) where.status = filter.status;
+    return contentEntries.list({
+      where,
+      orderBy: [{ field: "sortOrder", direction: "asc" }, { field: "title", direction: "asc" }],
+    });
+  }
+
+  async function getContentTypeBySlug(slug: string): Promise<ContentType | undefined> {
+    const [t] = await contentTypes.list({ where: { slug } });
+    return t;
+  }
+
+  async function getContentEntry(typeSlug: string, slug: string): Promise<ContentEntry | undefined> {
+    const type = await getContentTypeBySlug(typeSlug);
+    if (!type) return undefined;
+    const [entry] = await contentEntries.list({ where: { contentTypeId: type.id, slug } });
+    return entry;
   }
 
   function platformRow(row: Record<string, unknown>): Platform {
@@ -736,6 +854,16 @@ export function createPostgresAdapter(): DbAdapter {
     listSiteSettings,
     getSiteSetting,
     upsertSiteSetting,
+    contentTypes,
+    contentEntries,
+    collections,
+    getContentEntryCollections,
+    setContentEntryCollections,
+    getContentEntryTags,
+    setContentEntryTags,
+    listContentEntries,
+    getContentEntry,
+    getContentTypeBySlug,
     migrate: () => applyPostgresMigrations(sql, postgresMigrations),
   };
 }

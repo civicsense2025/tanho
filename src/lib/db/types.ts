@@ -360,6 +360,88 @@ export interface SiteSetting {
   updatedAt: string;
 }
 
+// Field-kind palette -- the data-driven generalization of defineBlock's "Zod schema is
+// simultaneously the validator and the type." A fixed, code-defined set of kinds; the composition
+// per type is admin-authored data (ContentType.fields), not a compile-time module.
+export type FieldKind =
+  | "text" | "textarea" | "richtext" | "number" | "boolean" | "date" | "datetime"
+  | "select" | "image" | "url" | "tags" | "reference" | "block-list";
+
+export interface FieldDef {
+  key: string;
+  label: string;
+  kind: FieldKind;
+  required?: boolean;
+  /** Default value used when a field is absent or fails per-field validation (see parseEntryData). */
+  defaultValue?: unknown;
+  /** Options for the 'select' kind. Ignored by other kinds. */
+  options?: string[];
+  helpText?: string;
+}
+
+export interface ContentType {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string | null;
+  /** JSON-encoded FieldDef[] in SQL backends; native array in Mongo. The admin-authored schema. */
+  fields: string;
+  isBuiltIn: number;
+  sortOrder: number;
+  seoTitleTemplate: string | null;
+  seoDescriptionTemplate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ContentEntryStatus = "draft" | "published" | "scheduled";
+
+export interface ContentEntry {
+  id: string;
+  contentTypeId: string;
+  slug: string;
+  title: string;
+  status: ContentEntryStatus;
+  scheduledAt: string | null;
+  /** Set when status flips to 'published' -- on cron-publish, set to scheduledAt (author intent), not cron-run time. */
+  publishedAt: string | null;
+  sortOrder: number;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  ogImage: string | null;
+  canonicalUrl: string | null;
+  noIndex: number;
+  /** JSON-encoded type-specific field values in SQL backends; native object in Mongo. */
+  data: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Collection {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Join with a sortOrder payload -- modeled on guide_resources, not the payload-free guide_tags shape. */
+export interface ContentEntryCollection {
+  id: string;
+  contentEntryId: string;
+  collectionId: string;
+  sortOrder: number;
+}
+
+/** Generalization of guide_tags, keyed off contentEntryId instead of guideId. */
+export interface ContentEntryTag {
+  id: string;
+  contentEntryId: string;
+  tagId: string;
+}
+
 export interface DbAdapter {
   projects: Repository<Project>;
   experience: Repository<Experience>;
@@ -425,5 +507,19 @@ export interface DbAdapter {
   listSiteSettings(): Promise<SiteSetting[]>;
   getSiteSetting(key: string): Promise<SiteSetting | undefined>;
   upsertSiteSetting(key: string, data: { value: string | null; isSecret: number }): Promise<SiteSetting>;
+  contentTypes: Repository<ContentType>;
+  contentEntries: Repository<ContentEntry>;
+  collections: Repository<Collection>;
+  /** content_entry_collections join with sortOrder payload -- sort-stable replace, modeled on setGuideResources. */
+  getContentEntryCollections(entryId: string): Promise<ContentEntryCollection[]>;
+  setContentEntryCollections(entryId: string, collections: { collectionId: string; sortOrder: number }[]): Promise<void>;
+  /** content_entry_tags join -- generalization of getGuideTags/setGuideTags. */
+  getContentEntryTags(entryId: string): Promise<Tag[]>;
+  setContentEntryTags(entryId: string, tagIds: string[]): Promise<void>;
+  /** Equality-only filter; publishedOnly filters status='published'. No JSON-path DB operators. */
+  listContentEntries(filter?: { contentTypeId?: string; status?: ContentEntryStatus; publishedOnly?: boolean }): Promise<ContentEntry[]>;
+  /** Convenience: look up a content type by slug, then its entry by slug. Returns undefined if either is missing. */
+  getContentEntry(typeSlug: string, slug: string): Promise<ContentEntry | undefined>;
+  getContentTypeBySlug(slug: string): Promise<ContentType | undefined>;
   migrate(): Promise<void>;
 }

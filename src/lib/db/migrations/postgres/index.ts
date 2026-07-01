@@ -7,6 +7,7 @@ import { sql as seoTemplates } from "./0005_seo_templates";
 import { sql as newsletter } from "./0006_newsletter";
 import { sql as payments } from "./0007_payments";
 import { sql as siteSettings } from "./0008_site_settings";
+import { sql as contentTypes } from "./0009_content_types";
 
 export const postgresMigrations: SqlMigration[] = [
   { name: "0001_init", sql: init },
@@ -17,4 +18,5 @@ export const postgresMigrations: SqlMigration[] = [
   { name: "0006_newsletter", sql: newsletter },
   { name: "0007_payments", sql: payments },
   { name: "0008_site_settings", sql: siteSettings },
+  { name: "0009_content_types", sql: contentTypes },
 ];
