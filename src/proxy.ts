@@ -28,6 +28,7 @@ const PROTECTED_API_PREFIXES = [
   "/api/settings",
   "/api/content-types",
   "/api/content-entries",
+  "/api/collections",
 ];
 
 function isProtectedApiRequest(pathname: string, method: string): boolean {
@@ -84,6 +85,7 @@ export const config = {
     "/api/settings/:path*",
     "/api/content-types/:path*",
     "/api/content-entries/:path*",
+    "/api/collections/:path*",
     // Additive only, for the AI-crawler UA check above -- the admin/API entries above are the
     // pre-existing auth surface and must stay untouched. Without these, the UA short-circuit
     // would never run on the public content routes it's actually meant to protect. Next.js

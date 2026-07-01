@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
-import { listContentEntries, createContentEntry, getContentTypeBySlug, listContentTypes } from "@/lib/db";
+import { listContentEntries, createContentEntry, getContentTypeBySlug, listContentTypes, setContentEntryCollections } from "@/lib/db";
 import { parseEntryData, type FieldDef } from "@/lib/content-types";
 import { redactPaidEntry } from "@/lib/content-types/paywall";
 import { revalidateContent } from "@/lib/cache";
@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
     noIndex: body.noIndex ? 1 : 0,
     data: JSON.stringify(data),
   });
+  if (Array.isArray(body.collectionIds)) {
+    await setContentEntryCollections(entry.id, body.collectionIds.map((collectionId: string, i: number) => ({ collectionId, sortOrder: i })));
+  }
   revalidateContent(type.slug); // new entry → refresh public lists/pages for this type
   return NextResponse.json(entry, { status: 201 });
 }

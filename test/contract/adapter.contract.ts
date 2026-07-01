@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import type { DbAdapter, ContentType, ContentEntry } from "@/lib/db/types";
+import type { DbAdapter, ContentType, ContentEntry, Collection } from "@/lib/db/types";
 import type { BackendHarness } from "../helpers/adapters";
 
 /**
@@ -44,6 +44,16 @@ function sampleContentEntry(contentTypeId: string, over: Partial<Omit<ContentEnt
     canonicalUrl: null,
     noIndex: 0,
     data: JSON.stringify({ title: "Hello", body: "<p>World</p>" }),
+    ...over,
+  };
+}
+
+function sampleCollection(over: Partial<Omit<Collection, "id" | "createdAt" | "updatedAt">> = {}) {
+  return {
+    slug: "test-collection",
+    name: "Test Collection",
+    description: null,
+    sortOrder: 0,
     ...over,
   };
 }
@@ -321,6 +331,68 @@ export function runAdapterContract(harness: BackendHarness) {
         // Empty clears.
         await db.setContentEntryTags(entryId, []);
         expect(await db.getContentEntryTags(entryId)).toHaveLength(0);
+      });
+    });
+
+    describe("Repository<T> CRUD (collections)", () => {
+      it("creates, gets, updates, deletes a collection", async () => {
+        const created = await db.collections.create(sampleCollection({ slug: "coll-crud-1", name: "Before" }));
+        expect(created.id).toBeTruthy();
+        expect(created.slug).toBe("coll-crud-1");
+
+        const got = await db.collections.get(created.id);
+        expect(got?.name).toBe("Before");
+
+        const updated = await db.collections.update(created.id, { name: "After" });
+        expect(updated.name).toBe("After");
+        expect((await db.collections.get(created.id))?.name).toBe("After");
+
+        await db.collections.delete(created.id);
+        expect(await db.collections.get(created.id)).toBeUndefined();
+      });
+    });
+
+    describe("content entry collections many-to-many (sortOrder-carrying)", () => {
+      let typeId: string;
+      let entryId: string;
+      const collectionIds: string[] = [];
+
+      beforeAll(async () => {
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "coll-join-type" }));
+        typeId = ct.id;
+        const e = await db.contentEntries.create(sampleContentEntry(typeId, { slug: "coll-join-entry" }));
+        entryId = e.id;
+        const c1 = await db.collections.create(sampleCollection({ slug: "coll-join-1", name: "First" }));
+        const c2 = await db.collections.create(sampleCollection({ slug: "coll-join-2", name: "Second" }));
+        collectionIds.push(c1.id, c2.id);
+      });
+      afterAll(async () => {
+        await db.contentEntries.delete(entryId);
+        await db.contentTypes.delete(typeId);
+        for (const id of collectionIds) await db.collections.delete(id);
+      });
+
+      it("sets and gets collections preserving explicit sortOrder; re-set replaces; empty clears", async () => {
+        // Deliberately reversed insertion order vs. array order, to prove sortOrder (not name or
+        // insertion order) drives the returned order -- the whole reason this join carries a
+        // payload instead of being a plain unordered join like content_entry_tags.
+        await db.setContentEntryCollections(entryId, [
+          { collectionId: collectionIds[1], sortOrder: 0 },
+          { collectionId: collectionIds[0], sortOrder: 1 },
+        ]);
+        const got = await db.getContentEntryCollections(entryId);
+        expect(got.map((c) => c.collectionId)).toEqual([collectionIds[1], collectionIds[0]]);
+        expect(got.map((c) => c.sortOrder)).toEqual([0, 1]);
+
+        // Re-set with fewer entries replaces, not appends.
+        await db.setContentEntryCollections(entryId, [{ collectionId: collectionIds[0], sortOrder: 0 }]);
+        const afterReset = await db.getContentEntryCollections(entryId);
+        expect(afterReset).toHaveLength(1);
+        expect(afterReset[0].collectionId).toBe(collectionIds[0]);
+
+        // Empty clears.
+        await db.setContentEntryCollections(entryId, []);
+        expect(await db.getContentEntryCollections(entryId)).toHaveLength(0);
       });
     });
 

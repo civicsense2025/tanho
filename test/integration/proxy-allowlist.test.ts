@@ -29,6 +29,7 @@ const KNOWN_PROTECTED_API_PREFIXES = [
   "/api/settings",
   "/api/content-types",
   "/api/content-entries",
+  "/api/collections",
 ];
 
 function matcherCovers(prefix: string): boolean {
