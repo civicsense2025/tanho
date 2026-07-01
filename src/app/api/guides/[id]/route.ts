@@ -12,10 +12,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const guide = await getGuideById(id);
   if (!guide) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const isAdmin = await getAdminSession();
+  if (!isAdmin && guide.status !== "published") return NextResponse.json({ error: "Not found" }, { status: 404 });
   const [steps, tags, resources] = await Promise.all([
     getGuideSteps(guide.id),
     getGuideTags(guide.id),
-    getResourcesForGuide(guide.id, false),
+    getResourcesForGuide(guide.id, !isAdmin),
   ]);
   return NextResponse.json({ ...guide, steps, tags, resources });
 }
