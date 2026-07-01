@@ -1,0 +1,10 @@
+Contact: mailto:security@own-your-site.com
+Expires: 2027-07-01T00:00:00.000Z
+Preferred-Languages: en
+Policy: /SECURITY.md
+
+# NOTE: the RFC 9116 spec technically wants an absolute URL for `Canonical` and
+# `Policy` (this instance's real deploy domain + a hosted copy of SECURITY.md).
+# Left as a relative reference here since no production domain is configured yet
+# for this repo -- fill in `Canonical: https://<your-domain>/.well-known/security.txt`
+# once one exists, and point `Policy` at the repo's real SECURITY.md URL.
