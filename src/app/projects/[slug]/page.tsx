@@ -2,7 +2,7 @@ import { getProject, getProjectById, getBlocks, getSeoTemplate } from "@/lib/db"
 import { getProjectBody } from "@/lib/content/project-content";
 import { getAdminSession } from "@/lib/auth";
 import { parseTags } from "@/lib/utils";
-import { absoluteUrl, buildMetadata } from "@/lib/seo";
+import { absoluteImage, absoluteUrl, buildMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -67,7 +67,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
             "@type": "CreativeWork",
             name: resolved.title as string,
             description: resolved.description as string | undefined,
-            image: project.coverImage || undefined,
+            image: project.coverImage ? absoluteImage(project.coverImage) : undefined,
             url: absoluteUrl(`/projects/${project.slug}`),
             dateModified: project.updatedAt,
             author: { "@type": "Person", name: "Tan Ho" },
