@@ -18,6 +18,6 @@ export async function applyMigrations(client: Client, migrations: SqlMigration[]
   for (const migration of migrations) {
     if (appliedNames.has(migration.name)) continue;
     await client.executeMultiple(migration.sql);
-    await client.execute({ sql: "INSERT INTO _migrations (name) VALUES (?)", args: [migration.name] });
+    await client.execute({ sql: "INSERT OR IGNORE INTO _migrations (name) VALUES (?)", args: [migration.name] });
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import type { DbAdapter, Project, Guide } from "@/lib/db/types";
+import type { DbAdapter, Project, Guide, ContentType, ContentEntry } from "@/lib/db/types";
 import type { BackendHarness } from "../helpers/adapters";
 
 /**
@@ -357,6 +357,115 @@ export function runAdapterContract(harness: BackendHarness) {
 
         await db.subscribers.delete(sub.id);
         await db.posts.delete(post.id);
+      });
+    });
+
+    describe("content types & entries", () => {
+      it("creates a content type and round-trips its fields", async () => {
+        const ct = await db.contentTypes.create({
+          slug: "testimonial",
+          name: "Testimonial",
+          icon: null,
+          fields: JSON.stringify([{ key: "quote", label: "Quote", kind: "text" }]),
+          isBuiltIn: 0,
+          sortOrder: 0,
+          seoTitleTemplate: null,
+          seoDescriptionTemplate: null,
+        });
+        expect(ct.id).toBeTruthy();
+        expect(ct.slug).toBe("testimonial");
+        const got = await db.contentTypes.get(ct.id);
+        expect(got).toBeDefined();
+        expect(got!.fields).toBe(JSON.stringify([{ key: "quote", label: "Quote", kind: "text" }]));
+        await db.contentTypes.delete(ct.id);
+      });
+
+      it("creates an entry and filters by content type", async () => {
+        const ct = await db.contentTypes.create({
+          slug: "ct-filter-test",
+          name: "Filter Test",
+          icon: null,
+          fields: "[]",
+          isBuiltIn: 0,
+          sortOrder: 0,
+          seoTitleTemplate: null,
+          seoDescriptionTemplate: null,
+        });
+        const entry = await db.contentEntries.create({
+          contentTypeId: ct.id,
+          slug: "entry-1",
+          title: "Entry 1",
+          status: "published",
+          scheduledAt: null,
+          publishedAt: null,
+          sortOrder: 0,
+          seoTitle: null,
+          seoDescription: null,
+          ogImage: null,
+          canonicalUrl: null,
+          noIndex: 0,
+          data: JSON.stringify({}),
+        });
+        expect(entry.id).toBeTruthy();
+        expect(entry.contentTypeId).toBe(ct.id);
+
+        const entries = await db.listContentEntries({ contentTypeId: ct.id });
+        expect(entries.some((e) => e.id === entry.id)).toBe(true);
+
+        const published = await db.listContentEntries({ contentTypeId: ct.id, publishedOnly: true });
+        expect(published.some((e) => e.id === entry.id)).toBe(true);
+
+        const bySlug = await db.getContentEntry("ct-filter-test", "entry-1");
+        expect(bySlug).toBeDefined();
+        expect(bySlug!.id).toBe(entry.id);
+
+        await db.contentEntries.delete(entry.id);
+        await db.contentTypes.delete(ct.id);
+      });
+
+      it("content entry tags join works", async () => {
+        const ct = await db.contentTypes.create({
+          slug: "ct-tag-test",
+          name: "Tag Test",
+          icon: null,
+          fields: "[]",
+          isBuiltIn: 0,
+          sortOrder: 0,
+          seoTitleTemplate: null,
+          seoDescriptionTemplate: null,
+        });
+        const entry = await db.contentEntries.create({
+          contentTypeId: ct.id,
+          slug: "tagged-entry",
+          title: "Tagged",
+          status: "draft",
+          scheduledAt: null,
+          publishedAt: null,
+          sortOrder: 0,
+          seoTitle: null,
+          seoDescription: null,
+          ogImage: null,
+          canonicalUrl: null,
+          noIndex: 0,
+          data: JSON.stringify({}),
+        });
+        const tag = await db.upsertTag({ slug: "tag-test-1", name: "Tag Test 1" });
+        await db.setContentEntryTags(entry.id, [tag.id]);
+        const got = await db.getContentEntryTags(entry.id);
+        expect(got).toHaveLength(1);
+        expect(got[0].slug).toBe("tag-test-1");
+        // Re-set replaces.
+        const tag2 = await db.upsertTag({ slug: "tag-test-2", name: "Tag Test 2" });
+        await db.setContentEntryTags(entry.id, [tag2.id]);
+        const got2 = await db.getContentEntryTags(entry.id);
+        expect(got2).toHaveLength(1);
+        expect(got2[0].slug).toBe("tag-test-2");
+        // Empty clears.
+        await db.setContentEntryTags(entry.id, []);
+        expect(await db.getContentEntryTags(entry.id)).toHaveLength(0);
+
+        await db.contentEntries.delete(entry.id);
+        await db.contentTypes.delete(ct.id);
       });
     });
   });
