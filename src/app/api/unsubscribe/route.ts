@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSubscriberByToken, updateSubscriber } from "@/lib/db";
 import { tokenSchema } from "@/lib/validation/schemas";
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 
 /** Public one-click unsubscribe. Token is Zod-narrowed to a UUID. Idempotent: unsubscribing an
  * already-unsubscribed address is a no-op success. */
 export async function GET(req: NextRequest) {
-  if (!siteConfig.features.newsletter) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await getSettings()).features.newsletter) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const token = req.nextUrl.searchParams.get("token") ?? "";
   const parsed = tokenSchema.safeParse({ token });

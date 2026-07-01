@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { getSubscriberByEmail, createSubscriber, updateSubscriber } from "@/lib/db";
 import { parseBody } from "@/lib/validation/parse";
 import { subscribeSchema } from "@/lib/validation/schemas";
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 import { getEmailProvider } from "@/lib/email/provider";
 import { SITE_URL } from "@/lib/seo";
 
@@ -14,7 +14,8 @@ import { SITE_URL } from "@/lib/seo";
  * a confirm token and sent a confirmation email via the provider seam (noop when unconfigured).
  */
 export async function POST(req: Request) {
-  if (!siteConfig.features.newsletter) {
+  const settings = await getSettings();
+  if (!settings.features.newsletter) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     const confirmUrl = `${SITE_URL}/api/subscribe/confirm?token=${confirmToken}`;
     await getEmailProvider().sendTransactional(
       email,
-      `Confirm your subscription to ${siteConfig.siteName}`,
+      `Confirm your subscription to ${settings.siteName}`,
       `<p>Please confirm your subscription by clicking <a href="${confirmUrl}">this link</a>.</p>`
     );
   } catch {

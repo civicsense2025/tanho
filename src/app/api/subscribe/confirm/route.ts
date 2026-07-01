@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSubscriberByToken, updateSubscriber } from "@/lib/db";
 import { tokenSchema } from "@/lib/validation/schemas";
-import { siteConfig } from "@/config/site.config";
+import { getSettings } from "@/lib/settings";
 
 /** Public double-opt-in confirmation. Token is Zod-narrowed to a UUID before the DB lookup.
  * On success redirects to the posts page; invalid/expired tokens get a plain message. */
 export async function GET(req: NextRequest) {
-  if (!siteConfig.features.newsletter) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const settings = await getSettings();
+  if (!settings.features.newsletter) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const token = req.nextUrl.searchParams.get("token") ?? "";
   const parsed = tokenSchema.safeParse({ token });
@@ -19,5 +20,5 @@ export async function GET(req: NextRequest) {
   }
 
   await updateSubscriber(sub.id, { status: "active", confirmToken: null });
-  return NextResponse.redirect(new URL("/posts?confirmed=1", siteConfig.url));
+  return NextResponse.redirect(new URL("/posts?confirmed=1", settings.url));
 }
