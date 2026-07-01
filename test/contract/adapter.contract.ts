@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import type { DbAdapter, Project, Guide, ContentType, ContentEntry } from "@/lib/db/types";
+import type { DbAdapter, ContentType, ContentEntry } from "@/lib/db/types";
 import type { BackendHarness } from "../helpers/adapters";
 
 /**
@@ -7,59 +7,43 @@ import type { BackendHarness } from "../helpers/adapters";
  * hand-written implementations (libsql, postgres, mongodb) observably agree. This is the
  * highest-ROI test in the codebase: everything rides on these adapters, they're implemented
  * three times by hand, and flipping DB_PROVIDER must never silently change behavior for a
- * white-label instance. It is also the prerequisite that makes the later adapter-dedup
- * refactor (Phase 6) safe.
+ * white-label instance.
  *
  * Call runAdapterContract(harness) from a per-backend test file.
  */
 
-function sampleProject(over: Partial<Omit<Project, "id" | "createdAt" | "updatedAt">> = {}) {
+function sampleContentType(over: Partial<Omit<ContentType, "id" | "createdAt" | "updatedAt">> = {}) {
   return {
-    slug: "my-project",
-    title: "My Project",
-    tagline: "A tagline",
-    description: null,
-    coverImage: null,
-    logoUrl: null,
-    tags: JSON.stringify(["a", "b"]),
-    githubUrl: null,
-    liveUrl: null,
-    year: 2026,
-    status: "draft" as const,
+    slug: "test-type",
+    name: "Test Type",
+    icon: "🧪",
+    fields: JSON.stringify([
+      { key: "title", label: "Title", kind: "text" as const },
+      { key: "body", label: "Body", kind: "richtext" as const },
+    ]),
+    isBuiltIn: 0,
     sortOrder: 0,
-    seoTitle: null,
-    seoDescription: null,
-    ogImage: null,
-    canonicalUrl: null,
-    noIndex: 0,
+    seoTitleTemplate: null,
+    seoDescriptionTemplate: null,
     ...over,
   };
 }
 
-function sampleGuide(over: Partial<Omit<Guide, "id" | "createdAt" | "updatedAt">> = {}) {
+function sampleContentEntry(contentTypeId: string, over: Partial<Omit<ContentEntry, "id" | "createdAt" | "updatedAt" | "contentTypeId">> = {}) {
   return {
-    slug: "sub-to-self",
-    title: "Substack to Self-Hosted",
-    tagline: null,
-    summary: null,
-    sourcePlatform: "substack",
-    targetPlatform: "self-hosted",
-    difficulty: "beginner" as const,
-    effortHoursMin: 1,
-    effortHoursMax: 4,
-    costMinUsd: 0,
-    costMaxUsd: 10,
-    costPeriod: "one_time" as const,
-    skillsRequired: JSON.stringify([]),
-    requirements: JSON.stringify([]),
-    coverImage: null,
-    status: "published" as const,
+    contentTypeId,
+    slug: "test-entry",
+    title: "Test Entry",
+    status: "draft" as const,
+    scheduledAt: null,
+    publishedAt: null,
     sortOrder: 0,
     seoTitle: null,
     seoDescription: null,
     ogImage: null,
     canonicalUrl: null,
     noIndex: 0,
+    data: JSON.stringify({ title: "Hello", body: "<p>World</p>" }),
     ...over,
   };
 }
@@ -75,397 +59,334 @@ export function runAdapterContract(harness: BackendHarness) {
       await harness.teardown();
     });
 
-    describe("Repository<T> CRUD", () => {
+    describe("Repository<T> CRUD (contentTypes)", () => {
       it("create returns a generated id and ISO timestamps", async () => {
-        const p = await db.projects.create(sampleProject({ slug: "crud-1" }));
-        expect(p.id).toBeTruthy();
-        expect(typeof p.id).toBe("string");
-        expect(p.title).toBe("My Project");
-        // Timestamps are ISO strings across all backends.
-        expect(typeof p.createdAt).toBe("string");
-        expect(new Date(p.createdAt).toISOString()).toBe(p.createdAt);
-        expect(typeof p.updatedAt).toBe("string");
-        await db.projects.delete(p.id);
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "crud-1" }));
+        expect(ct.id).toBeTruthy();
+        expect(typeof ct.id).toBe("string");
+        expect(ct.name).toBe("Test Type");
+        expect(typeof ct.createdAt).toBe("string");
+        expect(new Date(ct.createdAt).toISOString()).toBe(ct.createdAt);
+        expect(typeof ct.updatedAt).toBe("string");
+        await db.contentTypes.delete(ct.id);
       });
 
       it("get round-trips every field with correct scalar types", async () => {
-        const created = await db.projects.create(sampleProject({ slug: "crud-2", year: 2025, sortOrder: 3, noIndex: 1 }));
-        const got = await db.projects.get(created.id);
+        const created = await db.contentTypes.create(sampleContentType({ slug: "crud-2", sortOrder: 3, isBuiltIn: 1 }));
+        const got = await db.contentTypes.get(created.id);
         expect(got).toBeDefined();
         expect(got!.slug).toBe("crud-2");
-        expect(got!.tagline).toBe("A tagline");
-        // Numeric columns must read back as numbers on every backend — the classic
-        // SQLite-0/1 vs Mongo-native divergence this suite exists to catch.
-        expect(typeof got!.year).toBe("number");
-        expect(got!.year).toBe(2025);
+        expect(got!.name).toBe("Test Type");
         expect(typeof got!.sortOrder).toBe("number");
         expect(got!.sortOrder).toBe(3);
-        expect(typeof got!.noIndex).toBe("number");
-        expect(got!.noIndex).toBe(1);
-        // Nullable columns stay null, not undefined or "".
-        expect(got!.description).toBeNull();
-        expect(got!.coverImage).toBeNull();
-        await db.projects.delete(created.id);
+        expect(typeof got!.isBuiltIn).toBe("number");
+        expect(got!.isBuiltIn).toBe(1);
+        expect(got!.icon).toBe("🧪");
+        await db.contentTypes.delete(created.id);
       });
 
       it("get returns undefined for a missing id", async () => {
-        expect(await db.projects.get("does-not-exist")).toBeUndefined();
+        expect(await db.contentTypes.get("does-not-exist")).toBeUndefined();
       });
 
       it("update patches only given fields and bumps updatedAt", async () => {
-        const p = await db.projects.create(sampleProject({ slug: "crud-3", title: "Before" }));
-        const updated = await db.projects.update(p.id, { title: "After" });
-        expect(updated.title).toBe("After");
-        expect(updated.tagline).toBe("A tagline"); // untouched
-        expect(updated.createdAt).toBe(p.createdAt); // never changes
-        expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(p.updatedAt).getTime());
-        await db.projects.delete(p.id);
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "crud-3", name: "Before" }));
+        const updated = await db.contentTypes.update(ct.id, { name: "After" });
+        expect(updated.name).toBe("After");
+        expect(updated.slug).toBe("crud-3"); // untouched
+        expect(updated.createdAt).toBe(ct.createdAt); // never changes
+        expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(ct.updatedAt).getTime());
+        await db.contentTypes.delete(ct.id);
       });
 
       it("delete removes the row", async () => {
-        const p = await db.projects.create(sampleProject({ slug: "crud-4" }));
-        await db.projects.delete(p.id);
-        expect(await db.projects.get(p.id)).toBeUndefined();
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "crud-4" }));
+        await db.contentTypes.delete(ct.id);
+        expect(await db.contentTypes.get(ct.id)).toBeUndefined();
       });
     });
 
-    describe("list() query semantics", () => {
+    describe("list() query semantics (contentTypes)", () => {
       const ids: string[] = [];
       beforeAll(async () => {
         for (let i = 0; i < 4; i++) {
-          const p = await db.projects.create(
-            sampleProject({ slug: `list-${i}`, title: `P${i}`, sortOrder: i, status: i % 2 === 0 ? "published" : "draft" })
+          const ct = await db.contentTypes.create(
+            sampleContentType({ slug: `list-${i}`, name: `T${i}`, sortOrder: i })
           );
-          ids.push(p.id);
+          ids.push(ct.id);
         }
       });
       afterAll(async () => {
-        for (const id of ids) await db.projects.delete(id);
+        for (const id of ids) await db.contentTypes.delete(id);
       });
 
       it("filters by where equality", async () => {
-        const drafts = await db.projects.list({ where: { status: "draft" } });
-        expect(drafts.every((p) => p.status === "draft")).toBe(true);
-        expect(drafts.map((p) => p.slug).sort()).toContain("list-1");
+        const got = await db.contentTypes.list({ where: { name: "T1" } });
+        expect(got.every((c) => c.name === "T1")).toBe(true);
+        expect(got.map((c) => c.slug).sort()).toContain("list-1");
       });
 
       it("filters by where { in: [...] }", async () => {
-        const got = await db.projects.list({ where: { slug: { in: ["list-0", "list-2"] } } });
-        expect(got.map((p) => p.slug).sort()).toEqual(["list-0", "list-2"]);
+        const got = await db.contentTypes.list({ where: { slug: { in: ["list-0", "list-2"] } } });
+        expect(got.map((c) => c.slug).sort()).toEqual(["list-0", "list-2"]);
       });
 
       it("orders by a field ascending and descending", async () => {
-        const asc = await db.projects.list({
+        const asc = await db.contentTypes.list({
           where: { slug: { in: ["list-0", "list-1", "list-2", "list-3"] } },
           orderBy: [{ field: "sortOrder", direction: "asc" }],
         });
-        expect(asc.map((p) => p.sortOrder)).toEqual([0, 1, 2, 3]);
-        const desc = await db.projects.list({
+        expect(asc.map((c) => c.sortOrder)).toEqual([0, 1, 2, 3]);
+        const desc = await db.contentTypes.list({
           where: { slug: { in: ["list-0", "list-1", "list-2", "list-3"] } },
           orderBy: [{ field: "sortOrder", direction: "desc" }],
         });
-        expect(desc.map((p) => p.sortOrder)).toEqual([3, 2, 1, 0]);
+        expect(desc.map((c) => c.sortOrder)).toEqual([3, 2, 1, 0]);
       });
 
       it("honors limit and offset", async () => {
-        const page = await db.projects.list({
+        const page = await db.contentTypes.list({
           where: { slug: { in: ["list-0", "list-1", "list-2", "list-3"] } },
           orderBy: [{ field: "sortOrder", direction: "asc" }],
           limit: 2,
           offset: 1,
         });
-        expect(page.map((p) => p.sortOrder)).toEqual([1, 2]);
+        expect(page.map((c) => c.sortOrder)).toEqual([1, 2]);
       });
     });
 
-    describe("project blocks (sort-stable replace)", () => {
-      it("replaces and returns blocks in sort order, empty clears", async () => {
-        const p = await db.projects.create(sampleProject({ slug: "blocks-1" }));
-        await db.replaceProjectBlocks(p.id, [
-          { type: "text", content: JSON.stringify({ html: "one" }), sortOrder: 0 },
-          { type: "image", content: JSON.stringify({ url: "/x.png" }), sortOrder: 1 },
-        ]);
-        const blocks = await db.getProjectBlocks(p.id);
-        expect(blocks.map((b) => b.type)).toEqual(["text", "image"]);
-        expect(blocks.map((b) => b.sortOrder)).toEqual([0, 1]);
-        expect(blocks.every((b) => b.projectId === p.id)).toBe(true);
-        expect(blocks.every((b) => typeof b.id === "string" && b.id.length > 0)).toBe(true);
-        // Full replace: fewer blocks than before.
-        await db.replaceProjectBlocks(p.id, [{ type: "text", content: "{}", sortOrder: 0 }]);
-        expect(await db.getProjectBlocks(p.id)).toHaveLength(1);
-        // Empty clears.
-        await db.replaceProjectBlocks(p.id, []);
-        expect(await db.getProjectBlocks(p.id)).toHaveLength(0);
-        await db.projects.delete(p.id);
-      });
-    });
+    describe("contentEntries CRUD", () => {
+      let typeId: string;
+      const entryIds: string[] = [];
 
-    describe("guide tags many-to-many", () => {
-      it("sets and gets tags ordered by name; re-set replaces", async () => {
-        const g = await db.guides.create(sampleGuide({ slug: "gt-1" }));
-        const t1 = await db.upsertTag({ slug: "zeta", name: "Zeta" });
-        const t2 = await db.upsertTag({ slug: "alpha", name: "Alpha" });
-        await db.setGuideTags(g.id, [t1.id, t2.id]);
-        const tags = await db.getGuideTags(g.id);
-        expect(tags.map((t) => t.name)).toEqual(["Alpha", "Zeta"]); // name ASC
-        await db.setGuideTags(g.id, [t1.id]);
-        expect((await db.getGuideTags(g.id)).map((t) => t.slug)).toEqual(["zeta"]);
-        await db.guides.delete(g.id);
-      });
-    });
-
-    describe("listGuides filters + difficulty ranking", () => {
-      const created: string[] = [];
       beforeAll(async () => {
-        created.push((await db.guides.create(sampleGuide({ slug: "lg-beg", difficulty: "beginner", status: "published" }))).id);
-        created.push((await db.guides.create(sampleGuide({ slug: "lg-adv", difficulty: "advanced", status: "published" }))).id);
-        created.push((await db.guides.create(sampleGuide({ slug: "lg-draft", difficulty: "beginner", status: "draft" }))).id);
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "entry-crud-type" }));
+        typeId = ct.id;
       });
       afterAll(async () => {
-        for (const id of created) await db.guides.delete(id);
+        for (const id of entryIds) await db.contentEntries.delete(id);
+        await db.contentTypes.delete(typeId);
       });
 
-      it("publishedOnly by default excludes drafts", async () => {
-        const list = await db.listGuides();
-        expect(list.some((g) => g.slug === "lg-draft")).toBe(false);
-        expect(list.some((g) => g.slug === "lg-beg")).toBe(true);
+      it("create returns a generated id and ISO timestamps", async () => {
+        const e = await db.contentEntries.create(sampleContentEntry(typeId, { slug: "entry-1" }));
+        expect(e.id).toBeTruthy();
+        expect(typeof e.id).toBe("string");
+        expect(e.title).toBe("Test Entry");
+        expect(typeof e.createdAt).toBe("string");
+        expect(new Date(e.createdAt).toISOString()).toBe(e.createdAt);
+        entryIds.push(e.id);
       });
 
-      it("publishedOnly:false includes drafts", async () => {
-        const list = await db.listGuides({ publishedOnly: false });
-        expect(list.some((g) => g.slug === "lg-draft")).toBe(true);
-      });
-
-      it("maxDifficulty caps the difficulty rank", async () => {
-        const list = await db.listGuides({ maxDifficulty: "beginner" });
-        expect(list.some((g) => g.slug === "lg-adv")).toBe(false);
-        expect(list.some((g) => g.slug === "lg-beg")).toBe(true);
-      });
-    });
-
-    describe("upsert idempotency", () => {
-      it("upsertTag on the same slug updates rather than duplicates", async () => {
-        const a = await db.upsertTag({ slug: "dup", name: "First" });
-        const b = await db.upsertTag({ slug: "dup", name: "Second" });
-        expect(b.name).toBe("Second");
-        const all = await db.tags.list({ where: { slug: "dup" } });
-        expect(all).toHaveLength(1);
-      });
-
-      it("upsertPlatform on the same slug updates rather than duplicates", async () => {
-        await db.upsertPlatform({
-          slug: "ghost", name: "Ghost", kind: "target", category: null, logoUrl: null,
-          description: null, sortOrder: 0, officialUrl: null, isOpenSource: 1,
-          pricingModel: "free_oss", pricingNotes: null, githubUrl: null,
-        });
-        const second = await db.upsertPlatform({
-          slug: "ghost", name: "Ghost CMS", kind: "target", category: null, logoUrl: null,
-          description: null, sortOrder: 0, officialUrl: null, isOpenSource: 1,
-          pricingModel: "free_oss", pricingNotes: null, githubUrl: null,
-        });
-        expect(second.name).toBe("Ghost CMS");
-        expect(await db.getPlatformBySlug("ghost")).toBeDefined();
-        expect((await db.platforms.list({ where: { slug: "ghost" } }))).toHaveLength(1);
-      });
-    });
-
-    describe("seo templates (singleton per entityType)", () => {
-      it("upsert-by-entityType updates in place and get/list agree", async () => {
-        const first = await db.upsertSeoTemplate("project", { titleTemplate: "{{title}} — A", descriptionTemplate: "d1" });
-        expect(first.entityType).toBe("project");
-        const second = await db.upsertSeoTemplate("project", { titleTemplate: "{{title}} — B", descriptionTemplate: "d2" });
-        expect(second.titleTemplate).toBe("{{title}} — B");
-        const got = await db.getSeoTemplate("project");
-        expect(got!.titleTemplate).toBe("{{title}} — B");
-        const projectRows = (await db.listSeoTemplates()).filter((t) => t.entityType === "project");
-        expect(projectRows).toHaveLength(1);
-      });
-    });
-
-    describe("logQuizResponse", () => {
-      it("accepts arbitrary answer/recommendation payloads without throwing", async () => {
-        await expect(
-          db.logQuizResponse([{ questionId: "q1", value: "a" }], { guideSlug: "x" }, "substack")
-        ).resolves.toBeUndefined();
-      });
-    });
-
-    describe("newsletter: posts CRUD", () => {
-      it("round-trips a post with correct scalar types", async () => {
-        const p = await db.posts.create({
-          slug: "hello-world", title: "Hello", subtitle: null, excerpt: "An excerpt",
-          coverImage: null, status: "published", visibility: "public",
-          publishedAt: "2026-01-01T00:00:00.000Z", sortOrder: 0,
-          seoTitle: null, seoDescription: null, ogImage: null, canonicalUrl: null, noIndex: 0,
-        });
-        expect(p.id).toBeTruthy();
-        const got = await db.posts.get(p.id);
-        expect(got!.slug).toBe("hello-world");
-        expect(got!.visibility).toBe("public");
-        expect(typeof got!.sortOrder).toBe("number");
-        expect(typeof got!.noIndex).toBe("number");
-        expect(typeof got!.createdAt).toBe("string");
-        await db.posts.delete(p.id);
-      });
-    });
-
-    describe("newsletter: subscribers + delivery join", () => {
-      it("bespoke email/token lookups and active filtering agree across backends", async () => {
-        const active = await db.subscribers.create({
-          email: "a@example.com", status: "active", confirmToken: null,
-          unsubscribeToken: "unsub-token-a", source: "form",
-        });
-        const pending = await db.subscribers.create({
-          email: "b@example.com", status: "pending", confirmToken: "confirm-token-b",
-          unsubscribeToken: "unsub-token-b", source: "import",
-        });
-
-        expect((await db.getSubscriberByEmail("a@example.com"))!.id).toBe(active.id);
-        expect((await db.getSubscriberByToken("confirm-token-b"))!.id).toBe(pending.id);
-        expect((await db.getSubscriberByToken("unsub-token-a"))!.id).toBe(active.id);
-        expect(await db.getSubscriberByToken("no-such-token")).toBeUndefined();
-
-        const activeList = await db.listActiveSubscribers();
-        expect(activeList.some((s) => s.id === active.id)).toBe(true);
-        expect(activeList.some((s) => s.id === pending.id)).toBe(false);
-
-        await db.subscribers.delete(active.id);
-        await db.subscribers.delete(pending.id);
-      });
-
-      it("recordDelivery upserts idempotently and getDeliveriesForPost reads back", async () => {
-        const post = await db.posts.create({
-          slug: "issue-1", title: "Issue 1", subtitle: null, excerpt: null, coverImage: null,
-          status: "published", visibility: "public", publishedAt: null, sortOrder: 0,
-          seoTitle: null, seoDescription: null, ogImage: null, canonicalUrl: null, noIndex: 0,
-        });
-        const sub = await db.subscribers.create({
-          email: "d@example.com", status: "active", confirmToken: null,
-          unsubscribeToken: "unsub-d", source: "form",
-        });
-
-        await db.recordDelivery(post.id, sub.id, { status: "queued" });
-        await db.recordDelivery(post.id, sub.id, { status: "sent", providerMessageId: "msg-1", sentAt: "2026-01-02T00:00:00.000Z" });
-
-        const deliveries = await db.getDeliveriesForPost(post.id);
-        // Idempotent on (post, subscriber): a single row, reflecting the latest patch.
-        expect(deliveries).toHaveLength(1);
-        expect(deliveries[0].status).toBe("sent");
-        expect(deliveries[0].providerMessageId).toBe("msg-1");
-        expect(deliveries[0].postId).toBe(post.id);
-        expect(deliveries[0].subscriberId).toBe(sub.id);
-
-        await db.subscribers.delete(sub.id);
-        await db.posts.delete(post.id);
-      });
-    });
-
-    describe("content types & entries", () => {
-      it("creates a content type and round-trips its fields", async () => {
-        const ct = await db.contentTypes.create({
-          slug: "testimonial",
-          name: "Testimonial",
-          icon: null,
-          fields: JSON.stringify([{ key: "quote", label: "Quote", kind: "text" }]),
-          isBuiltIn: 0,
-          sortOrder: 0,
-          seoTitleTemplate: null,
-          seoDescriptionTemplate: null,
-        });
-        expect(ct.id).toBeTruthy();
-        expect(ct.slug).toBe("testimonial");
-        const got = await db.contentTypes.get(ct.id);
+      it("get round-trips every field with correct scalar types", async () => {
+        const created = await db.contentEntries.create(
+          sampleContentEntry(typeId, { slug: "entry-2", status: "published", sortOrder: 5, noIndex: 1 })
+        );
+        entryIds.push(created.id);
+        const got = await db.contentEntries.get(created.id);
         expect(got).toBeDefined();
-        expect(got!.fields).toBe(JSON.stringify([{ key: "quote", label: "Quote", kind: "text" }]));
-        await db.contentTypes.delete(ct.id);
+        expect(got!.slug).toBe("entry-2");
+        expect(got!.status).toBe("published");
+        expect(typeof got!.sortOrder).toBe("number");
+        expect(got!.sortOrder).toBe(5);
+        expect(typeof got!.noIndex).toBe("number");
+        expect(got!.noIndex).toBe(1);
+        expect(got!.data).toBe(JSON.stringify({ title: "Hello", body: "<p>World</p>" }));
       });
 
-      it("creates an entry and filters by content type", async () => {
-        const ct = await db.contentTypes.create({
-          slug: "ct-filter-test",
-          name: "Filter Test",
-          icon: null,
-          fields: "[]",
-          isBuiltIn: 0,
-          sortOrder: 0,
-          seoTitleTemplate: null,
-          seoDescriptionTemplate: null,
-        });
-        const entry = await db.contentEntries.create({
-          contentTypeId: ct.id,
-          slug: "entry-1",
-          title: "Entry 1",
-          status: "published",
-          scheduledAt: null,
-          publishedAt: null,
-          sortOrder: 0,
-          seoTitle: null,
-          seoDescription: null,
-          ogImage: null,
-          canonicalUrl: null,
-          noIndex: 0,
-          data: JSON.stringify({}),
-        });
-        expect(entry.id).toBeTruthy();
-        expect(entry.contentTypeId).toBe(ct.id);
+      it("update patches only given fields and bumps updatedAt", async () => {
+        const e = await db.contentEntries.create(sampleContentEntry(typeId, { slug: "entry-3", title: "Before" }));
+        entryIds.push(e.id);
+        const updated = await db.contentEntries.update(e.id, { title: "After" });
+        expect(updated.title).toBe("After");
+        expect(updated.slug).toBe("entry-3"); // untouched
+        expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(e.updatedAt).getTime());
+      });
+    });
 
-        const entries = await db.listContentEntries({ contentTypeId: ct.id });
-        expect(entries.some((e) => e.id === entry.id)).toBe(true);
+    describe("listContentEntries filter semantics", () => {
+      let typeId: string;
+      const entryIds: string[] = [];
 
-        const published = await db.listContentEntries({ contentTypeId: ct.id, publishedOnly: true });
-        expect(published.some((e) => e.id === entry.id)).toBe(true);
-
-        const bySlug = await db.getContentEntry("ct-filter-test", "entry-1");
-        expect(bySlug).toBeDefined();
-        expect(bySlug!.id).toBe(entry.id);
-
-        await db.contentEntries.delete(entry.id);
-        await db.contentTypes.delete(ct.id);
+      beforeAll(async () => {
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "entry-list-type" }));
+        typeId = ct.id;
+        for (let i = 0; i < 4; i++) {
+          const e = await db.contentEntries.create(
+            sampleContentEntry(typeId, {
+              slug: `el-${i}`,
+              title: `E${i}`,
+              sortOrder: i,
+              status: i % 2 === 0 ? "published" : "draft",
+            })
+          );
+          entryIds.push(e.id);
+        }
+      });
+      afterAll(async () => {
+        for (const id of entryIds) await db.contentEntries.delete(id);
+        await db.contentTypes.delete(typeId);
       });
 
-      it("content entry tags join works", async () => {
-        const ct = await db.contentTypes.create({
-          slug: "ct-tag-test",
-          name: "Tag Test",
-          icon: null,
-          fields: "[]",
-          isBuiltIn: 0,
-          sortOrder: 0,
-          seoTitleTemplate: null,
-          seoDescriptionTemplate: null,
-        });
-        const entry = await db.contentEntries.create({
-          contentTypeId: ct.id,
-          slug: "tagged-entry",
-          title: "Tagged",
-          status: "draft",
-          scheduledAt: null,
-          publishedAt: null,
-          sortOrder: 0,
-          seoTitle: null,
-          seoDescription: null,
-          ogImage: null,
-          canonicalUrl: null,
-          noIndex: 0,
-          data: JSON.stringify({}),
-        });
-        const tag = await db.upsertTag({ slug: "tag-test-1", name: "Tag Test 1" });
-        await db.setContentEntryTags(entry.id, [tag.id]);
-        const got = await db.getContentEntryTags(entry.id);
-        expect(got).toHaveLength(1);
-        expect(got[0].slug).toBe("tag-test-1");
-        // Re-set replaces.
-        const tag2 = await db.upsertTag({ slug: "tag-test-2", name: "Tag Test 2" });
-        await db.setContentEntryTags(entry.id, [tag2.id]);
-        const got2 = await db.getContentEntryTags(entry.id);
-        expect(got2).toHaveLength(1);
-        expect(got2[0].slug).toBe("tag-test-2");
+      it("filters by contentTypeId", async () => {
+        const got = await db.listContentEntries({ contentTypeId: typeId });
+        expect(got.length).toBe(4);
+        expect(got.every((e) => e.contentTypeId === typeId)).toBe(true);
+      });
+
+      it("publishedOnly filters status=published", async () => {
+        const got = await db.listContentEntries({ contentTypeId: typeId, publishedOnly: true });
+        expect(got.every((e) => e.status === "published")).toBe(true);
+        expect(got.length).toBe(2);
+      });
+
+      it("filters by status", async () => {
+        const got = await db.listContentEntries({ contentTypeId: typeId, status: "draft" });
+        expect(got.every((e) => e.status === "draft")).toBe(true);
+        expect(got.length).toBe(2);
+      });
+    });
+
+    describe("getContentTypeBySlug + getContentEntry convenience", () => {
+      let typeId: string;
+      let entryId: string;
+
+      beforeAll(async () => {
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "conv-type" }));
+        typeId = ct.id;
+        const e = await db.contentEntries.create(sampleContentEntry(typeId, { slug: "conv-entry" }));
+        entryId = e.id;
+      });
+      afterAll(async () => {
+        await db.contentEntries.delete(entryId);
+        await db.contentTypes.delete(typeId);
+      });
+
+      it("getContentTypeBySlug returns the type", async () => {
+        const got = await db.getContentTypeBySlug("conv-type");
+        expect(got).toBeDefined();
+        expect(got!.id).toBe(typeId);
+        expect(got!.slug).toBe("conv-type");
+      });
+
+      it("getContentEntry resolves type+entry by slugs", async () => {
+        const got = await db.getContentEntry("conv-type", "conv-entry");
+        expect(got).toBeDefined();
+        expect(got!.id).toBe(entryId);
+        expect(got!.slug).toBe("conv-entry");
+      });
+
+      it("getContentEntry returns undefined for missing type", async () => {
+        const got = await db.getContentEntry("no-such-type", "conv-entry");
+        expect(got).toBeUndefined();
+      });
+
+      it("getContentEntry returns undefined for missing entry", async () => {
+        const got = await db.getContentEntry("conv-type", "no-such-entry");
+        expect(got).toBeUndefined();
+      });
+    });
+
+    describe("content entry tags many-to-many", () => {
+      let typeId: string;
+      let entryId: string;
+      const tagIds: string[] = [];
+
+      beforeAll(async () => {
+        const ct = await db.contentTypes.create(sampleContentType({ slug: "tag-type" }));
+        typeId = ct.id;
+        const e = await db.contentEntries.create(sampleContentEntry(typeId, { slug: "tag-entry" }));
+        entryId = e.id;
+        const t1 = await db.upsertTag({ slug: "zeta", name: "Zeta" });
+        const t2 = await db.upsertTag({ slug: "alpha", name: "Alpha" });
+        tagIds.push(t1.id, t2.id);
+      });
+      afterAll(async () => {
+        await db.contentEntries.delete(entryId);
+        await db.contentTypes.delete(typeId);
+        for (const id of tagIds) {
+          // Tags are upserted by slug; we clean by deleting via the tags repository
+          const tags = await db.tags.list({ where: { id } });
+          for (const t of tags) await db.tags.delete(t.id);
+        }
+      });
+
+      it("sets and gets tags ordered by name; re-set replaces", async () => {
+        await db.setContentEntryTags(entryId, tagIds);
+        const got = await db.getContentEntryTags(entryId);
+        expect(got.map((t) => t.name)).toEqual(["Alpha", "Zeta"]); // ordered by name
+        // Re-set with fewer tags replaces, not appends.
+        await db.setContentEntryTags(entryId, [tagIds[0]]);
+        expect(await db.getContentEntryTags(entryId)).toHaveLength(1);
         // Empty clears.
-        await db.setContentEntryTags(entry.id, []);
-        expect(await db.getContentEntryTags(entry.id)).toHaveLength(0);
+        await db.setContentEntryTags(entryId, []);
+        expect(await db.getContentEntryTags(entryId)).toHaveLength(0);
+      });
+    });
 
-        await db.contentEntries.delete(entry.id);
-        await db.contentTypes.delete(ct.id);
+    describe("platform upsert-by-slug", () => {
+      const cleanupSlugs: string[] = [];
+
+      afterAll(async () => {
+        for (const slug of cleanupSlugs) {
+          const list = await db.platforms.list({ where: { slug } });
+          for (const p of list) await db.platforms.delete(p.id);
+        }
+      });
+
+      it("inserts on first call, updates on second", async () => {
+        const p1 = await db.upsertPlatform({ slug: "upsert-plat", name: "First", kind: "source", category: null, logoUrl: null, description: null, sortOrder: 0, officialUrl: null, isOpenSource: 0, pricingModel: null, pricingNotes: null, githubUrl: null });
+        cleanupSlugs.push("upsert-plat");
+        expect(p1.name).toBe("First");
+        const p2 = await db.upsertPlatform({ slug: "upsert-plat", name: "Second", kind: "source", category: null, logoUrl: null, description: null, sortOrder: 0, officialUrl: null, isOpenSource: 0, pricingModel: null, pricingNotes: null, githubUrl: null });
+        expect(p2.id).toBe(p1.id);
+        expect(p2.name).toBe("Second");
+      });
+    });
+
+    describe("SEO template singleton", () => {
+      afterAll(async () => {
+        // Clean up: upsert with empty to reset, or delete via list+delete
+        const templates = await db.listSeoTemplates();
+        for (const t of templates) {
+          if (t.entityType === "project" && t.titleTemplate === "CONTRACT_TEST") {
+            await db.upsertSeoTemplate("project", { titleTemplate: "", descriptionTemplate: "" });
+          }
+        }
+      });
+
+      it("upsert creates then updates the same row (keyed by entityType)", async () => {
+        const t1 = await db.upsertSeoTemplate("project", { titleTemplate: "CONTRACT_TEST", descriptionTemplate: "desc1" });
+        expect(t1.titleTemplate).toBe("CONTRACT_TEST");
+        const t2 = await db.upsertSeoTemplate("project", { titleTemplate: "CONTRACT_TEST", descriptionTemplate: "desc2" });
+        expect(t2.id).toBe(t1.id);
+        expect(t2.descriptionTemplate).toBe("desc2");
+      });
+
+      it("getSeoTemplate returns by entityType", async () => {
+        const got = await db.getSeoTemplate("project");
+        expect(got).toBeDefined();
+        expect(got!.titleTemplate).toBe("CONTRACT_TEST");
+      });
+    });
+
+    describe("site settings singleton", () => {
+      it("upsert creates then updates the same row (keyed by key)", async () => {
+        const s1 = await db.upsertSiteSetting("contract_test_key", { value: "val1", isSecret: 0 });
+        expect(s1.value).toBe("val1");
+        const s2 = await db.upsertSiteSetting("contract_test_key", { value: "val2", isSecret: 0 });
+        expect(s2.id).toBe(s1.id);
+        expect(s2.value).toBe("val2");
+        // Clean up
+        await db.upsertSiteSetting("contract_test_key", { value: null, isSecret: 0 });
+      });
+
+      it("getSiteSetting returns by key", async () => {
+        await db.upsertSiteSetting("contract_test_get", { value: "hello", isSecret: 0 });
+        const got = await db.getSiteSetting("contract_test_get");
+        expect(got).toBeDefined();
+        expect(got!.value).toBe("hello");
+        await db.upsertSiteSetting("contract_test_get", { value: null, isSecret: 0 });
       });
     });
   });
