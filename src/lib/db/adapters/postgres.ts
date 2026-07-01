@@ -28,6 +28,7 @@ import type {
 import { applyPostgresMigrations } from "../migrate-runner-postgres";
 import { postgresMigrations } from "../migrations/postgres";
 import { sqlRepository as sharedSqlRepository, type ColumnMap, type SqlDialect } from "./sql-core";
+import { warnIfNoTls } from "../tls-check";
 
 /** postgres dialect for the shared SQL repository: "$n" placeholders, executed via sql.unsafe. */
 function postgresDialect(sql: Sql): SqlDialect {
@@ -46,6 +47,7 @@ function makeSqlRepository<T extends { id: string }>(sql: Sql, table: string, co
 export function createPostgresAdapter(): DbAdapter {
   const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;
   if (!url) throw new Error("POSTGRES_URL or DATABASE_URL must be set when DB_PROVIDER=postgres");
+  warnIfNoTls(url, "postgres", "tanho");
   // Return timestamptz/timestamp as ISO strings (not Date objects) so every backend agrees on
   // the string-typed createdAt/updatedAt the app and the adapter contract expect. Without this
   // the postgres driver hands back Date instances and callers diverge from libsql/mongo.

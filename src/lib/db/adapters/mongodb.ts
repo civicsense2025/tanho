@@ -27,6 +27,7 @@ import type {
 } from "../types";
 import { applyMongoMigrations } from "../migrate-runner-mongodb";
 import { mongoMigrations } from "../migrations/mongodb";
+import { warnIfNoTls } from "../tls-check";
 
 /**
  * Documents store the app-level string `id` as their own `id` field (not `_id`
@@ -102,6 +103,7 @@ function mongoRepository<T extends { id: string }>(collection: Collection): Repo
 export function createMongoAdapter(): DbAdapter {
   const url = process.env.MONGODB_URL;
   if (!url) throw new Error("MONGODB_URL must be set when DB_PROVIDER=mongodb");
+  warnIfNoTls(url, "mongodb", "tanho");
   const client = new MongoClient(url);
   const dbName = process.env.MONGODB_DB || "cms";
   let db: Db;
