@@ -1,6 +1,7 @@
 import { getGuide, getGuideSteps, getResourcesForGuide, getSeoTemplate } from "@/lib/db";
 import { parseTags } from "@/lib/utils";
 import { absoluteImage, absoluteUrl, buildMetadata } from "@/lib/seo";
+import { siteConfig } from "@/config/site.config";
 import { GuideMeta } from "@/components/GuideMeta";
 import { JsonLd } from "@/components/JsonLd";
 import { notFound } from "next/navigation";
@@ -67,7 +68,7 @@ export default async function GuidePage({ params }: Props) {
           image: guide.coverImage ? absoluteImage(guide.coverImage) : undefined,
           url: absoluteUrl(`/guides/${guide.slug}`),
           dateModified: guide.updatedAt,
-          author: { "@type": "Person", name: "Tan Ho" },
+          author: { "@type": "Person", name: siteConfig.author },
         }}
       />
       <div style={{ marginBottom: "var(--space-8)" }}>
