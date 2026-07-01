@@ -1,5 +1,5 @@
 import type { FieldDef, FieldKind } from "@/lib/db/types";
-import { fieldKindToZod, defaultForKind } from "./field-kinds";
+import { fieldKindToZod, defaultForKind, hasValidOptions } from "./field-kinds";
 
 export interface ParsedEntryData {
   data: Record<string, unknown>;
@@ -46,8 +46,8 @@ export function validateFieldDefs(fields: FieldDef[]): string[] {
     if (field.key && seenKeys.has(field.key)) errors.push(`Duplicate field key: ${field.key}`);
     if (field.key) seenKeys.add(field.key);
     if (!field.label) errors.push(`Field ${field.key}: label is required`);
-    if (field.kind === "select" && (!field.options || field.options.length === 0)) {
-      errors.push(`Field ${field.key}: select kind requires options`);
+    if (field.kind === "select" && !hasValidOptions(field.options)) {
+      errors.push(`Field ${field.key}: select kind requires a non-empty array of up to 200 string options`);
     }
   }
   return errors;
