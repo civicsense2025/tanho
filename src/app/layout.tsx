@@ -12,14 +12,12 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 // The static `metadata` export can't read the DB (Next.js requires it to be a plain object, not
 // async), so title/description/verification -- which can now change via /admin/settings without
 // a rebuild -- move to generateMetadata() below. metadataBase stays a build-time constant since
-// SITE_URL itself isn't (yet) a settings-editable field.
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-};
-
+// SITE_URL itself isn't (yet) a settings-editable field; Next.js 16 forbids exporting both
+// `metadata` and `generateMetadata`, so metadataBase is folded into the async return.
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
   return {
+    metadataBase: new URL(SITE_URL),
     title: settings.title,
     description: settings.description,
     verification: settings.analytics.googleSiteVerification

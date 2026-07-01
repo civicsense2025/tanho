@@ -1,5 +1,5 @@
 import { listPosts } from "@/lib/db";
-import { getPostBody } from "@/lib/content/post-content";
+import { renderPostBody } from "@/lib/content/post-content";
 import { SITE_URL } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
 
@@ -16,8 +16,8 @@ function xml(s: string): string {
 }
 
 /** RSS 2.0 feed of published posts. PAID posts emit title + excerpt only — never the body — so
- * the feed can't be used to bypass the paywall. Public posts include the full markdown body in
- * a CDATA <content:encoded>. When newsletter is off, returns 404. */
+ * the feed can't be used to bypass the paywall. Public posts include the full rendered, sanitized
+ * HTML body in a CDATA <content:encoded>. When newsletter is off, returns 404. */
 export async function GET() {
   const settings = await getSettings();
   if (!settings.features.newsletter) {
@@ -31,10 +31,10 @@ export async function GET() {
       const link = `${SITE_URL}/posts/${p.slug}`;
       const pubDate = p.publishedAt ? new Date(p.publishedAt).toUTCString() : new Date(p.createdAt).toUTCString();
       const isPaid = p.visibility === "paid";
-      const bodyMd = isPaid ? "" : await getPostBody(p.slug);
+      const bodyHtml = isPaid ? "" : await renderPostBody(p.slug);
       const description = p.excerpt ?? "";
-      const contentBlock = bodyMd
-        ? `\n      <content:encoded><![CDATA[${bodyMd}]]></content:encoded>`
+      const contentBlock = bodyHtml
+        ? `\n      <content:encoded><![CDATA[${bodyHtml}]]></content:encoded>`
         : "";
       return `    <item>
       <title>${xml(p.title)}</title>
