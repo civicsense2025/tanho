@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { renderRichText } from "@/lib/richtext/renderRichText";
 import type { Block } from "@/lib/blocks/types";
+import { parseBlocks } from "@/lib/blocks/core/validate";
 import { BlockTree } from "@/components/BlockTree";
 import { Tag } from "@/components/ui";
 
@@ -45,7 +46,9 @@ export default async function GuidePage({ params }: Props) {
   const coverImage = data.coverImage ? String(data.coverImage) : null;
   const tagline = data.tagline ? String(data.tagline) : null;
   const summary = data.summary ? String(data.summary) : null;
-  const blocks = ((data.blocks as Block[]) || []).map((b, i) => ({ ...b, id: i }));
+  // parseBlocks() is the same trust-boundary validator the homepage already uses -- a malformed
+  // or unregistered block type is dropped with a warning instead of crashing the render.
+  const blocks = parseBlocks({ blocks: data.blocks }).map((b, i) => ({ ...b, id: i, type: b.type as Block["type"] }));
   const skillsRequired = Array.isArray(data.skillsRequired) ? (data.skillsRequired as string[]) : [];
   const requirements = Array.isArray(data.requirements) ? (data.requirements as string[]) : [];
 

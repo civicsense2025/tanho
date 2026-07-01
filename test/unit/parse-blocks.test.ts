@@ -67,4 +67,17 @@ describe("parseBlocks", () => {
     // style fails styleSchema (max 6) → whole block dropped by the outer rawBlockSchema.
     expect(parseBlocks(raw)).toEqual([]);
   });
+
+  it("degrades gracefully on a content_entries block-list field's bare array shape", () => {
+    // A block-list field's stored value (content_entries.data.blocks) is a bare array, not the
+    // {blocks: [...]} envelope parseBlocks expects -- the render-time call sites wrap it as
+    // `parseBlocks({ blocks: data.blocks })`. This is a regression test for guides/[slug],
+    // projects/[slug], and the generic [typeSlug]/[slug] route, which used to raw-cast
+    // `data.blocks as Block[]` straight into <BlockTree> with zero validation -- a corrupted
+    // block's invalid content would have failed however BlockTree/RenderContentBlock happens to
+    // fail on bad input, untested and unhandled, instead of being dropped here as designed.
+    const entryData = { title: "x", blocks: [{ type: "text", content: { html: "ok" } }, { type: "gallery", content: { images: "not-an-array" } }] };
+    const out = parseBlocks({ blocks: entryData.blocks });
+    expect(out.map((b) => b.type)).toEqual(["text"]);
+  });
 });
