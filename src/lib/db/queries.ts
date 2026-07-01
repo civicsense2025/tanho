@@ -7,14 +7,20 @@ import type {
   Guide,
   GuideFilter,
   GuideStep,
+  Order,
   Page,
   Platform,
+  Post,
+  PostDelivery,
   Project,
   ProjectBlock,
   Resource,
   SeoEntityType,
   SeoTemplate,
+  SiteSetting,
   Skill,
+  Subscriber,
+  Subscription,
   Tag,
 } from "./types";
 
@@ -349,6 +355,143 @@ export async function deleteResource(id: string): Promise<void> {
   await adapter.resources.delete(id);
 }
 
+// ---------- Newsletter: posts ----------
+
+export async function listPosts(publishedOnly = true): Promise<Post[]> {
+  const adapter = await getAdapter();
+  return adapter.posts.list({
+    where: publishedOnly ? { status: "published" } : undefined,
+    orderBy: [
+      { field: "publishedAt", direction: "desc" },
+      { field: "sortOrder", direction: "asc" },
+    ],
+  });
+}
+
+// Request-level memoized like getProject/getGuide: generateMetadata() and the post body both
+// resolve the same slug once per request.
+export const getPost = cache(async (slug: string): Promise<Post | undefined> => {
+  const adapter = await getAdapter();
+  const [post] = await adapter.posts.list({ where: { slug } });
+  return post;
+});
+
+export async function getPostById(id: string): Promise<Post | undefined> {
+  const adapter = await getAdapter();
+  return adapter.posts.get(id);
+}
+
+export async function createPost(data: Omit<Post, "id" | "createdAt" | "updatedAt">): Promise<Post> {
+  const adapter = await getAdapter();
+  return adapter.posts.create(data);
+}
+
+export async function updatePost(id: string, data: Partial<Omit<Post, "id" | "createdAt" | "updatedAt">>): Promise<Post> {
+  const adapter = await getAdapter();
+  return adapter.posts.update(id, data);
+}
+
+export async function deletePost(id: string): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.posts.delete(id);
+}
+
+// ---------- Newsletter: subscribers ----------
+
+export async function listSubscribers(): Promise<Subscriber[]> {
+  const adapter = await getAdapter();
+  return adapter.subscribers.list({ orderBy: [{ field: "createdAt", direction: "desc" }] });
+}
+
+export async function createSubscriber(data: Omit<Subscriber, "id" | "createdAt" | "updatedAt">): Promise<Subscriber> {
+  const adapter = await getAdapter();
+  return adapter.subscribers.create(data);
+}
+
+export async function updateSubscriber(
+  id: string,
+  data: Partial<Omit<Subscriber, "id" | "createdAt" | "updatedAt">>
+): Promise<Subscriber> {
+  const adapter = await getAdapter();
+  return adapter.subscribers.update(id, data);
+}
+
+export async function getSubscriberByEmail(email: string): Promise<Subscriber | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getSubscriberByEmail(email);
+}
+
+export async function getSubscriberByToken(token: string): Promise<Subscriber | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getSubscriberByToken(token);
+}
+
+export async function listActiveSubscribers(): Promise<Subscriber[]> {
+  const adapter = await getAdapter();
+  return adapter.listActiveSubscribers();
+}
+
+export async function getDeliveriesForPost(postId: string): Promise<PostDelivery[]> {
+  const adapter = await getAdapter();
+  return adapter.getDeliveriesForPost(postId);
+}
+
+export async function recordDelivery(
+  postId: string,
+  subscriberId: string,
+  patch: Partial<Omit<PostDelivery, "id" | "postId" | "subscriberId">>
+): Promise<void> {
+  const adapter = await getAdapter();
+  await adapter.recordDelivery(postId, subscriberId, patch);
+}
+
+// ---------- Payments: orders + subscriptions ----------
+
+export async function createOrder(data: Omit<Order, "id" | "createdAt" | "updatedAt">): Promise<Order> {
+  const adapter = await getAdapter();
+  return adapter.orders.create(data);
+}
+
+export async function updateOrder(id: string, data: Partial<Omit<Order, "id" | "createdAt" | "updatedAt">>): Promise<Order> {
+  const adapter = await getAdapter();
+  return adapter.orders.update(id, data);
+}
+
+export async function getOrderByCheckoutSession(sessionId: string): Promise<Order | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getOrderByCheckoutSession(sessionId);
+}
+
+export async function getOrdersByEmail(email: string): Promise<Order[]> {
+  const adapter = await getAdapter();
+  return adapter.getOrdersByEmail(email);
+}
+
+export async function listOrders(): Promise<Order[]> {
+  const adapter = await getAdapter();
+  return adapter.orders.list({ orderBy: [{ field: "createdAt", direction: "desc" }] });
+}
+
+export async function createSubscription(data: Omit<Subscription, "id" | "createdAt" | "updatedAt">): Promise<Subscription> {
+  const adapter = await getAdapter();
+  return adapter.subscriptions.create(data);
+}
+
+export async function updateSubscription(id: string, data: Partial<Omit<Subscription, "id" | "createdAt" | "updatedAt">>): Promise<Subscription> {
+  const adapter = await getAdapter();
+  return adapter.subscriptions.update(id, data);
+}
+
+export async function getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getSubscriptionByStripeId(stripeSubscriptionId);
+}
+
+export async function getActiveSubscriptionByEmail(email: string): Promise<Subscription | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getActiveSubscriptionByEmail(email);
+}
+
 export async function logQuizResponse(answers: unknown, recommendation: unknown, sourcePlatform: string | null): Promise<void> {
   const adapter = await getAdapter();
   await adapter.logQuizResponse(answers, recommendation, sourcePlatform);
@@ -373,4 +516,22 @@ export async function upsertSeoTemplate(
 ): Promise<SeoTemplate> {
   const adapter = await getAdapter();
   return adapter.upsertSeoTemplate(entityType, data);
+}
+
+// Wrapped in React's cache() -- getSettings() (src/lib/settings.ts) reads every key on nearly
+// every request (layout.tsx, sitemap.ts, feed.xml, etc.), so without this each of those would
+// issue its own full site_settings scan per request instead of sharing one.
+export const listSiteSettings = cache(async (): Promise<SiteSetting[]> => {
+  const adapter = await getAdapter();
+  return adapter.listSiteSettings();
+});
+
+export async function getSiteSetting(key: string): Promise<SiteSetting | undefined> {
+  const adapter = await getAdapter();
+  return adapter.getSiteSetting(key);
+}
+
+export async function upsertSiteSetting(key: string, data: { value: string | null; isSecret: number }): Promise<SiteSetting> {
+  const adapter = await getAdapter();
+  return adapter.upsertSiteSetting(key, data);
 }
