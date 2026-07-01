@@ -5,13 +5,17 @@ import { JsonLd } from "@/components/JsonLd";
 import { TextLink } from "@/components/ui";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { ShareButtons } from "@/components/ShareButtons";
+import { FeatureGate } from "@/components/FeatureGate";
+import { PaywallActions } from "@/components/PaywallActions";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { renderRichText } from "@/lib/richtext/renderRichText";
+import { verifyPostAccess, ACCESS_COOKIE_NAME } from "@/lib/stripe/entitlement";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ access?: string }> };
 
 function parseData(dataJson: string): Record<string, unknown> {
   try {
@@ -32,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   );
 }
 
-export default async function PostPage({ params }: Props) {
+export default async function PostPage({ params, searchParams }: Props) {
   const settings = await getSettings();
   if (!settings.features.newsletter) notFound();
   const { slug } = await params;
@@ -44,10 +48,17 @@ export default async function PostPage({ params }: Props) {
   const excerpt = data.excerpt ? String(data.excerpt) : null;
   const visibility = data.visibility ? String(data.visibility) : "public";
 
-  // Paid gating: entitlement is added in a later phase. Until then a paid post shows its
-  // excerpt + a subscribe prompt to everyone; the full body is only rendered for public posts,
-  // so paid content is never served to a non-entitled reader (server-side decision).
-  const entitled = visibility === "public";
+  // Paid gating (subscription-only). A paid post's full body is served ONLY to an entitled
+  // reader — a valid subscriber access token (from ?access= or the post_access cookie) that
+  // still resolves to an ACTIVE subscription (verifyPostAccess does the live re-check, so a
+  // canceled subscriber loses access even with an unexpired token). Public posts are ungated.
+  // The body is never rendered for a non-entitled reader, so paid content can't leak.
+  let entitled = visibility === "public";
+  if (!entitled) {
+    const { access } = await searchParams;
+    const token = access ?? (await cookies()).get(ACCESS_COOKIE_NAME)?.value;
+    entitled = await verifyPostAccess(token ?? undefined);
+  }
   const bodyHtml = entitled ? renderRichText(String(data.body || "")) : "";
 
   return (
@@ -91,7 +102,12 @@ export default async function PostPage({ params }: Props) {
             <p style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-sm)", color: "var(--text)" }}>
               This is a subscriber-only post. Subscribe to read the rest.
             </p>
-            <SubscribeForm />
+            {/* When payments are on, offer paid subscription + unlock; otherwise the free
+                newsletter opt-in. FeatureGate returns nothing (and never loads PaywallActions'
+                client chunk) while payments are disabled. */}
+            <FeatureGate feature="payments" fallback={<SubscribeForm />}>
+              <PaywallActions />
+            </FeatureGate>
           </div>
         </div>
       )}
