@@ -10,6 +10,7 @@ import { ShareButtons } from "@/components/ShareButtons";
 import { TextLink } from "@/components/ui";
 import { renderRichText } from "@/lib/richtext/renderRichText";
 import type { Block } from "@/lib/blocks/types";
+import { parseBlocks } from "@/lib/blocks/core/validate";
 
 export const dynamic = "force-dynamic";
 
@@ -90,8 +91,9 @@ export default async function GenericEntryPage({ params }: Props) {
       })}
 
       {blockFields.map((field) => {
-        const blocks = (data[field.key] as Block[]) || [];
-        const items = blocks.map((b, i) => ({ ...b, id: i }));
+        // parseBlocks() is the same trust-boundary validator the homepage already uses -- a
+        // malformed or unregistered block type is dropped with a warning instead of crashing.
+        const items = parseBlocks({ blocks: data[field.key] }).map((b, i) => ({ ...b, id: i, type: b.type as Block["type"] }));
         return items.length > 0 ? <BlockTree key={field.key} blocks={items} /> : null;
       })}
     </main>

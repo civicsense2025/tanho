@@ -10,6 +10,7 @@ import { BlockTree } from "@/components/BlockTree";
 import { JsonLd } from "@/components/JsonLd";
 import { ShareButtons } from "@/components/ShareButtons";
 import type { Block } from "@/lib/blocks/types";
+import { parseBlocks } from "@/lib/blocks/core/validate";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,9 @@ export default async function ProjectPage({ params }: Props) {
   const githubUrl = data.githubUrl ? String(data.githubUrl) : null;
   const year = data.year != null ? Number(data.year) : null;
   const tags = Array.isArray(data.tags) ? (data.tags as string[]) : [];
-  const blocks = ((data.blocks as Block[]) || []).map((b, i) => ({ ...b, id: i }));
+  // parseBlocks() is the same trust-boundary validator the homepage already uses -- a malformed
+  // or unregistered block type is dropped with a warning instead of crashing the render.
+  const blocks = parseBlocks({ blocks: data.blocks }).map((b, i) => ({ ...b, id: i, type: b.type as Block["type"] }));
 
   return (
     <main style={{ maxWidth: "var(--width-prose)", margin: "0 auto", padding: "var(--space-10) var(--gutter)" }}>
