@@ -9,6 +9,7 @@ import { writeFileToGithub, readFileFromGithub, deleteFileFromGithub, triggerDep
 const CONTENT_ROOT = path.join(process.cwd(), "content");
 const PROJECTS_ROOT = path.join(CONTENT_ROOT, "projects");
 const PAGES_ROOT = path.join(CONTENT_ROOT, "pages");
+const POSTS_ROOT = path.join(CONTENT_ROOT, "posts");
 
 /** Vercel's serverless filesystem is read-only outside /tmp in production, so
  * writes there go through the GitHub Contents API instead of fs/promises.
@@ -38,6 +39,11 @@ function projectBlocksTarget(slug: string): ContentTarget {
 function pageBlocksTarget(slug: string): ContentTarget {
   assertSafeSlug(slug);
   return { localPath: path.join(PAGES_ROOT, `${slug}.json`), repoPath: `content/pages/${slug}.json` };
+}
+
+function postMdxTarget(slug: string): ContentTarget {
+  assertSafeSlug(slug);
+  return { localPath: path.join(POSTS_ROOT, `${slug}.mdx`), repoPath: `content/posts/${slug}.mdx` };
 }
 
 async function readLocal(localPath: string): Promise<string | undefined> {
@@ -118,6 +124,46 @@ export async function readProjectBlocks(slug: string): Promise<string | undefine
 export async function writeProjectBlocks(slug: string, json: string): Promise<void> {
   const target = projectBlocksTarget(slug);
   await write(target, json, `content: update ${slug}.blocks.json`);
+}
+
+export async function readPostMdx(slug: string): Promise<string | undefined> {
+  return read(postMdxTarget(slug));
+}
+
+export async function writePostMdx(slug: string, content: string): Promise<void> {
+  await write(postMdxTarget(slug), content, `content: update posts/${slug}.mdx`);
+}
+
+export async function renamePostMdx(oldSlug: string, newSlug: string): Promise<void> {
+  const oldTarget = postMdxTarget(oldSlug);
+  const newTarget = postMdxTarget(newSlug);
+  if (isWritableFsEnvironment()) {
+    try {
+      await rename(oldTarget.localPath, newTarget.localPath);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+    return;
+  }
+  const content = await readFileFromGithub(oldTarget.repoPath);
+  if (content === undefined) return;
+  await writeFileToGithub(newTarget.repoPath, content, `content: rename posts/${oldSlug}.mdx -> ${newSlug}.mdx`);
+  await deleteFileFromGithub(oldTarget.repoPath, `content: remove posts/${oldSlug}.mdx (renamed)`);
+  await triggerDeployHook();
+}
+
+export async function deletePostMdx(slug: string): Promise<void> {
+  const target = postMdxTarget(slug);
+  if (isWritableFsEnvironment()) {
+    try {
+      await unlink(target.localPath);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+    return;
+  }
+  await deleteFileFromGithub(target.repoPath, `content: remove posts/${slug}.mdx`);
+  await triggerDeployHook();
 }
 
 export async function readPageBlocks(slug: string): Promise<string | undefined> {
