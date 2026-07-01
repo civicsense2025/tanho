@@ -1,4 +1,4 @@
-import { listGuides, listPlatforms } from "@/lib/db";
+import { listGuides, getPlatform } from "@/lib/db";
 import { GuideCard } from "@/components/GuideCard";
 import { notFound } from "next/navigation";
 import { TextLink } from "@/components/ui";
@@ -9,8 +9,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export default async function PlatformGuidesPage({ params }: Props) {
   const { slug } = await params;
-  const platforms = await listPlatforms();
-  const platform = platforms.find((p) => p.slug === slug);
+  const platform = await getPlatform(slug);
   if (!platform) notFound();
 
   const [fromGuides, toGuides] = await Promise.all([
