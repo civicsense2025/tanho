@@ -364,61 +364,6 @@ export function createLibsqlAdapter(): DbAdapter {
     };
   }
 
-  async function getPlatformsForResource(resourceId: string): Promise<Platform[]> {
-    const result = await client.execute({
-      sql: "SELECT p.* FROM platforms p JOIN resource_platforms rp ON rp.platform_id = p.id WHERE rp.resource_id = ? ORDER BY p.name ASC",
-      args: [resourceId],
-    });
-    return result.rows.map((r) => platformRow(r as Record<string, unknown>));
-  }
-
-  async function setResourcePlatforms(resourceId: string, platformIds: string[]): Promise<void> {
-    await client.batch(
-      [
-        { sql: "DELETE FROM resource_platforms WHERE resource_id = ?", args: [resourceId] },
-        ...platformIds.map((platformId) => ({
-          sql: "INSERT INTO resource_platforms (resource_id, platform_id) VALUES (?, ?)",
-          args: [resourceId, platformId],
-        })),
-      ],
-      "write"
-    );
-  }
-
-  function contentEntryRow(row: Record<string, unknown>): ContentEntry {
-    return {
-      id: String(row.id),
-      contentTypeId: String(row.content_type_id),
-      slug: row.slug as string,
-      title: row.title as string,
-      status: row.status as ContentEntryStatus,
-      scheduledAt: (row.scheduled_at as string) ?? null,
-      publishedAt: (row.published_at as string) ?? null,
-      sortOrder: Number(row.sort_order),
-      seoTitle: (row.seo_title as string) ?? null,
-      seoDescription: (row.seo_description as string) ?? null,
-      ogImage: (row.og_image as string) ?? null,
-      canonicalUrl: (row.canonical_url as string) ?? null,
-      noIndex: Number(row.no_index),
-      data: row.data as string,
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
-    };
-  }
-
-  async function getResourcesForPlatform(platformSlug: string, publicOnly = true): Promise<ContentEntry[]> {
-    const where = publicOnly ? "AND e.status = 'published'" : "";
-    const result = await client.execute({
-      sql: `SELECT e.* FROM content_entries e
-            JOIN resource_platforms rp ON rp.resource_id = e.id
-            JOIN platforms p ON p.id = rp.platform_id
-            WHERE p.slug = ? ${where}
-            ORDER BY e.created_at DESC`,
-      args: [platformSlug],
-    });
-    return result.rows.map((r) => contentEntryRow(r as Record<string, unknown>));
-  }
-
   async function getPlatformBySlug(slug: string): Promise<Platform | undefined> {
     const [p] = await platforms.list({ where: { slug } });
     return p;
@@ -548,9 +493,6 @@ export function createLibsqlAdapter(): DbAdapter {
     getOrdersByEmail,
     getSubscriptionByStripeId,
     getActiveSubscriptionByEmail,
-    getPlatformsForResource,
-    setResourcePlatforms,
-    getResourcesForPlatform,
     getPlatformBySlug,
     upsertPlatform,
     upsertTag,

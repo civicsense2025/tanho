@@ -84,9 +84,9 @@ describe("backfill_legacy_data [libsql]", () => {
     const resourceData = JSON.parse(resourceEntry!.data as string);
     expect(resourceData.url).toBe("https://example.com/resource");
 
-    // Old tables (except resources, a separately-tracked gap) are genuinely gone.
+    // Old tables, including resources/resource_platforms, are genuinely gone.
     const oldTables = await client.execute(
-      `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('guides','guide_steps','projects','project_blocks','pages','posts')`
+      `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('guides','guide_steps','projects','project_blocks','pages','posts','resources','resource_platforms')`
     );
     expect(oldTables.rows).toHaveLength(0);
 
@@ -185,9 +185,9 @@ describe("backfill_legacy_data [mongodb]", () => {
     expect(resourceEntry).toBeDefined();
     expect(JSON.parse(resourceEntry!.data as string).url).toBe("https://example.com/resource");
 
-    // Old collections (except resources, a separately-tracked gap) are genuinely gone.
+    // Old collections, including resources/resource_platforms, are genuinely gone.
     const collectionNames = (await db.listCollections().toArray()).map((c) => c.name);
-    for (const old of ["guides", "guide_steps", "projects", "project_blocks", "pages", "posts"]) {
+    for (const old of ["guides", "guide_steps", "projects", "project_blocks", "pages", "posts", "resources", "resource_platforms"]) {
       expect(collectionNames, `expected ${old} to be dropped`).not.toContain(old);
     }
 

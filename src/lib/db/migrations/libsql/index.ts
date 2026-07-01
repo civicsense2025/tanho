@@ -14,6 +14,7 @@ import { fixGuideSeedBlocksField } from "./fix_guide_seed_blocks_field";
 import { addPlatformDynamicOptions } from "./add_platform_dynamic_options";
 import { backfillLegacyData } from "./backfill_legacy_data";
 import { dropLegacyTables } from "./0012_drop_legacy_tables";
+import { dropOrphanedResourcesTables } from "./drop_orphaned_resources_tables";
 
 export const libsqlMigrations: SqlMigration[] = [
   { name: "0001_init", sql: init },
@@ -31,4 +32,5 @@ export const libsqlMigrations: SqlMigration[] = [
   addPlatformDynamicOptions,
   ...backfillLegacyData,
   dropLegacyTables,
+  dropOrphanedResourcesTables,
 ];
