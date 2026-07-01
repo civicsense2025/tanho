@@ -1,9 +1,10 @@
 import { getAdminSession } from "@/lib/auth";
-import { listContentTypes, listContentEntries, listExperience, listSkills, listAwards, listEducation, listSubscribers } from "@/lib/db";
+import { listContentTypes, listContentEntries, listExperience, listSkills, listAwards, listEducation, listSubscribers, listSiteSettings } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { redirect } from "next/navigation";
 import { Badge, Button, TextLink } from "@/components/ui";
 import { LogoutButton } from "@/components/LogoutButton";
+import { SetupChecklist } from "@/components/SetupChecklist";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +22,18 @@ export default async function AdminPage() {
   const newsletterOn = settings.features.newsletter;
   const guidesOn = settings.features.guides;
 
-  const [contentTypes, experiences, skills, awards, education, subscribers] = await Promise.all([
+  const [contentTypes, experiences, skills, awards, education, subscribers, siteSettingRows] = await Promise.all([
     listContentTypes(),
     listExperience(),
     listSkills(),
     listAwards(),
     listEducation(),
     newsletterOn ? listSubscribers() : Promise.resolve([]),
+    listSiteSettings(),
   ]);
+
+  // Fresh install = no site_settings rows written yet → show the first-run setup guide.
+  const configured = siteSettingRows.length > 0;
 
   // Load entries for each content type
   const entriesByType = await Promise.all(
@@ -67,6 +72,8 @@ export default async function AdminPage() {
         </div>
         <LogoutButton />
       </div>
+
+      <SetupChecklist settings={settings} configured={configured} />
 
       {/* Profile & résumé summary */}
       <div
