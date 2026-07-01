@@ -11,17 +11,22 @@ if (process.env.NODE_ENV === "production") {
 
 const SECRET = new TextEncoder().encode(process.env.ADMIN_SECRET || DEFAULT_SECRET);
 const COOKIE = "admin_token";
+// Dedicated audience so an admin session token can't be mistaken for any other
+// token minted with the same secret. Pinned alongside algorithms: ["HS256"] on
+// verify to make the accepted algorithm explicit (algorithm-confusion hardening).
+const ADMIN_AUDIENCE = "oys-admin";
 
 export async function signAdminToken(): Promise<string> {
   return new SignJWT({ role: "admin" })
     .setProtectedHeader({ alg: "HS256" })
+    .setAudience(ADMIN_AUDIENCE)
     .setExpirationTime("7d")
     .sign(SECRET);
 }
 
 export async function verifyAdminToken(token: string): Promise<boolean> {
   try {
-    await jwtVerify(token, SECRET);
+    await jwtVerify(token, SECRET, { audience: ADMIN_AUDIENCE, algorithms: ["HS256"] });
     return true;
   } catch {
     return false;
