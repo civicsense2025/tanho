@@ -1,6 +1,18 @@
 import { z } from "zod";
 import type { FieldDef, FieldKind } from "@/lib/db/types";
 
+/** Upper bound on a `select` field's option count. Generous for any real dropdown; exists to
+ * stop an admin-authored (or corrupted) FieldDef from making z.enum() build an enormous schema
+ * -- reproduced as a multi-second, synchronous, event-loop-blocking cost at ~1M entries. */
+const MAX_SELECT_OPTIONS = 200;
+
+/** True only for a real, reasonably-sized array of strings -- NOT just "truthy with a .length",
+ * which a plain string also satisfies (a string's .length is its character count, and z.enum()
+ * over a string silently iterates its characters into a bogus enum rather than rejecting it). */
+export function hasValidOptions(options: unknown): options is string[] {
+  return Array.isArray(options) && options.length > 0 && options.length <= MAX_SELECT_OPTIONS && options.every((o) => typeof o === "string");
+}
+
 /** The raw Zod type for a kind, before required/nullable/default wrapping. */
 function baseSchemaForKind(field: FieldDef): z.ZodTypeAny {
   switch (field.kind) {
@@ -19,9 +31,7 @@ function baseSchemaForKind(field: FieldDef): z.ZodTypeAny {
       // Stored as 0/1 in SQL, matching the site-wide noIndex convention.
       return z.number().int().min(0).max(1);
     case "select":
-      return field.options && field.options.length > 0
-        ? z.enum(field.options as [string, ...string[]])
-        : z.string();
+      return hasValidOptions(field.options) ? z.enum(field.options as [string, ...string[]]) : z.string();
     case "tags":
       return z.array(z.string());
     case "block-list":

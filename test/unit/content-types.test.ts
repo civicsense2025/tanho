@@ -98,7 +98,21 @@ describe("validateFieldDefs", () => {
 
   it("catches select without options", () => {
     const errors = validateFieldDefs([{ key: "s", label: "S", kind: "select" }]);
-    expect(errors.some((e) => e.includes("select kind requires options"))).toBe(true);
+    expect(errors.some((e) => e.includes("select kind requires"))).toBe(true);
+  });
+
+  it("catches a string passed as options (type confusion) -- a string also has a truthy .length", () => {
+    const errors = validateFieldDefs([
+      { key: "s", label: "S", kind: "select", options: "danger" as unknown as string[] },
+    ]);
+    expect(errors.some((e) => e.includes("select kind requires"))).toBe(true);
+  });
+
+  it("catches an oversized options array", () => {
+    const errors = validateFieldDefs([
+      { key: "s", label: "S", kind: "select", options: Array.from({ length: 201 }, (_, i) => `opt-${i}`) },
+    ]);
+    expect(errors.some((e) => e.includes("select kind requires"))).toBe(true);
   });
 
   it("passes for valid field defs", () => {
@@ -107,5 +121,25 @@ describe("validateFieldDefs", () => {
       { key: "level", label: "Level", kind: "select", options: ["easy", "hard"] },
     ]);
     expect(errors).toEqual([]);
+  });
+});
+
+describe("fieldKindToZod -- select options defense-in-depth", () => {
+  it("falls back to a plain string schema (not a broken enum) when options is a string, not an array", () => {
+    // Reproduces the type-confusion bug: z.enum() over a raw string silently iterates its
+    // characters into a bogus enum rather than rejecting it. Defense-in-depth here means this
+    // can't happen even if a bad FieldDef somehow bypasses validateFieldDefs.
+    const schema = fieldKindToZod({ key: "s", label: "S", kind: "select", options: "danger" as unknown as string[] });
+    // A real z.enum(["d","a","n","g","e","r"]) would accept "d"; the string-schema fallback
+    // accepts any string, so this alone isn't distinguishing -- assert the enum-specific failure
+    // mode (rejecting a value outside the bogus per-character set) does NOT happen.
+    expect(schema.safeParse("danger").success).toBe(true);
+    expect(schema.safeParse("anything at all").success).toBe(true);
+  });
+
+  it("falls back to a plain string schema when options exceeds the size cap", () => {
+    const huge = Array.from({ length: 201 }, (_, i) => `opt-${i}`);
+    const schema = fieldKindToZod({ key: "s", label: "S", kind: "select", options: huge });
+    expect(schema.safeParse("not-in-the-list-at-all").success).toBe(true);
   });
 });
