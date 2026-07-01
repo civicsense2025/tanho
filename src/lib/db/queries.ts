@@ -206,6 +206,40 @@ export async function listActiveSubscribers(): Promise<Subscriber[]> {
   return adapter.listActiveSubscribers();
 }
 
+export async function getSubscriberById(id: string): Promise<Subscriber | undefined> {
+  const adapter = await getAdapter();
+  return adapter.subscribers.get(id);
+}
+
+/** Hard delete. Subscriber records carry no financial-retention requirement
+ * (unlike, say, a paid order), so a genuine delete — not a soft/anonymize —
+ * is the correct response to an admin-initiated erasure or the retention
+ * purge below. */
+export async function deleteSubscriber(id: string): Promise<void> {
+  const adapter = await getAdapter();
+  return adapter.subscribers.delete(id);
+}
+
+/** Retention purge: hard-deletes subscribers who never confirmed (still
+ * "pending") or who unsubscribed, and haven't been touched in `olderThanDays`.
+ * Active/confirmed subscribers are never touched regardless of age. Not run
+ * automatically — callers (an admin action or an operator's own cron) decide
+ * when/whether "stale" applies, matching how every other destructive
+ * operation in this codebase requires an explicit trigger. Returns the count
+ * deleted, for audit logging. */
+export async function purgeStaleSubscribers(olderThanDays: number): Promise<number> {
+  const adapter = await getAdapter();
+  const cutoff = new Date(Date.now() - olderThanDays * 86_400_000).toISOString();
+  const all = await adapter.subscribers.list();
+  const stale = all.filter(
+    (s) => (s.status === "pending" || s.status === "unsubscribed") && s.updatedAt < cutoff
+  );
+  for (const s of stale) {
+    await adapter.subscribers.delete(s.id);
+  }
+  return stale.length;
+}
+
 export async function getDeliveriesForPost(postId: string): Promise<PostDelivery[]> {
   const adapter = await getAdapter();
   return adapter.getDeliveriesForPost(postId);
