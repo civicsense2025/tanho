@@ -7,13 +7,17 @@ import { SeoFields, type SeoFieldsValue } from "@/components/SeoFields";
 import { PageBuilder } from "@/components/PageBuilder";
 import { RichTextEditor } from "@/lib/richtext/RichTextEditor";
 import { slugify } from "@/lib/utils";
-import type { FieldDef, ContentEntry, ContentType } from "@/lib/db";
+import type { FieldDef, ContentEntry, ContentType, Platform } from "@/lib/db";
 
 interface Props {
   contentType: ContentType;
   entryId?: string;
   initial?: Partial<ContentEntry>;
   onUpload: (file: File) => Promise<string>;
+  /** Passed down from the server-rendered parent page (listPlatforms()) for any 'select' field
+   * declaring dynamicOptions: "platforms" -- e.g. the built-in guide type's sourcePlatform/
+   * targetPlatform fields. Omitted/empty is fine for content types with no such field. */
+  platforms?: Platform[];
 }
 
 const sectionLabel: CSSProperties = {
@@ -41,7 +45,7 @@ function parseEntryData(dataJson: string): Record<string, unknown> {
   }
 }
 
-export function EntryForm({ contentType, entryId, initial, onUpload }: Props) {
+export function EntryForm({ contentType, entryId, initial, onUpload, platforms }: Props) {
   const router = useRouter();
   const fields = parseFields(contentType.fields);
   const initialData = initial?.data ? parseEntryData(initial.data) : {};
@@ -157,6 +161,7 @@ export function EntryForm({ contentType, entryId, initial, onUpload }: Props) {
             value={data[field.key]}
             onChange={(v) => updateField(field.key, v)}
             onUpload={onUpload}
+            platforms={platforms}
           />
         ))}
       </div>
@@ -186,11 +191,13 @@ function FieldRenderer({
   value,
   onChange,
   onUpload,
+  platforms,
 }: {
   field: FieldDef;
   value: unknown;
   onChange: (value: unknown) => void;
   onUpload: (file: File) => Promise<string>;
+  platforms?: Platform[];
 }) {
   const label = field.label + (field.required ? " *" : "");
   switch (field.kind) {
@@ -218,17 +225,24 @@ function FieldRenderer({
           <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked ? 1 : 0)} />
         </Field>
       );
-    case "select":
+    case "select": {
+      const dynamicOpts = field.dynamicOptions === "platforms" ? (platforms || []) : null;
       return (
         <Field label={label}>
           <Select value={(value as string) || ""} onChange={(e) => onChange(e.target.value)}>
             <option value="">—</option>
-            {(field.options || []).map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
+            {dynamicOpts
+              ? dynamicOpts.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)
+              : (field.options || []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
           </Select>
+          {dynamicOpts && dynamicOpts.length === 0 && (
+            <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
+              No platforms defined yet.
+            </p>
+          )}
         </Field>
       );
+    }
     case "date":
       return (
         <Field label={label}>

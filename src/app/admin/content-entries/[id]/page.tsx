@@ -1,5 +1,5 @@
 import { getAdminSession } from "@/lib/auth";
-import { getContentEntryById, getContentTypeById } from "@/lib/db";
+import { getContentEntryById, getContentTypeById, listPlatforms } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { AdminPageShell } from "@/components/AdminPageShell";
 import { EntryForm } from "@/components/EntryForm";
@@ -14,7 +14,7 @@ export default async function EditEntryPage({ params }: Props) {
   const { id } = await params;
   const entry = await getContentEntryById(id);
   if (!entry) notFound();
-  const type = await getContentTypeById(entry.contentTypeId);
+  const [type, platforms] = await Promise.all([getContentTypeById(entry.contentTypeId), listPlatforms()]);
   if (!type) notFound();
 
   return (
@@ -23,6 +23,7 @@ export default async function EditEntryPage({ params }: Props) {
         contentType={type}
         entryId={entry.id}
         initial={entry}
+        platforms={platforms}
         onUpload={async (file) => {
           const fd = new FormData();
           fd.append("file", file);

@@ -213,6 +213,11 @@ export interface FieldDef {
   defaultValue?: unknown;
   /** Options for the 'select' kind. Ignored by other kinds. */
   options?: string[];
+  /** For the 'select' kind: populate options dynamically from another entity at form-render
+   * time instead of the static `options` array above. Currently just one source -- a small,
+   * fixed discriminator (like the field-kind palette itself), not an open-ended plugin system,
+   * since only sourcePlatform/targetPlatform need this today. */
+  dynamicOptions?: "platforms";
   helpText?: string;
 }
 
