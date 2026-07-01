@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
-import { getContentEntryById, updateContentEntry, deleteContentEntry, getContentTypeById } from "@/lib/db";
+import { getContentEntryById, updateContentEntry, deleteContentEntry, getContentTypeById, setContentEntryCollections } from "@/lib/db";
 import { parseEntryData, type FieldDef } from "@/lib/content-types";
 import { redactPaidEntry } from "@/lib/content-types/paywall";
 import { revalidateContent } from "@/lib/cache";
@@ -54,6 +54,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   const entry = await updateContentEntry(id, data);
+  if (Array.isArray(body.collectionIds)) {
+    await setContentEntryCollections(id, body.collectionIds.map((collectionId: string, i: number) => ({ collectionId, sortOrder: i })));
+  }
   // Bust the ISR cache so the edit shows on public pages immediately (Next 16 serve-stale-then-
   // revalidate). Busts the broad content tag + this entry's type.
   revalidateContent(await typeSlugFor(existing.contentTypeId));

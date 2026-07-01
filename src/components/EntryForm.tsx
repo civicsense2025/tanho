@@ -7,7 +7,7 @@ import { SeoFields, type SeoFieldsValue } from "@/components/SeoFields";
 import { PageBuilder } from "@/components/PageBuilder";
 import { RichTextEditor } from "@/lib/richtext/RichTextEditor";
 import { slugify } from "@/lib/utils";
-import type { FieldDef, ContentEntry, ContentType, Platform } from "@/lib/db";
+import type { FieldDef, ContentEntry, ContentType, Platform, Collection } from "@/lib/db";
 
 interface Props {
   contentType: ContentType;
@@ -18,6 +18,10 @@ interface Props {
    * declaring dynamicOptions: "platforms" -- e.g. the built-in guide type's sourcePlatform/
    * targetPlatform fields. Omitted/empty is fine for content types with no such field. */
   platforms?: Platform[];
+  /** All collections (for the assignment checklist) and this entry's current assignments
+   * (content_entry_id -> collection_id, sortOrder), both fetched server-side by the parent page. */
+  allCollections?: Collection[];
+  entryCollectionIds?: string[];
 }
 
 const sectionLabel: CSSProperties = {
@@ -45,7 +49,7 @@ function parseEntryData(dataJson: string): Record<string, unknown> {
   }
 }
 
-export function EntryForm({ contentType, entryId, initial, onUpload, platforms }: Props) {
+export function EntryForm({ contentType, entryId, initial, onUpload, platforms, allCollections, entryCollectionIds }: Props) {
   const router = useRouter();
   const fields = parseFields(contentType.fields);
   const initialData = initial?.data ? parseEntryData(initial.data) : {};
@@ -56,6 +60,7 @@ export function EntryForm({ contentType, entryId, initial, onUpload, platforms }
   const [scheduledAt, setScheduledAt] = useState(initial?.scheduledAt || "");
   const [sortOrder, setSortOrder] = useState(initial?.sortOrder || 0);
   const [data, setData] = useState<Record<string, unknown>>(initialData);
+  const [collectionIds, setCollectionIds] = useState<string[]>(entryCollectionIds || []);
   const [seo, setSeo] = useState<SeoFieldsValue>({
     seoTitle: initial?.seoTitle || "",
     seoDescription: initial?.seoDescription || "",
@@ -87,6 +92,7 @@ export function EntryForm({ contentType, entryId, initial, onUpload, platforms }
         canonicalUrl: seo.canonicalUrl || null,
         noIndex: seo.noIndex,
         data,
+        collectionIds,
       };
       const url = entryId ? `/api/content-entries/${entryId}` : "/api/content-entries";
       const method = entryId ? "PATCH" : "POST";
@@ -165,6 +171,26 @@ export function EntryForm({ contentType, entryId, initial, onUpload, platforms }
           />
         ))}
       </div>
+
+      {allCollections && allCollections.length > 0 && (
+        <div>
+          <h2 style={sectionLabel}>Collections</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+            {allCollections.map((c) => (
+              <label key={c.id} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-sm)", color: "var(--text)" }}>
+                <input
+                  type="checkbox"
+                  checked={collectionIds.includes(c.id)}
+                  onChange={(e) =>
+                    setCollectionIds((prev) => (e.target.checked ? [...prev, c.id] : prev.filter((id) => id !== c.id)))
+                  }
+                />
+                {c.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 style={sectionLabel}>SEO</h2>

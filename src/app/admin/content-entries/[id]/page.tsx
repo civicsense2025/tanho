@@ -1,5 +1,5 @@
 import { getAdminSession } from "@/lib/auth";
-import { getContentEntryById, getContentTypeById, listPlatforms } from "@/lib/db";
+import { getContentEntryById, getContentTypeById, listPlatforms, listCollections, getContentEntryCollections } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { AdminPageShell } from "@/components/AdminPageShell";
 import { EntryForm } from "@/components/EntryForm";
@@ -14,7 +14,12 @@ export default async function EditEntryPage({ params }: Props) {
   const { id } = await params;
   const entry = await getContentEntryById(id);
   if (!entry) notFound();
-  const [type, platforms] = await Promise.all([getContentTypeById(entry.contentTypeId), listPlatforms()]);
+  const [type, platforms, allCollections, entryCollections] = await Promise.all([
+    getContentTypeById(entry.contentTypeId),
+    listPlatforms(),
+    listCollections(),
+    getContentEntryCollections(entry.id),
+  ]);
   if (!type) notFound();
 
   return (
@@ -24,6 +29,8 @@ export default async function EditEntryPage({ params }: Props) {
         entryId={entry.id}
         initial={entry}
         platforms={platforms}
+        allCollections={allCollections}
+        entryCollectionIds={entryCollections.map((ec) => ec.collectionId)}
         onUpload={async (file) => {
           const fd = new FormData();
           fd.append("file", file);

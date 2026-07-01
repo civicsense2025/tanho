@@ -1,5 +1,5 @@
 import { getAdminSession } from "@/lib/auth";
-import { getContentTypeBySlug, listContentTypes, listPlatforms } from "@/lib/db";
+import { getContentTypeBySlug, listContentTypes, listPlatforms, listCollections } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { AdminPageShell } from "@/components/AdminPageShell";
 import { EntryForm } from "@/components/EntryForm";
@@ -13,12 +13,12 @@ export default async function NewEntryPage({ searchParams }: Props) {
   if (!authed) redirect("/admin/login");
   const { type: typeSlug } = await searchParams;
   if (!typeSlug) notFound();
-  const [type, platforms] = await Promise.all([getContentTypeBySlug(typeSlug), listPlatforms()]);
+  const [type, platforms, allCollections] = await Promise.all([getContentTypeBySlug(typeSlug), listPlatforms(), listCollections()]);
   if (!type) notFound();
 
   return (
     <AdminPageShell title={`New ${type.name}`}>
-      <EntryForm contentType={type} platforms={platforms} onUpload={async (file) => {
+      <EntryForm contentType={type} platforms={platforms} allCollections={allCollections} onUpload={async (file) => {
         const fd = new FormData();
         fd.append("file", file);
         const res = await fetch("/api/upload", { method: "POST", body: fd });

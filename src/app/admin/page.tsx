@@ -91,9 +91,14 @@ export default async function AdminPage() {
       {/* Content Types & Entries */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
         <h2 style={sectionHead}>Content</h2>
-        <Button as="a" href="/admin/content-types" size="sm" variant="outline">
-          Manage types
-        </Button>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <Button as="a" href="/admin/collections" size="sm" variant="outline">
+            Manage collections
+          </Button>
+          <Button as="a" href="/admin/content-types" size="sm" variant="outline">
+            Manage types
+          </Button>
+        </div>
       </div>
       {entriesByType.map(({ type, entries }) => (
         <div key={type.id} style={{ marginBottom: "var(--space-8)" }}>
