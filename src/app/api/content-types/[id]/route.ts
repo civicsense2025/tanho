@@ -10,6 +10,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const type = await getContentTypeById(id);
   if (!type) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Mirrors the list route: non-admins only see built-in types (custom types are admin-internal
+  // schema) -- otherwise a caller who obtains a custom type's id (e.g. via a content_entries
+  // response's contentTypeId) could read its full field schema despite the list route hiding it.
+  const isAdmin = await getAdminSession();
+  if (!isAdmin && type.isBuiltIn !== 1) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(type);
 }
 
