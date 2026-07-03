@@ -1,11 +1,30 @@
-import next from "eslint-config-next";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-// Flat config (ESLint 9). `next lint` was removed in Next 16, and the bare `eslint` script
-// needs a config file to run at all — this wires the existing eslint-config-next (which
-// exports a flat-config array) so `npm run lint` and CI's static leg work.
-const config = [
-  { ignores: [".next/**", "node_modules/**", "coverage/**", "test-results/**", "playwright-report/**"] },
-  ...next,
-];
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  {
+    // Atomization discipline: single-responsibility files. Split before
+    // crossing the cap (see docs/architecture — Modularity standards).
+    rules: {
+      "max-lines": [
+        "error",
+        { max: 300, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "drizzle/**",
+    "**/*.md",
+  ]),
+]);
 
-export default config;
+export default eslintConfig;

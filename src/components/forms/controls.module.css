@@ -1,0 +1,66 @@
+/* Shared text-control styling — Input, Select, Textarea. Hairline border
+   that warms on focus; invalid state driven by aria-invalid. */
+
+.control {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  outline: none;
+  transition: var(--transition), box-shadow var(--dur) var(--ease);
+}
+.control:focus {
+  border-color: var(--text-muted);
+  box-shadow: var(--shadow-focus);
+}
+.control[aria-invalid="true"] {
+  border-color: var(--accent);
+}
+.control::placeholder {
+  color: var(--text-faint);
+}
+.control:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.selectWrap {
+  position: relative;
+  width: 100%;
+}
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  cursor: pointer;
+}
+.chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.textarea {
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+
+.fieldLabel {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+.fieldHint {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}

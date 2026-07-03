@@ -1,0 +1,49 @@
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  padding: var(--space-4);
+}
+.panelToggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-muted);
+}
+.chevron {
+  transition: transform var(--dur) var(--ease);
+  color: var(--text-faint);
+}
+.chevron[data-open] {
+  transform: rotate(180deg);
+}
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+.checkRow input {
+  margin-top: 3px;
+}
+.checkRow strong {
+  display: block;
+  font-weight: var(--weight-medium);
+}
+.checkHint {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  margin-top: 2px;
+}

@@ -1,0 +1,333 @@
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+}
+.cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  padding: 2px 4px;
+}
+.cardChevron {
+  color: var(--text-faint);
+  transition: transform var(--dur) var(--ease);
+  display: inline-block;
+}
+.cardChevron[data-open="true"] {
+  transform: rotate(90deg);
+}
+.cardMeta {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+.cardBody {
+  border-top: 1px solid var(--border);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.cardNote {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.iconBtn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.iconBtn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border);
+}
+.iconBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.iconBtnDanger:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.picker {
+  position: relative;
+}
+.pickerMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 300px;
+  max-height: 380px;
+  overflow-y: auto;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
+}
+.pickerCat {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  padding: 6px 10px 2px;
+}
+.pickerItem {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  gap: 1px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.pickerItem:hover {
+  background: var(--surface);
+}
+.pickerItemLabel {
+  font-size: var(--text-sm);
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+.pickerItemBlurb {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
+}
+.previewBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.draftRibbon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px var(--space-4);
+  background: var(--accent-tint);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+}
+.previewBody {
+  max-height: 74vh;
+  overflow-y: auto;
+}
+
+/* Between-block quick insert */
+/* Canvas between-block insert — a circular ＋ that reveals on hover. */
+.insertMenu {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.insertPlus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-faint);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.insertMenu:hover .insertPlus,
+.insertPlus[data-open],
+.insertPlus:focus-visible {
+  opacity: 1;
+}
+.insertPlus[data-open] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.between {
+  position: relative;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.betweenBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+.between:hover .betweenBtn,
+.betweenBtn:focus-visible {
+  opacity: 1;
+}
+.betweenLine {
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.5;
+}
+.betweenPlus {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Row picker — flat chips */
+.rowPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.rowChip {
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-card);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.rowChip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Panel + command shared search box */
+.pickerSearch {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  margin-bottom: var(--space-2);
+}
+
+/* Panel picker — search + grid drawer */
+.pickerPanel {
+  position: absolute;
+  z-index: 30;
+  margin-top: 4px;
+  width: 320px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3);
+}
+.pickerGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.pickerGridItem {
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  text-align: left;
+}
+.pickerGridItem:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* Command palette */
+.pickerCommand {
+  position: absolute;
+  z-index: 30;
+  margin-top: 4px;
+  width: 340px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3);
+}
+.pickerCommandList {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.pickerCommandItem,
+.pickerCommandItemSel {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-align: left;
+}
+.pickerCommandItemSel {
+  background: var(--surface-hover);
+}

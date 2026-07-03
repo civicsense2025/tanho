@@ -1,0 +1,83 @@
+/* Admin chrome — section cards + row/seg primitives. The top bar and nav
+   buckets are now inline-styled components (AdminTopBar/NavBucket/AccountMenu),
+   faithful to the design's AdminScreen. Ported from the Shell/Section/Row
+   pattern. */
+
+.eyebrow {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+
+.section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  padding: var(--space-6);
+}
+
+.sectionHead {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-muted);
+}
+
+.sectionDesc {
+  margin: 0 0 var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--space-4);
+  align-items: center;
+}
+.rowStack {
+  display: block;
+}
+.rowLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.seg {
+  display: flex;
+  gap: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  width: 100%;
+}
+.segBtn {
+  composes: eyebrow;
+  flex: 1;
+  text-align: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-xs);
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.segBtnActive {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}

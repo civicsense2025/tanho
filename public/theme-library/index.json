@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "note": "Curated starter themes for the Brand → Theme library. Same-origin, self-hostable: replace this file to ship your own library. Each theme carries only the base scalars (oys-theme@1 shape).",
+  "themes": [
+    {
+      "id": "midnight",
+      "name": "Midnight",
+      "description": "Deep indigo on near-black, cool and focused.",
+      "previewColors": ["#0f1220", "#6d7cff", "#37d3a6", "#e7e9f5"],
+      "theme": {
+        "accent": "#6d7cff",
+        "accent2": "#37d3a6",
+        "ink": "#e7e9f5",
+        "paper": "#0f1220",
+        "font": "grotesk",
+        "baseSize": 16,
+        "headingScale": 1.1,
+        "leading": 1.6,
+        "density": 1,
+        "radius": "soft",
+        "shadow": "subtle"
+      }
+    },
+    {
+      "id": "sandstone",
+      "name": "Sandstone",
+      "description": "Warm terracotta and sage on cream — editorial and soft.",
+      "previewColors": ["#fdf8f2", "#c15f3c", "#7c8a5a", "#2a231d"],
+      "theme": {
+        "accent": "#c15f3c",
+        "accent2": "#7c8a5a",
+        "ink": "#2a231d",
+        "paper": "#fdf8f2",
+        "font": "serif",
+        "baseSize": 17,
+        "headingScale": 1.15,
+        "leading": 1.7,
+        "density": 1.05,
+        "radius": "round",
+        "shadow": "flat"
+      }
+    },
+    {
+      "id": "harbor",
+      "name": "Harbor",
+      "description": "Slate and teal, crisp and professional.",
+      "previewColors": ["#ffffff", "#2f5d7c", "#0e8a8a", "#12212b"],
+      "theme": {
+        "accent": "#2f5d7c",
+        "accent2": "#0e8a8a",
+        "ink": "#12212b",
+        "paper": "#ffffff",
+        "font": "geist",
+        "baseSize": 16,
+        "headingScale": 1.05,
+        "leading": 1.6,
+        "density": 1,
+        "radius": "soft",
+        "shadow": "subtle"
+      }
+    },
+    {
+      "id": "meadow",
+      "name": "Meadow",
+      "description": "Fresh green and amber on paper white.",
+      "previewColors": ["#fbfdf9", "#2f6b3f", "#b0742a", "#161a15"],
+      "theme": {
+        "accent": "#2f6b3f",
+        "accent2": "#b0742a",
+        "ink": "#161a15",
+        "paper": "#fbfdf9",
+        "font": "humanist",
+        "baseSize": 16,
+        "headingScale": 1.1,
+        "leading": 1.65,
+        "density": 1,
+        "radius": "soft",
+        "shadow": "subtle"
+      }
+    }
+  ]
+}

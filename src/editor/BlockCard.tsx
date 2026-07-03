@@ -1,0 +1,79 @@
+"use client";
+
+import { useState } from "react";
+import { blockDef } from "@/blocks/registry";
+import { isContainer, kidsOf } from "@/blocks/tree";
+import type { BlockNode } from "@/blocks/types";
+import { ValueField } from "./ValueField";
+import styles from "./editor.module.css";
+
+/** One block's editing card in the stacked layout. */
+export function BlockCard({
+  block,
+  index,
+  total,
+  onPatch,
+  onMove,
+  onDuplicate,
+  onRemove,
+}: {
+  block: BlockNode;
+  index: number;
+  total: number;
+  onPatch: (content: Record<string, unknown>) => void;
+  onMove: (dir: -1 | 1) => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const def = blockDef(block.type);
+  if (!def) return null;
+  const container = isContainer(block);
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHead}>
+        <button type="button" className={styles.cardTitle} onClick={() => setOpen((o) => !o)}>
+          <span className={styles.cardChevron} data-open={open}>
+            ▸
+          </span>
+          {def.label}
+          {container ? (
+            <span className={styles.cardMeta}>{kidsOf(block).length} inside</span>
+          ) : null}
+        </button>
+        <span style={{ flex: 1 }} />
+        <button type="button" className={styles.iconBtn} title="Move up" disabled={index === 0} onClick={() => onMove(-1)}>
+          ↑
+        </button>
+        <button type="button" className={styles.iconBtn} title="Move down" disabled={index === total - 1} onClick={() => onMove(1)}>
+          ↓
+        </button>
+        <button type="button" className={styles.iconBtn} title="Duplicate" onClick={onDuplicate}>
+          ⧉
+        </button>
+        <button type="button" className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remove" onClick={onRemove}>
+          ✕
+        </button>
+      </div>
+      {open ? (
+        <div className={styles.cardBody}>
+          {Object.entries(block.content).map(([k, v]) => (
+            <ValueField
+              key={k}
+              name={k}
+              value={v}
+              onChange={(nv) => onPatch({ ...block.content, [k]: nv })}
+            />
+          ))}
+          {container ? (
+            <p className={styles.cardNote}>
+              Nested blocks are edited on the canvas (arrives with the canvas
+              layout) — this card edits the container itself.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}

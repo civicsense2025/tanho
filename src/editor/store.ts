@@ -1,0 +1,191 @@
+"use client";
+
+import { create } from "zustand";
+import {
+  cloneWithIds,
+  treeFind,
+  treeInsert,
+  treeLocate,
+  treeMove,
+  treeRemove,
+  treeSetContent,
+  canNest,
+  newBlockId,
+} from "@/blocks/tree";
+import type { BlockNode } from "@/blocks/types";
+
+type EditorState = {
+  blocks: BlockNode[];
+  selection: Set<string>;
+  lastSelected: string | null;
+  onChange: ((blocks: BlockNode[]) => void) | null;
+  /** Key of the content last loaded via init(); lets a consumer render its own
+   *  server data until the (post-paint effect) init has populated the store. */
+  readyFor: string | null;
+
+  init(blocks: BlockNode[], onChange: (blocks: BlockNode[]) => void, key?: string | null): void;
+  apply(fn: (bs: BlockNode[]) => BlockNode[]): void;
+
+  select(id: string, mode?: "single" | "toggle" | "range"): void;
+  clearSelection(): void;
+
+  patch(id: string, content: Record<string, unknown>): void;
+  move(id: string, dir: -1 | 1): void;
+  insert(parentId: string | null, index: number, block: BlockNode): void;
+  /** Drag-drop: pull a block from wherever it lives and splice it into a new parent/index. */
+  dropMove(id: string, parentId: string | null, index: number): void;
+  remove(id: string): void;
+  duplicate(id: string): void;
+  wrapInSection(id: string): void;
+
+  bulkDelete(): void;
+  bulkDuplicate(): void;
+  bulkWrapInSection(): void;
+};
+
+export const useEditor = create<EditorState>((set, get) => ({
+  blocks: [],
+  selection: new Set(),
+  lastSelected: null,
+  onChange: null,
+  readyFor: null,
+
+  init(blocks, onChange, key = null) {
+    set({ blocks, onChange, selection: new Set(), lastSelected: null, readyFor: key });
+  },
+
+  apply(fn) {
+    const next = fn(get().blocks);
+    set({ blocks: next });
+    get().onChange?.(next);
+  },
+
+  select(id, mode = "single") {
+    const { selection, lastSelected, blocks } = get();
+    if (mode === "toggle") {
+      const next = new Set(selection);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      set({ selection: next, lastSelected: id });
+      return;
+    }
+    if (mode === "range" && lastSelected) {
+      const a = treeLocate(blocks, lastSelected);
+      const b = treeLocate(blocks, id);
+      // Range selection only among siblings of the same parent.
+      if (a && b && a.parentId === b.parentId) {
+        const parent = a.parentId ? treeFind(blocks, a.parentId) : null;
+        const sibs = parent
+          ? ((parent.content.blocks as BlockNode[]) ?? [])
+          : blocks;
+        const [lo, hi] = [Math.min(a.index, b.index), Math.max(a.index, b.index)];
+        const next = new Set(selection);
+        for (let i = lo; i <= hi; i++) next.add(sibs[i].id);
+        set({ selection: next, lastSelected: id });
+        return;
+      }
+    }
+    set({ selection: new Set([id]), lastSelected: id });
+  },
+
+  clearSelection: () => set({ selection: new Set(), lastSelected: null }),
+
+  patch(id, content) {
+    get().apply((bs) => treeSetContent(bs, id, content));
+  },
+  move(id, dir) {
+    get().apply((bs) => treeMove(bs, id, dir));
+  },
+  insert(parentId, index, block) {
+    get().apply((bs) => treeInsert(bs, parentId, index, block));
+    set({ selection: new Set([block.id]), lastSelected: block.id });
+  },
+  dropMove(id, parentId, index) {
+    get().apply((bs) => {
+      const { blocks: without, removed } = treeRemove(bs, id);
+      if (!removed) return bs;
+      return treeInsert(without, parentId, index, removed);
+    });
+  },
+  remove(id) {
+    get().apply((bs) => treeRemove(bs, id).blocks);
+    const next = new Set(get().selection);
+    next.delete(id);
+    set({ selection: next });
+  },
+  duplicate(id) {
+    get().apply((bs) => {
+      const loc = treeLocate(bs, id);
+      const orig = treeFind(bs, id);
+      if (!loc || !orig) return bs;
+      return treeInsert(bs, loc.parentId, loc.index + 1, cloneWithIds(orig));
+    });
+  },
+  /** Wrap a single block in a fresh section, in place (single-select analog of bulkWrapInSection). */
+  wrapInSection(id) {
+    const { blocks } = get();
+    const loc = treeLocate(blocks, id);
+    const block = treeFind(blocks, id);
+    if (!loc || !block) return;
+    if (!canNest("section", block.type)) return;
+    const parentType = loc.parentId ? treeFind(blocks, loc.parentId)?.type ?? null : null;
+    if (!canNest(parentType, "section")) return;
+    const wrapper: BlockNode = {
+      id: newBlockId(),
+      type: "section",
+      content: { width: "contained", background: "none", py: "lg", blocks: [block] },
+    };
+    get().apply((bs) => {
+      const { blocks: without } = treeRemove(bs, id);
+      return treeInsert(without, loc.parentId, loc.index, wrapper);
+    });
+    set({ selection: new Set([wrapper.id]), lastSelected: wrapper.id });
+  },
+
+  bulkDelete() {
+    const ids = [...get().selection];
+    get().apply((bs) => ids.reduce((acc, id) => treeRemove(acc, id).blocks, bs));
+    get().clearSelection();
+  },
+
+  bulkDuplicate() {
+    const ids = [...get().selection];
+    get().apply((bs) =>
+      ids.reduce((acc, id) => {
+        const loc = treeLocate(acc, id);
+        const orig = treeFind(acc, id);
+        if (!loc || !orig) return acc;
+        return treeInsert(acc, loc.parentId, loc.index + 1, cloneWithIds(orig));
+      }, bs),
+    );
+  },
+
+  /** Wrap the selection (same-parent siblings only) into one new section. */
+  bulkWrapInSection() {
+    const { selection, blocks } = get();
+    const ids = [...selection];
+    if (!ids.length) return;
+    const locs = ids
+      .map((id) => ({ id, loc: treeLocate(blocks, id) }))
+      .filter((x): x is { id: string; loc: NonNullable<ReturnType<typeof treeLocate>> } => !!x.loc);
+    const parentId = locs[0]?.loc.parentId ?? null;
+    if (!locs.every((x) => x.loc.parentId === parentId)) return;
+    const parentType = parentId ? treeFind(blocks, parentId)?.type ?? null : null;
+    if (!canNest(parentType, "section")) return;
+    const members = ids.map((id) => treeFind(blocks, id)!).filter(Boolean);
+    if (!members.every((m) => canNest("section", m.type))) return;
+
+    const insertAt = Math.min(...locs.map((x) => x.loc.index));
+    const wrapper: BlockNode = {
+      id: newBlockId(),
+      type: "section",
+      content: { width: "contained", background: "none", py: "lg", blocks: members },
+    };
+    get().apply((bs) => {
+      let acc = bs;
+      for (const id of ids) acc = treeRemove(acc, id).blocks;
+      return treeInsert(acc, parentId, insertAt, wrapper);
+    });
+    set({ selection: new Set([wrapper.id]), lastSelected: wrapper.id });
+  },
+}));

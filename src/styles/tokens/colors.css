@@ -1,0 +1,119 @@
+/* ============================================================
+   COLORS — warm minimal neutrals + two earthy accents
+   Ported verbatim from the design system. These are the DEFAULT
+   (neutral-seed) values; the theme module overrides the semantic
+   aliases at render time from site settings (see modules/theme).
+   ============================================================ */
+
+:root {
+  /* — Paper (light surfaces, warm white → bone) — */
+  --paper-0: #fdfcf9; /* page background */
+  --paper-1: #f6f4ee; /* subtle surface / inset */
+  --paper-2: #efece2; /* hover / raised card */
+
+  /* — Ink (near-black → muted, warm cast) — */
+  --ink-0: #1c1a16; /* primary text, solid buttons */
+  --ink-1: #57534a; /* secondary / muted text */
+  --ink-2: #8c877b; /* faint text, captions, meta */
+
+  /* — Line — */
+  --line-0: #e6e2d7; /* default hairline border */
+  --line-1: #d8d3c5; /* stronger border */
+
+  /* — Accent 2 (earthy green) — */
+  --olive-deep: #34371f;
+  --olive:      #585c34;
+  --olive-soft: #7c8052;
+  --olive-tint: #eef0e1; /* wash background */
+
+  /* — Accent (deep red) — */
+  --maroon-deep: #45191e;
+  --maroon:      #6e2b32;
+  --maroon-soft: #913a43;
+  --maroon-tint: #f5e8e7; /* wash background */
+
+  /* — Pure — */
+  --white: #ffffff;
+  --black: #000000;
+
+  /* ---------- Semantic aliases ---------- */
+  --bg:             var(--paper-0);
+  --surface:        var(--paper-1);
+  --surface-hover:  var(--paper-2);
+  --surface-card:   var(--white);
+
+  --text:           var(--ink-0);
+  --text-muted:     var(--ink-1);
+  --text-faint:     var(--ink-2);
+  --text-on-accent: var(--paper-0);
+
+  --border:         var(--line-0);
+  --border-strong:  var(--line-1);
+
+  --accent:         var(--maroon);      /* primary accent — links, emphasis */
+  --accent-hover:   var(--maroon-deep);
+  --accent-tint:    var(--maroon-tint);
+  --accent-2:       var(--olive);       /* secondary accent — tags, support */
+  --accent-2-hover: var(--olive-deep);
+  --accent-2-tint:  var(--olive-tint);
+
+  --solid:          var(--ink-0);       /* solid (black) button fill */
+  --solid-hover:    #000000;
+
+  --focus-ring:     var(--maroon-soft);
+  --selection-bg:   var(--ink-0);
+  --selection-fg:   var(--paper-0);
+
+  --success: var(--olive);
+  --danger:  var(--maroon-soft);
+}
+
+/* ---------- Dark mode ---------- */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"], :root:not([data-theme]) {
+    --paper-0: #14130f;
+    --paper-1: #1c1a15;
+    --paper-2: #25221b;
+
+    --ink-0: #f0ede4;
+    --ink-1: #a8a294;
+    --ink-2: #75705f;
+
+    --line-0: #2c2920;
+    --line-1: #3a362b;
+
+    --olive-tint:  #23271a;
+    --maroon-tint: #2a1a1b;
+    --olive-soft:  #9aa06a;
+    --maroon-soft: #c06b73;
+
+    --surface-card:   #1c1a15;
+    --text-on-accent: #14130f;
+    --accent:         #c06b73;
+    --accent-hover:   #d68a91;
+    --accent-2:       #9aa06a;
+    --solid:          #f0ede4;
+    --solid-hover:    #ffffff;
+    --selection-bg:   #f0ede4;
+    --selection-fg:   #14130f;
+  }
+}
+
+/* Explicit dark scope */
+[data-theme="dark"] {
+  --paper-0: #14130f;
+  --paper-1: #1c1a15;
+  --paper-2: #25221b;
+  --ink-0: #f0ede4;
+  --ink-1: #a8a294;
+  --ink-2: #75705f;
+  --line-0: #2c2920;
+  --line-1: #3a362b;
+  --olive-tint: #23271a;
+  --maroon-tint: #2a1a1b;
+  --surface-card: #1c1a15;
+  --text-on-accent: #14130f;
+  --accent: #c06b73;
+  --accent-2: #9aa06a;
+  --solid: #f0ede4;
+}

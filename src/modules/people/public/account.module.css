@@ -1,0 +1,134 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.name {
+  margin: 0;
+  font-size: var(--text-h3);
+  letter-spacing: var(--tracking-tight);
+}
+
+.email {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  background: var(--surface-card);
+}
+
+.cardHead {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.meta dt {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+
+.meta dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.faint {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+.billing {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.subs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.subList {
+  font-size: var(--text-sm);
+  flex: 1;
+}
+
+.subStatus {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+
+.subStatus[data-status="unsubscribed"] {
+  color: var(--text-faint);
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: var(--text-xs);
+}
+
+.link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.flash {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}

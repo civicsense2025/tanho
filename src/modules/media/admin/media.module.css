@@ -1,0 +1,381 @@
+/* Media library screen — header, toolbar, grid, cards. The detail
+   sidesheet and picker modal live in sheet.module.css. */
+
+.page {
+  max-width: var(--width-content);
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter) var(--space-12);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.title {
+  margin: 0;
+  font-size: var(--text-h2);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+}
+.intro {
+  margin: var(--space-2) 0 var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+.shortcut {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.shortcut:hover {
+  color: var(--accent-hover);
+}
+.shortcut:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-xs);
+}
+
+.flash {
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+
+.eyebrow {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+/* ---- toolbar ---- */
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 320px;
+}
+.searchGlyph {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.searchInput {
+  padding-left: 30px;
+}
+
+.pills {
+  display: flex;
+  gap: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+.pill {
+  composes: eyebrow;
+  color: var(--text-muted);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-pill);
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.pill:hover {
+  color: var(--text);
+}
+.pill:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.pillActive,
+.pillActive:hover {
+  background: var(--solid);
+  color: var(--text-on-accent);
+}
+
+.chip {
+  composes: eyebrow;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.chip:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.chipActive,
+.chipActive:hover {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.tag:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+.tag:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.tagActive,
+.tagActive:hover {
+  background: var(--accent-2-tint);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.clearLink {
+  composes: eyebrow;
+  border: none;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 4px 6px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.clearLink:hover {
+  color: var(--text);
+}
+.clearLink:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-xs);
+}
+
+.summary {
+  composes: eyebrow;
+  color: var(--text-faint);
+}
+
+/* ---- grid + cards ---- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: var(--transition);
+}
+.card:hover {
+  border-color: var(--border-strong);
+}
+
+.thumbBtn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+.thumbBtn:focus-visible {
+  outline: none;
+  box-shadow: inset var(--shadow-focus);
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--surface);
+  overflow: hidden;
+}
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.thumbStripes {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--surface),
+    var(--surface) 9px,
+    var(--paper-2) 9px,
+    var(--paper-2) 18px
+  );
+}
+.kindGlyph {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 3px 8px;
+}
+
+.badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.badge {
+  composes: eyebrow;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.badgeWarn {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: var(--space-3);
+}
+.fileName {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text);
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fileName:hover {
+  color: var(--accent);
+}
+.fileName:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-xs);
+}
+
+.metaLine {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+.licenseRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.licenseChip {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+.licenseChipWarn {
+  background: var(--accent-tint);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+}
+.creditText {
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inlineInputs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.miniInput {
+  font-size: var(--text-2xs);
+  padding: 5px 8px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+  padding: var(--space-10) var(--space-5);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

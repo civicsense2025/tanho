@@ -1,3 +1,5 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # dependencies
 /node_modules
 /.pnp
@@ -10,10 +12,6 @@
 
 # testing
 /coverage
-/test-results
-/playwright-report
-/blob-report
-/.playwright
 
 # next.js
 /.next/
@@ -32,18 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files (can opt-in for committing if needed)
 .env*
-!.env.local.example
-
-# SQLite DB
-/db/*.db
-/db/*.db-wal
-/db/*.db-shm
-
-# Uploads
-/public/uploads/*
-!/public/uploads/.gitkeep
 
 # vercel
 .vercel
@@ -51,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local database
+data/
+
+# site backups + export bundles (never commit a site's data)
+backups/
+*.tar.gz
+
+# Local release dry-run output (scripts/build-release.ts --dry-run)
+dist-release/

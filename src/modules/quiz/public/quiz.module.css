@@ -1,0 +1,213 @@
+/* "Should I migrate?" quiz — shared styles for all three interaction styles. */
+
+.quiz {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--gutter) var(--space-12);
+}
+
+.lede {
+  margin: 0 0 var(--space-8);
+}
+.ledeTitle {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 var(--space-3);
+  color: var(--text);
+}
+.ledeBody {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+  margin: 0;
+  max-width: 56ch;
+}
+
+.progress {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  margin-bottom: var(--space-3);
+}
+
+.question {
+  margin-bottom: var(--space-8);
+}
+.prompt {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  margin: 0 0 var(--space-2);
+}
+.help {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  margin: 0 0 var(--space-4);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: left;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.option:hover {
+  border-color: var(--accent);
+}
+.option:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.optionActive {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.optionMark {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  flex: none;
+}
+.optionActive .optionMark {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+.spacer {
+  flex: 1;
+}
+
+/* Split (two-pane) layout */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+.splitAside {
+  position: sticky;
+  top: var(--space-8);
+}
+@media (max-width: 720px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+  .splitAside {
+    position: static;
+  }
+}
+
+/* Result */
+.result {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  padding: var(--space-8);
+}
+.verdictLabel {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+  margin-bottom: var(--space-2);
+}
+.verdictHeadline {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 var(--space-3);
+  color: var(--text);
+}
+.narrative {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+  margin: 0 0 var(--space-4);
+}
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  margin-bottom: var(--space-6);
+}
+.scoreBar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line-0);
+  overflow: hidden;
+}
+.scoreFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.matchesLabel {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  margin-bottom: var(--space-3);
+}
+.matches {
+  display: grid;
+  gap: var(--space-3);
+}
+.card {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: var(--space-4);
+  text-decoration: none;
+  color: var(--text);
+  transition: var(--transition);
+}
+.card:hover {
+  border-color: var(--accent);
+}
+.cardTitle {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  margin: 0 0 4px;
+}
+.cardTagline {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+.emptyMatches {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+.restart {
+  margin-top: var(--space-6);
+}

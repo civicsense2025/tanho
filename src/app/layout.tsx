@@ -1,45 +1,38 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { SITE_URL } from "@/lib/seo";
-import { getSettings } from "@/lib/settings";
-import { ThemeStyle } from "@/components/ThemeStyle";
-import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import { Suspense } from "react";
+import { ThemeStyle } from "@/modules/theme/ThemeStyle";
+import { getGeneralSettings } from "@/modules/settings/queries";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-
-// The static `metadata` export can't read the DB (Next.js requires it to be a plain object, not
-// async), so title/description/verification -- which can now change via /admin/settings without
-// a rebuild -- move to generateMetadata() below. metadataBase stays a build-time constant since
-// SITE_URL itself isn't (yet) a settings-editable field; Next.js 16 forbids exporting both
-// `metadata` and `generateMetadata`, so metadataBase is folded into the async return.
+// Everything a visitor reads comes from the database — never from code.
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
+  const general = await getGeneralSettings();
   return {
-    metadataBase: new URL(SITE_URL),
-    title: settings.title,
-    description: settings.description,
-    verification: settings.analytics.googleSiteVerification
-      ? { google: settings.analytics.googleSiteVerification }
-      : undefined,
+    title: {
+      default: general.name,
+      template: `%s · ${general.name}`,
+    },
+    description: general.tagline || undefined,
+    robots: general.indexable ? undefined : { index: false, follow: false },
   };
 }
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const settings = await getSettings();
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const general = await getGeneralSettings();
   return (
     <html
-      lang={settings.locale}
-      data-theme={settings.theme.defaultMode}
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      lang={general.language}
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
-      <head>
-        <ThemeStyle theme={settings.theme} />
-      </head>
-      <body className="min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
-        {children}
-        <GoogleAnalytics measurementId={settings.analytics.gaMeasurementId} />
+      <body>
+        <ThemeStyle />
+        <Suspense>{children}</Suspense>
       </body>
     </html>
   );

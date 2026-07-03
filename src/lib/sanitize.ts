@@ -1,30 +1,41 @@
-import DOMPurify from "isomorphic-dompurify";
+import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 
-/** Tags this site's admin-authored content actually produces -- guide/step/callout
- * HTML and project body HTML are hand-authored as raw HTML in plain <textarea>
- * fields (see TextEditor, GuideForm's summary field), no markdown pipeline or
- * rich-text editor in between. Kept intentionally close to what's really used
- * (headings, paragraphs, links, images, lists, emphasis, code, tables) rather
- * than DOMPurify's much larger default allowlist. */
-const ALLOWED_TAGS = [
-  "h1", "h2", "h3", "h4",
-  "p", "br", "hr",
-  "a",
-  "img",
-  "ul", "ol", "li",
-  "strong", "b", "em", "i", "u", "s",
-  "code", "pre",
-  "blockquote",
-  "table", "thead", "tbody", "tr", "th", "td",
-  "span", "div",
-];
+/**
+ * The ONLY path author HTML may take to a page. Strict allowlist; every
+ * rich-text block sanitizes through here server-side at render time.
+ */
+const OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    "p", "h2", "h3", "h4", "br", "hr",
+    "strong", "em", "b", "i", "u", "s", "mark",
+    "a", "ul", "ol", "li", "blockquote",
+    "code", "pre", "img", "figure", "figcaption",
+  ],
+  allowedAttributes: {
+    a: ["href", "title"],
+    img: ["src", "alt", "title", "width", "height"],
+  },
+  allowedSchemes: ["https", "http", "mailto"],
+  allowedSchemesAppliedToAttributes: ["href", "src"],
+  // Relative URLs (in-site links, media library paths) stay allowed.
+  allowProtocolRelative: false,
+  transformTags: {
+    a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer" }, true),
+  },
+};
 
-const ALLOWED_ATTR = ["href", "target", "rel", "src", "alt", "width", "height", "title"];
+export function sanitizeRichHtml(html: string): string {
+  return sanitizeHtml(html ?? "", OPTIONS);
+}
 
-/** Sanitizes admin-authored HTML before it's passed to dangerouslySetInnerHTML.
- * Works both server-side (Server Components, via jsdom under the hood) and
- * client-side (browser DOM) -- isomorphic-dompurify picks the right backend
- * automatically, so this one helper is safe to call from either. */
-export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, { ALLOWED_TAGS, ALLOWED_ATTR });
+/** Markdown → sanitized HTML (the richtext block's md mode). */
+export function markdownToSafeHtml(md: string): string {
+  const raw = marked.parse(md ?? "", { async: false }) as string;
+  return sanitizeRichHtml(raw);
+}
+
+/** For JSON-LD script tags: prevent </script> breakout. */
+export function safeJsonLd(obj: unknown): string {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
 }

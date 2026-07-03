@@ -1,0 +1,58 @@
+/* Redirects admin — table with an inline add/edit row. */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.table th {
+  text-align: left;
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.path {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text);
+  word-break: break-all;
+}
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+.empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.editRow td {
+  background: var(--surface);
+}
+.editGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 90px auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+@media (max-width: 640px) {
+  .editGrid {
+    grid-template-columns: 1fr;
+  }
+}

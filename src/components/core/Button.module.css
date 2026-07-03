@@ -1,0 +1,75 @@
+/* Button — ported from the design system; states are real CSS
+   (:hover/:active/:focus-visible) instead of the prototype's JS handlers. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: var(--transition);
+  border: 1px solid transparent;
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.btn[data-loading="true"] {
+  cursor: progress;
+  opacity: 0.7;
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+/* sizes */
+.sm { font-size: var(--text-2xs); padding: 6px 12px; }
+.md { font-size: var(--text-xs); padding: 9px 18px; }
+.lg { font-size: var(--text-sm); padding: 11px 24px; }
+
+/* uppercase mono label (outline's default, matches "LIVE ↗") */
+.upper {
+  font-family: var(--font-label);
+  font-weight: var(--weight-regular);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+/* variants */
+.solid {
+  background: var(--solid);
+  color: var(--text-on-accent);
+  border-color: var(--solid);
+}
+.solid:hover:not(:disabled) { background: var(--solid-hover); }
+
+.accent {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+.accent:hover:not(:disabled) { background: var(--accent-hover); }
+
+.outline {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+.outline:hover:not(:disabled) { border-color: var(--text-muted); }
+
+.ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: transparent;
+}
+.ghost:hover:not(:disabled) { color: var(--text); }

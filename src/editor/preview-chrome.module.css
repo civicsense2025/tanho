@@ -1,0 +1,88 @@
+.frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.dots {
+  display: flex;
+  gap: 6px;
+}
+.dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.urlWrap {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+.url {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  padding: 4px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.urlRoute {
+  color: var(--text-muted);
+}
+.deviceLabel {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+.ribbon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px var(--space-4);
+  background: var(--maroon-tint, var(--accent-tint));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+}
+.ribbonDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.body {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg);
+  min-height: 0;
+}
+.column {
+  margin: 0 auto;
+  min-height: 100%;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}

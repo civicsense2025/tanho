@@ -1,0 +1,46 @@
+/* ============================================================
+   TYPOGRAPHY — Geist Sans (UI/display) + Geist Mono (meta/labels)
+   Ported from the design system. Families resolve through
+   next/font variables (self-hosted; no external font CDN), set on
+   <html> in the root layout. Type is restrained: medium weights
+   for headings, regular for body, mono uppercase tracking for
+   labels. No heavy/bold weights.
+   ============================================================ */
+
+:root {
+  /* Families — next/font injects --font-geist-sans / --font-geist-mono */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Weights — kept light; 500 is the heaviest used */
+  --weight-regular: 400;
+  --weight-medium: 500;
+
+  /* Type scale (rem, 16px base) */
+  --text-display: 2.25rem;  /* 36px — hero name */
+  --text-h1: 1.875rem;      /* 30px — page title */
+  --text-h2: 1.25rem;       /* 20px — section / prose h2 */
+  --text-lg: 1.125rem;      /* 18px — lead paragraph / tagline */
+  --text-body: 1rem;        /* 16px — body */
+  --text-sm: 0.875rem;      /* 14px — secondary */
+  --text-xs: 0.75rem;       /* 12px — labels, meta */
+  --text-2xs: 0.625rem;     /* 10px — tags, micro-labels */
+
+  /* Line heights */
+  --leading-tight: 1.15;    /* display headings */
+  --leading-snug: 1.4;      /* sub-headings */
+  --leading-normal: 1.6;    /* body */
+  --leading-relaxed: 1.8;   /* prose / long-form */
+
+  /* Letter spacing */
+  --tracking-tight: -0.02em;  /* display & headings */
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;    /* small labels */
+  --tracking-widest: 0.15em;  /* uppercase micro-labels */
+
+  /* ---------- Semantic roles ---------- */
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-label: var(--font-mono);
+}

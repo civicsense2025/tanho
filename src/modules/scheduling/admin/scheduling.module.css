@@ -1,0 +1,187 @@
+/* Scheduling admin — mirrors commerce/people admin: hairline borders, mono
+   micro-labels, CSS vars only. */
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter) var(--space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-h2);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.tab {
+  border: none;
+  background: none;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tabActive {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+.cardHead {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-faint);
+}
+
+.rowGrid {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.faint {
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+.dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.weekGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dayRow {
+  display: grid;
+  grid-template-columns: 5rem auto 1fr;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.timeInput {
+  width: 6rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-pill, 999px);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.chipOn {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.preview {
+  white-space: pre-wrap;
+  font-size: var(--text-sm);
+  color: var(--text);
+  padding: var(--space-3);
+  border: var(--border-width) dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+.notice {
+  color: var(--success);
+  font-size: var(--text-sm);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+  font: inherit;
+}
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+}

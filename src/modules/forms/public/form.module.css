@@ -1,0 +1,146 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 34rem;
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.choiceRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.done {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-body);
+}
+
+.progress {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+
+.progressBar {
+  display: block;
+  height: 100%;
+  background: var(--form-accent, var(--accent));
+  transition: width 0.2s ease;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.screenHeading {
+  margin: 0;
+  font-size: var(--text-h2);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.screenTitle {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.screenBody {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.uploadRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.uploadStatus {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.uploadError {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.signaturePad {
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  touch-action: none;
+  width: 100%;
+  max-width: 100%;
+  cursor: crosshair;
+}
+
+.signatureRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.signatureFallback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.paymentNote {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.paymentDisabled {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  font-style: italic;
+}

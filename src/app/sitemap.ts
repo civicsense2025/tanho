@@ -1,48 +1,75 @@
 import type { MetadataRoute } from "next";
-import { listContentEntries, getContentTypeBySlug } from "@/lib/db";
-import { SITE_URL } from "@/lib/seo";
-import { getSettings } from "@/lib/settings";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { pages } from "@/modules/pages/schema";
+import { entries } from "@/modules/entries/schema";
+import { getGeneralSettings } from "@/modules/settings/queries";
+import { getSeoSettings } from "@/modules/seo/queries";
+import { getContentTypesSettings, isTypeDisabled } from "@/modules/custom-types/content-types-settings";
 
+const BASE_FALLBACK = process.env.APP_URL ?? "http://localhost:3000";
+
+/** Map a published entry to its public path, or null if the type has none. */
+function entryPath(type: string, slug: string, data: Record<string, unknown>): string | null {
+  switch (type) {
+    case "project":
+      return `/work/${slug}`;
+    case "guide": {
+      const category = typeof data.category === "string" ? data.category : "general";
+      return `/guides/${category}/${slug}`;
+    }
+    case "hub":
+      return `/guides/${slug}`;
+    default:
+      return null;
+  }
+}
+
+/**
+ * DB-driven sitemap: published, indexable pages plus published entries.
+ * Returns an empty sitemap when the site is set non-indexable so nothing
+ * is advertised to crawlers.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const settings = await getSettings();
-  const [projectType, guideType, postType] = await Promise.all([
-    getContentTypeBySlug("project"),
-    getContentTypeBySlug("guide"),
-    getContentTypeBySlug("post"),
+  const [general, seo, contentTypes] = await Promise.all([
+    getGeneralSettings(),
+    getSeoSettings(),
+    getContentTypesSettings(),
   ]);
+  if (!general.indexable) return [];
 
-  const [projects, guides, posts] = await Promise.all([
-    projectType ? listContentEntries({ contentTypeId: projectType.id, publishedOnly: true }) : Promise.resolve([]),
-    guideType ? listContentEntries({ contentTypeId: guideType.id, publishedOnly: true }) : Promise.resolve([]),
-    postType && settings.features.newsletter ? listContentEntries({ contentTypeId: postType.id, publishedOnly: true }) : Promise.resolve([]),
-  ]);
+  const base = (seo.siteUrl || BASE_FALLBACK).replace(/\/$/, "");
+  const abs = (path: string) => `${base}${path.startsWith("/") ? path : `/${path}`}`;
 
-  const entries: MetadataRoute.Sitemap = [
-    {
-      url: SITE_URL,
-      lastModified: undefined,
-      changeFrequency: "monthly",
-      priority: 1,
-    },
-    ...projects.map((project) => ({
-      url: `${SITE_URL}/projects/${project.slug}`,
-      lastModified: new Date(project.updatedAt),
-      changeFrequency: "monthly" as const,
-      priority: 0.8,
-    })),
-    ...guides.map((guide) => ({
-      url: `${SITE_URL}/guides/${guide.slug}`,
-      lastModified: new Date(guide.updatedAt),
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    })),
-    ...posts.map((post) => ({
-      url: `${SITE_URL}/posts/${post.slug}`,
-      lastModified: new Date(post.updatedAt),
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    })),
-  ];
+  const pageRows = await db
+    .select({ route: pages.route, noIndex: pages.noIndex, updatedAt: pages.updatedAt })
+    .from(pages)
+    .where(eq(pages.status, "published"));
 
-  return entries;
+  const items: MetadataRoute.Sitemap = pageRows
+    .filter((p) => !p.noIndex)
+    .map((p) => ({ url: abs(p.route), lastModified: new Date(p.updatedAt) }));
+
+  const entryRows = await db
+    .select({
+      type: entries.type,
+      slug: entries.slug,
+      data: entries.data,
+      updatedAt: entries.updatedAt,
+    })
+    .from(entries)
+    .where(eq(entries.status, "published"));
+
+  for (const e of entryRows) {
+    // A content type turned off in Settings → Content types is excluded from
+    // the sitemap (and from routing — see the entity route resolver).
+    if (isTypeDisabled(contentTypes, e.type)) continue;
+    const path = entryPath(e.type, e.slug, e.data ?? {});
+    if (path) items.push({ url: abs(path), lastModified: new Date(e.updatedAt) });
+  }
+
+  if (!isTypeDisabled(contentTypes, "resource")) {
+    items.push({ url: abs("/resources"), lastModified: new Date() });
+  }
+  return items;
 }

@@ -1,0 +1,18 @@
+/* Native <details>/<summary> accordion — zero JS. The default disclosure
+   marker is replaced with a ▾ glyph that flips when the row is open. */
+
+.summary {
+  list-style: none;
+  cursor: pointer;
+}
+.summary::-webkit-details-marker {
+  display: none;
+}
+.summary::after {
+  content: "▾";
+  color: var(--text-faint);
+  transition: transform var(--dur) var(--ease);
+}
+.item[open] > .summary::after {
+  transform: rotate(180deg);
+}

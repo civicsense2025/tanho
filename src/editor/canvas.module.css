@@ -1,0 +1,145 @@
+.canvasBlock {
+  position: relative;
+  cursor: pointer;
+  outline: 1px solid transparent;
+  outline-offset: 4px;
+  border-radius: 2px;
+  transition: outline-color var(--dur) var(--ease);
+}
+.canvasBlock:hover {
+  outline-color: var(--border-strong);
+}
+.canvasBlock[data-selected] {
+  outline: 1.5px solid var(--accent);
+}
+
+.blockTag {
+  position: absolute;
+  top: -11px;
+  left: -4px;
+  z-index: 6;
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-on-accent);
+  background: var(--accent);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.blockTools {
+  position: absolute;
+  top: -11px;
+  right: -4px;
+  z-index: 6;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+.toolBtn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.toolBtn:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+}
+.toolBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.invalid {
+  padding: var(--space-3);
+  border: 1px dashed var(--danger);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--danger);
+}
+
+.emptyDrop {
+  padding: var(--space-6);
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+/* between-block insert strip in the canvas child list */
+.insertRow {
+  position: relative;
+  height: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvasFrame {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  min-height: 60vh;
+  overflow: hidden;
+}
+
+.bulkBar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-4);
+}
+.bulkCount {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+}
+
+.inspector {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  padding: var(--space-5);
+  position: sticky;
+  top: var(--space-5);
+  max-height: 84vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.inspectorHead {
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-muted);
+}
