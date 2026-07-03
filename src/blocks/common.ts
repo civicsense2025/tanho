@@ -84,6 +84,15 @@ export const styleContent = {
 
 export type BlockStyle = z.infer<(typeof styleContent)["style"]>;
 
+/** True when a block type opted into the universal style layer (spread
+ * `...styleContent`) — i.e. its schema has a `style` key. Drives whether the
+ * Inspector shows the Style section. Robust to the block list changing: derived
+ * from the schema, not a hardcoded set. */
+export function isStyledBlock(schema: z.ZodType): boolean {
+  const shape = (schema as { shape?: Record<string, unknown> }).shape;
+  return !!shape && "style" in shape;
+}
+
 // Enum → semantic CSS value. Every value is a semantic token var (or "0"/"none"),
 // never a raw primitive, px, or hex — the tokens-only invariant, enforced here.
 export const SPACE_STEP: Record<(typeof SPACE_STEPS)[number], string> = {

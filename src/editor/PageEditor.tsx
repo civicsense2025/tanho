@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createBlock } from "@/blocks/registry";
 import { pageLayout } from "@/blocks/layout";
-import type { BlockNode, Device } from "@/blocks/types";
+import type { BlockNode } from "@/blocks/types";
 import type { PageRow } from "@/modules/pages/queries";
 import { publishPage, saveDraftBlocks, savePageDetails } from "@/modules/pages/actions";
 import { pageRenderMode } from "@/modules/pages/render-mode";
@@ -74,7 +74,10 @@ export function PageEditor({
   const lastSelected = useEditor((s) => s.lastSelected);
 
   const [layout, setLayout] = useState<"canvas" | "stacked">("canvas");
-  const [device, setDevice] = useState<Device>("desktop");
+  // Device lives in the editor store (not local state) so the Inspector's Style
+  // section edits the same breakpoint the canvas previews. See store.ts.
+  const device = useEditor((s) => s.device);
+  const setDevice = useEditor((s) => s.setDevice);
   // Inspector tab. `null` = follow selection (Block when a block is selected,
   // Page otherwise); a non-null value is the user's explicit override, cleared
   // whenever the selection changes so a fresh block re-opens the Block tab.

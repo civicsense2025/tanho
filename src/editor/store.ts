@@ -12,7 +12,7 @@ import {
   canNest,
   newBlockId,
 } from "@/blocks/tree";
-import type { BlockNode } from "@/blocks/types";
+import type { BlockNode, Device } from "@/blocks/types";
 
 type EditorState = {
   blocks: BlockNode[];
@@ -22,9 +22,14 @@ type EditorState = {
   /** Key of the content last loaded via init(); lets a consumer render its own
    *  server data until the (post-paint effect) init has populated the store. */
   readyFor: string | null;
+  /** The active preview device. Lifted from PageEditor into the store so the
+   *  canvas AND the Inspector's style controls read one source — the device
+   *  is both the previewed viewport and the breakpoint the Style section edits. */
+  device: Device;
 
   init(blocks: BlockNode[], onChange: (blocks: BlockNode[]) => void, key?: string | null): void;
   apply(fn: (bs: BlockNode[]) => BlockNode[]): void;
+  setDevice(device: Device): void;
 
   select(id: string, mode?: "single" | "toggle" | "range"): void;
   clearSelection(): void;
@@ -49,6 +54,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   lastSelected: null,
   onChange: null,
   readyFor: null,
+  device: "desktop",
 
   init(blocks, onChange, key = null) {
     set({ blocks, onChange, selection: new Set(), lastSelected: null, readyFor: key });
@@ -59,6 +65,8 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ blocks: next });
     get().onChange?.(next);
   },
+
+  setDevice: (device) => set({ device }),
 
   select(id, mode = "single") {
     const { selection, lastSelected, blocks } = get();

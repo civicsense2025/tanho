@@ -5,6 +5,8 @@ import { isContainer, kidsOf, treeFind, treeLocate, canNest } from "@/blocks/tre
 import { Button } from "@/components/core/Button";
 import { AddBlockMenu } from "./AddBlockMenu";
 import { ValueField } from "./ValueField";
+import { StyleFields } from "./StyleFields";
+import { isStyledBlock } from "@/blocks/common";
 import { useEditor } from "./store";
 import { PageFields, PageMeta, SeoPanel, type PageDraft, type PageOption, type PatchPage } from "./page-settings";
 import styles from "./editor-shell.module.css";
@@ -165,6 +167,17 @@ function BlockTab() {
             onChange={(nv) => patch(block.id, { ...block.content, [k]: nv })}
           />
         ))}
+
+      {/* Universal style controls — only for blocks that opted into styleContent.
+          Bound blocks stay locked (their layout is entity-driven). */}
+      {!locked && isStyledBlock(def.schema) ? (
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--space-4)" }}>
+          <StyleFields
+            content={block.content}
+            onChange={(next) => patch(block.id, next)}
+          />
+        </div>
+      ) : null}
 
       {isContainer(block) ? (
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>

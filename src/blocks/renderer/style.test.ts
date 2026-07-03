@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolveStyleLayer, styleToCss, hasStyle } from "./style";
 import { headingDef } from "../heading/def";
-import { styleContent, type BlockStyle } from "../common";
+import { sectionDef } from "../section/def";
+import { isStyledBlock, styleContent, type BlockStyle } from "../common";
 import { z } from "zod";
 
 // The style layer's load-bearing invariants: mobile-first merge (base < tablet <
@@ -120,5 +121,12 @@ describe("opt-in contract (zod strip-mode)", () => {
   it("styleContent.style rejects a non-token value", () => {
     const schema = z.object({ ...styleContent });
     expect(schema.safeParse({ style: { base: { padTop: "bogus" } } }).success).toBe(false);
+  });
+});
+
+describe("isStyledBlock (drives whether the Inspector shows the Style section)", () => {
+  it("true for an opted-in block (heading), false for an excluded layout primitive (section)", () => {
+    expect(isStyledBlock(headingDef.schema)).toBe(true);
+    expect(isStyledBlock(sectionDef.schema)).toBe(false);
   });
 });
