@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 /** Bound to the singleton profile — no author-set content beyond the source. */
 export const profileHeaderSchema = z.object({
   ...commonContent,
+  ...styleContent,
   source: z.literal("profile").default("profile"),
 });
 

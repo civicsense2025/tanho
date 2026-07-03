@@ -125,7 +125,7 @@ describe("opt-in contract (zod strip-mode)", () => {
 });
 
 describe("isStyledBlock (drives whether the Inspector shows the Style section)", () => {
-  it("true for an opted-in block (heading), false for an excluded layout primitive (section)", () => {
+  it("true for an opted-in leaf block (heading), false for an excluded layout primitive (section)", () => {
     expect(isStyledBlock(headingDef.schema)).toBe(true);
     expect(isStyledBlock(sectionDef.schema)).toBe(false);
   });

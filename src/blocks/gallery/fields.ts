@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 import { mediaSrcSchema } from "../image/fields";
 
 export const galleryImageSchema = z.object({
@@ -10,6 +10,7 @@ export const galleryImageSchema = z.object({
 
 export const gallerySchema = z.object({
   ...commonContent,
+  ...styleContent,
   cols: z.number().int().min(2).max(4).default(3),
   images: z.array(galleryImageSchema).max(50).default([]),
 });

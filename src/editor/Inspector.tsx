@@ -168,9 +168,11 @@ function BlockTab() {
           />
         ))}
 
-      {/* Universal style controls — only for blocks that opted into styleContent.
-          Bound blocks stay locked (their layout is entity-driven). */}
-      {!locked && isStyledBlock(def.schema) ? (
+      {/* Universal style controls — for any block that opted into styleContent,
+          INCLUDING bound blocks: the Style section only affects the outer wrapper
+          (spacing/colour/border), never the entity-driven content, so it's safe
+          even while `locked` keeps the content fields read-only. */}
+      {isStyledBlock(def.schema) ? (
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--space-4)" }}>
           <StyleFields
             content={block.content}
