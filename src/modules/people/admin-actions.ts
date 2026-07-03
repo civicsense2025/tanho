@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { email as emailAdapter } from "@/adapters/email";
+import { orders } from "@/modules/commerce/schema";
 import {
   emailSubscriptions,
   memberships,
@@ -72,10 +73,14 @@ export async function removeTag(ids: string[], tag: string): Promise<Result> {
 }
 
 /** Bulk-remove selected people (owner-only). Cascades their activity,
- *  memberships, and email subscriptions. Irreversible — the UI confirms first. */
+ *  memberships, and email subscriptions. Order history is preserved (not
+ *  cascade-deleted) by clearing `personId` first, since financial records
+ *  should survive a customer being removed. Irreversible — the UI confirms
+ *  first. */
 export async function deletePeople(ids: string[]): Promise<Result> {
   const user = await requireUser("owner");
   if (ids.length === 0) return { ok: true };
+  await db.update(orders).set({ personId: null }).where(inArray(orders.personId, ids));
   await db.delete(personActivity).where(inArray(personActivity.personId, ids));
   await db.delete(memberships).where(inArray(memberships.personId, ids));
   await db.delete(emailSubscriptions).where(inArray(emailSubscriptions.personId, ids));

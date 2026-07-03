@@ -2,6 +2,7 @@
 
 import type { MouseEvent, PointerEvent } from "react";
 import { blockDef } from "@/blocks/registry";
+import { UnsupportedBlock } from "@/blocks/UnsupportedBlock";
 import { isContainer, kidsOf } from "@/blocks/tree";
 import type { BlockNode, Device } from "@/blocks/types";
 import { useEditor } from "./store";
@@ -51,7 +52,7 @@ export function CanvasBlock({
   const remove = useEditor((s) => s.remove);
   const duplicate = useEditor((s) => s.duplicate);
   const wrap = useEditor((s) => s.wrapInSection);
-  if (!def) return null;
+  if (!def) return <UnsupportedBlock type={block.type} />;
 
   const selected = selection.has(block.id);
   const hovered = ctx.hoverId === block.id;

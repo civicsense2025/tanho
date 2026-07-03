@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { listMenus } from "@/modules/menus/queries";
 import { NavTabs } from "@/modules/chrome/admin/NavTabs";
@@ -6,7 +7,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Menus" };
 
-export default async function NavMenusPage() {
+export default function NavMenusPage() {
+  return (
+    <Suspense fallback={null}>
+      <NavMenusPageInner />
+    </Suspense>
+  );
+}
+
+async function NavMenusPageInner() {
   await requireUser("owner");
   const menus = await listMenus();
   return (

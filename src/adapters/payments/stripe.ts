@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import type { CheckoutSessionInput, PaymentsAdapter, ProviderEvent } from "../types";
+import type { CheckoutSessionInput, PaymentsAdapter, ProviderEvent, RefundReason } from "../types";
 
 const key = process.env.STRIPE_SECRET_KEY;
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -59,10 +59,11 @@ export const stripePayments: PaymentsAdapter = {
     };
   },
 
-  async refund(paymentIntentId: string, amountCents?: number) {
+  async refund(paymentIntentId: string, amountCents?: number, reason?: RefundReason) {
     await stripe().refunds.create({
       payment_intent: paymentIntentId,
       amount: amountCents,
+      reason,
     });
   },
 
@@ -83,6 +84,23 @@ export const stripePayments: PaymentsAdapter = {
       unit_amount: input.priceCents,
     });
     return { productId: product.id, priceId: price.id };
+  },
+
+  async createCustomAmountPrice(input) {
+    const productId = input.productId
+      ? input.productId
+      : (await stripe().products.create({ name: "Donation" })).id;
+    const price = await stripe().prices.create({
+      product: productId,
+      currency: input.currency,
+      custom_unit_amount: {
+        enabled: true,
+        minimum: input.minCents,
+        maximum: input.maxCents,
+        preset: input.presetCents,
+      },
+    });
+    return { productId, priceId: price.id };
   },
 
   async billingPortalUrl(stripeCustomerId: string, returnUrl: string) {

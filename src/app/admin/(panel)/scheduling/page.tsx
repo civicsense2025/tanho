@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { connectionSummary, isConnected } from "@/modules/integrations";
 import { isGoogleOAuthConfigured } from "@/adapters/google/config";
@@ -33,8 +34,20 @@ type Search = Record<string, string | string[] | undefined>;
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
+export default function SchedulingPage({
+  searchParams,
+}: {
+  searchParams: Promise<Search>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <SchedulingPageInner searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
 /** The 5-tab scheduling admin. Tab + booking segment are URL-driven. */
-export default async function SchedulingPage({
+async function SchedulingPageInner({
   searchParams,
 }: {
   searchParams: Promise<Search>;

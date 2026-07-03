@@ -5,6 +5,8 @@ import { platformSchema } from "./schemas/platform";
 import { guideSchema } from "./schemas/guide";
 import { resourceSchema } from "./schemas/resource";
 import { matrixPairSchema } from "./schemas/matrix-pair";
+import { blockPackSchema } from "./schemas/block-pack";
+import { designPackSchema } from "./schemas/design-pack";
 
 /**
  * THE entity registry. Every content type registers once; the admin grids,
@@ -18,6 +20,8 @@ const builtins: AnyEntitySchema[] = [
   hubSchema,
   platformSchema,
   matrixPairSchema,
+  blockPackSchema,
+  designPackSchema,
 ];
 
 const byEntity = new Map<string, AnyEntitySchema>();
@@ -28,17 +32,24 @@ export function register(schema: AnyEntitySchema): void {
 
 for (const s of builtins) register(s);
 
-/** The schema for one content type, or undefined if it isn't registered. */
+/**
+ * The schema for one BUILT-IN content type, or undefined if it isn't
+ * registered. Sync, builtins-only — this file must stay importable from
+ * client components (e.g. pages/admin/DashboardTabs.tsx) with zero
+ * server-only dependencies pulled in transitively. For a lookup that also
+ * resolves DB-defined `custom:<slug>` types, use `getEntitySchema` in
+ * `./registry-async` (server-only, from a Server Component).
+ */
 export function get(entity: string): AnyEntitySchema | undefined {
   return byEntity.get(entity);
 }
 
-/** Every registered entity schema (built-ins + custom). */
+/** Every registered BUILT-IN entity schema (excludes custom types — see `./registry-async` for the full set). */
 export function all(): AnyEntitySchema[] {
   return [...byEntity.values()];
 }
 
-/** Content types shown as editable grids (excludes taxonomy). */
+/** Content types shown as editable grids (excludes taxonomy). Built-ins only — see `./registry-async` for the full set. */
 export function contentEntities(): AnyEntitySchema[] {
   return all().filter((s) => !s.taxonomy);
 }

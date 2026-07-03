@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { listMedia } from "@/modules/media/queries";
 import { UPLOAD_ACCEPT } from "@/modules/media/validation";
@@ -8,7 +9,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Media library" };
 
-export default async function AdminMediaPage() {
+export default function AdminMediaPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminMediaPageInner />
+    </Suspense>
+  );
+}
+
+async function AdminMediaPageInner() {
   await requireUser();
   const [items, ai, configured] = await Promise.all([
     listMedia(),

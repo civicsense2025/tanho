@@ -6,7 +6,8 @@ touching feature code. This is the stack-swap story.
 
 | Surface | Interface | Default impl | Swap for |
 | --- | --- | --- | --- |
-| Database | Drizzle + `lib/db/client.ts` | libSQL (Turso/file) | Postgres, MySQL, SQLite |
+| Database (primary) | Drizzle + `lib/db/client.ts` | libSQL (Turso/file) | Postgres, MySQL, SQLite |
+| External data sources | `DataSourceAdapter` | none (per-connection, admin-configured) | Postgres, Supabase (Turso/MongoDB later) |
 | Storage | `StorageAdapter` | local disk | S3, R2, GCS |
 | Email | `EmailAdapter` | console (logs) | SMTP, Resend, SES |
 | Payments | `PaymentsAdapter` | Stripe / null | any PSP |
@@ -18,13 +19,51 @@ env var. A missing integration degrades gracefully — the null payments
 adapter, for example, keeps commerce code importable and shows a "connect"
 state instead of crashing.
 
-## The database is an adapter too
+## The primary database is an adapter too
 
 All queries live in `src/modules/*/queries.ts` and go through Drizzle's
-query builder — never raw SQL. Swapping databases means changing the driver
-in `lib/db/client.ts` and regenerating migrations; the queries survive
-because Drizzle speaks the same API across dialects. See
+query builder — never raw SQL. Swapping the PRIMARY database means changing
+the driver in `lib/db/client.ts` and regenerating migrations; the queries
+survive because Drizzle speaks the same API across dialects. See
 [../recipes/swap-database-to-postgres.md](../recipes/swap-database-to-postgres.md).
+
+This is deliberately a different story from external data sources (below):
+the primary DB is first-party/trusted schema the platform owns and controls
+(so Drizzle's full relational query power — joins, transactions — is safe
+to expose), while external connections hold third-party credentials and
+must be queried through a narrow, allowlisted surface instead.
+
+## External data sources (`DataSourceAdapter`)
+
+Lets bound blocks read live rows from a self-hoster's OWN external database
+(Postgres, Supabase — Turso/MongoDB planned) without the platform
+hardcoding any vendor, and without giving blocks arbitrary SQL/query access.
+Admin-configured in Settings → Data sources
+(`src/modules/data-sources/`); each connection stores an owner-defined
+table/column allowlist that is re-checked on every query regardless of what
+a block's saved content claims — that allowlist, not the block content, is
+the actual security boundary.
+
+`DataSourceAdapter` (`src/adapters/types.ts`) has one method that matters
+most: `query(spec: QuerySpec)`, where `QuerySpec` is a strictly-typed,
+allowlisted descriptor (table/columns/filters/sort/limit) — never a raw
+query string. Every implementation (`src/adapters/data-source/postgres.ts`,
+`supabase.ts`) translates `QuerySpec` into a parameterized statement on its
+native driver; there is no code path from admin UI or block content to a
+concatenated query. Reads only in phase 1 — `capabilities().write` is
+always `false`; no `mutate()` exists yet.
+
+Unlike the other adapters, this one is NOT a single env-driven singleton:
+`getDataSourceAdapter(connection)` (`src/adapters/data-source/index.ts`) is
+a per-connection factory, since a self-hoster may configure many database
+connections across providers simultaneously.
+
+Connection CRUD (`src/modules/data-sources/connection-actions.ts`) is
+owner-only, audited, and DB-backed rate-limited
+(`src/modules/data-sources/rate-limit.ts`, mirroring
+`modules/auth/rate-limit.ts`'s sliding window — never the in-memory
+analytics pattern, since these credentials are security-sensitive). Binding
+a block to an already-allowlisted table/columns is available to any editor.
 
 ## Payments in detail
 

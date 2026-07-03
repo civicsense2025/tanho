@@ -4,6 +4,7 @@ import { resolveBooking } from "./booking/resolve";
 import { resolveEducationList } from "./education-list/resolve";
 import { resolveExperienceList } from "./experience-list/resolve";
 import { resolveFormBlock } from "./form/resolve";
+import { resolveGenericData } from "./generic-data-resolve";
 import { resolvePostlist } from "./postlist/resolve";
 import { resolveProfileHeader } from "./profile-header/resolve";
 import { resolveProjectList } from "./project-list/resolve";
@@ -38,4 +39,9 @@ export const blockResolvers: Record<string, Resolver> = {
   "profile-header": resolveProfileHeader,
   "project-list": resolveProjectList,
   "skills-list": resolveSkillsList,
+  // Not a fully "bound" block (def.bound is NOT set on `table`) — this
+  // resolver is a no-op (`content._resolved = null`) unless the block's
+  // content declares a `dataSource` binding, so static tables stay freely
+  // editable/movable/duplicable while dynamic ones resolve live rows.
+  table: resolveGenericData,
 } as unknown as Record<string, Resolver>;

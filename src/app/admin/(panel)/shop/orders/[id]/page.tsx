@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards";
 import { getOrder, listOrdersForPerson } from "@/modules/commerce/queries";
@@ -6,7 +7,19 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Order" };
 
-export default async function OrderPage({
+export default function OrderPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <OrderPageInner params={params} />
+    </Suspense>
+  );
+}
+
+async function OrderPageInner({
   params,
 }: {
   params: Promise<{ id: string }>;

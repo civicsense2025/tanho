@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards";
 import { getForm, getFormResponses } from "@/modules/forms/queries";
@@ -7,7 +8,19 @@ import { payments } from "@/adapters/payments";
 
 export const metadata = { title: "Form" };
 
-export default async function FormPage({
+export default function FormPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <FormPageInner params={params} />
+    </Suspense>
+  );
+}
+
+async function FormPageInner({
   params,
 }: {
   params: Promise<{ id: string }>;

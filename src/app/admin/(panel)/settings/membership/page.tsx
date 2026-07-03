@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { payments } from "@/adapters/payments";
 import { readMembershipSettings } from "@/modules/memberships/tiers";
@@ -6,7 +7,15 @@ import { SettingsShell } from "@/components/admin/SettingsShell";
 
 export const metadata = { title: "Membership settings" };
 
-export default async function MembershipSettingsPage() {
+export default function MembershipSettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <MembershipSettingsPageInner />
+    </Suspense>
+  );
+}
+
+async function MembershipSettingsPageInner() {
   await requireUser("owner");
   const initial = await readMembershipSettings();
   return (

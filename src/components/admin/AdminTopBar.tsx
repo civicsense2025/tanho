@@ -15,24 +15,27 @@ export function AdminTopBar({
   user,
   ecomOn = false,
   setupComplete = true,
+  shopVisible = true,
 }: {
   user: AdminUser;
   ecomOn?: boolean;
   setupComplete?: boolean;
+  /** False when BOTH products and collections are disabled in Settings → Content types — hides the whole Shop bucket. */
+  shopVisible?: boolean;
 }) {
   const shopItems: NavItem[] = ecomOn
     ? [
-        { label: "Orders", href: "/admin/shop/orders" },
-        { label: "Products", href: "/admin/shop/products" },
-        { label: "Collections", href: "/admin/shop/collections" },
-        { label: "Shipping", href: "/admin/shop/shipping" },
-      ]
+      { label: "Orders", href: "/admin/shop/orders" },
+      { label: "Products", href: "/admin/shop/products" },
+      { label: "Collections", href: "/admin/shop/collections" },
+      { label: "Shipping", href: "/admin/shop/shipping" },
+    ]
     : [
-        { label: "Orders", href: "/admin/shop/products", locked: true },
-        { label: "Products", href: "/admin/shop/products", locked: true },
-        { label: "Collections", href: "/admin/shop/products", locked: true },
-        { label: "Shipping", href: "/admin/shop/products", locked: true },
-      ];
+      { label: "Orders", href: "/admin/shop/products", locked: true },
+      { label: "Products", href: "/admin/shop/products", locked: true },
+      { label: "Collections", href: "/admin/shop/products", locked: true },
+      { label: "Shipping", href: "/admin/shop/products", locked: true },
+    ];
 
   return (
     <header
@@ -85,6 +88,8 @@ export function AdminTopBar({
         ]} />
         <NavBucket label="Content" items={[
           { label: "Pages", href: "/admin/pages" },
+          { label: "Block packs", href: "/admin/block-packs" },
+          { label: "Design packs", href: "/admin/design-packs" },
           { label: "Content types", href: "/admin/content/types" },
           { label: "Forms", href: "/admin/content/forms" },
           { label: "Media library", href: "/admin/media" },
@@ -103,14 +108,25 @@ export function AdminTopBar({
           { label: "Overview", href: "/admin/analytics/overview" },
           { label: "Traffic", href: "/admin/analytics/traffic" },
         ]} />
-        <NavBucket label="Shop" items={shopItems} />
+        <NavBucket label="Marketplace" items={[
+          { label: "Browse marketplace", href: "/admin/marketplace/browse" },
+        ]} />
+        {shopVisible ? <NavBucket label="Shop" items={shopItems} /> : null}
+        <NavBucket label="Marketplace" items={[
+          { label: "Pack products", href: "/admin/marketplace/products" },
+          { label: "Your purchases", href: "/admin/marketplace/purchases" },
+        ]} />
         <span style={{ flex: 1 }} />
         <NavBucket label="Settings" indicator={!setupComplete} items={[
+          { label: "Setup guide", href: "/admin/onboarding" },
           { label: "General", href: "/admin/settings/general" },
           { label: "Brand", href: "/admin/settings/brand" },
+          { label: "Data sources", href: "/admin/settings/data-sources" },
           { label: "Membership", href: "/admin/settings/membership" },
           { label: "Payments", href: "/admin/settings/payments" },
+          { label: "Donations", href: "/admin/settings/donations" },
           { label: "AI & crawlers", href: "/admin/settings/ai" },
+          { label: "Marketplace", href: "/admin/settings/marketplace" },
           { label: "Policies", href: "/admin/settings/policies" },
         ]} />
       </nav>

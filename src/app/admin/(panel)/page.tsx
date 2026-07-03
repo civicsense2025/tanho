@@ -1,10 +1,15 @@
+import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards";
 import { listPages } from "@/modules/pages/queries";
 import { listEntries } from "@/modules/entries/queries";
 import { listBookings } from "@/modules/scheduling/queries";
 import { codePageSummaries } from "@/app/(public)/code-pages/registry";
 import { DashboardTabs } from "@/modules/pages/admin/DashboardTabs";
+import { getOnboardingState } from "@/modules/onboarding/queries";
+import { onboardingChecklistItems } from "@/modules/onboarding/setup-checklist-items";
+import { SetupChecklist } from "@/modules/commerce/admin/SetupChecklist";
 
 function greeting(now: Date): string {
   const h = now.getHours();
@@ -17,9 +22,24 @@ function greeting(now: Date): string {
  * tabs. Identity/settings live in the top-bar account menu, so this is purely
  * "what's happening across your site".
  */
-export default async function AdminDashboardPage() {
+export default function AdminDashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminDashboardPageInner />
+    </Suspense>
+  );
+}
+
+async function AdminDashboardPageInner() {
   const user = await requireUser();
   const first = user.name.split(" ")[0];
+
+  const onboarding = await getOnboardingState();
+  // First-ever visit only — never redirect again once anything's been
+  // completed or the wizard's been dismissed/finished.
+  if (onboarding.dismissedAt === null && onboarding.completedSteps.length === 0) {
+    redirect("/admin/onboarding");
+  }
 
   const [allPages, projects, guides, resources, upcoming] = await Promise.all([
     listPages(),
@@ -93,6 +113,12 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      {onboarding.dismissedAt === null ? (
+        <Link href="/admin/onboarding" style={{ display: "block", marginBottom: "var(--space-6)", textDecoration: "none" }}>
+          <SetupChecklist items={onboardingChecklistItems(onboarding)} />
+        </Link>
+      ) : null}
 
       <DashboardTabs
         pages={pages}

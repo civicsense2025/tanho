@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { requireUser } from "@/modules/auth/guards";
 import { listThemePresets } from "@/modules/theme/preset-queries";
@@ -12,7 +13,15 @@ export const metadata = { title: "Themes" };
  * Saved themes + the theme library. Activate a saved theme to make it live,
  * duplicate/delete your own, or import a curated theme from the library.
  */
-export default async function ThemesPage() {
+export default function ThemesPage() {
+  return (
+    <Suspense fallback={null}>
+      <ThemesPageInner />
+    </Suspense>
+  );
+}
+
+async function ThemesPageInner() {
   await requireUser("owner");
   const presets = await listThemePresets();
   return (

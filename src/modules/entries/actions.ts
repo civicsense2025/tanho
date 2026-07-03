@@ -8,7 +8,7 @@ import { writeAudit } from "@/modules/audit/log";
 import { rebuildMediaUsage } from "@/modules/media/usage";
 import { blockSets } from "@/modules/pages/schema";
 import { validateBlockTree } from "@/modules/pages/blocks-io";
-import { get as getEntitySchema } from "@/entities/registry";
+import { getEntitySchema } from "@/entities/registry-async";
 import { entries } from "./schema";
 import { entryDetailsSchema } from "./validation";
 
@@ -20,11 +20,11 @@ const invalidate = (type: string) => {
 };
 
 /** Validates the entry's `data` JSON against its registered entity schema. */
-function validateData(
+async function validateData(
   type: string,
   data: unknown,
-): { ok: true; data: Record<string, unknown> } | { ok: false; error: string } {
-  const schema = getEntitySchema(type);
+): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> {
+  const schema = await getEntitySchema(type);
   if (!schema) return { ok: false, error: `Unknown content type: ${type}` };
   const parsed = schema.dataSchema.safeParse(data ?? {});
   if (!parsed.success) {
@@ -40,7 +40,7 @@ export async function createEntry(input: unknown): Promise<Result<{ id: string }
     return { ok: false, error: detailsRaw.error.issues[0]?.message ?? "Invalid entry" };
   }
   const details = detailsRaw.data;
-  const dataResult = validateData(
+  const dataResult = await validateData(
     details.type,
     (input as { data?: unknown })?.data,
   );
@@ -81,7 +81,7 @@ export async function updateEntry(id: string, input: unknown): Promise<Result> {
   delete patch.type;
 
   if ("data" in (input as object)) {
-    const dataResult = validateData(existing.type, (input as { data?: unknown }).data);
+    const dataResult = await validateData(existing.type, (input as { data?: unknown }).data);
     if (!dataResult.ok) return dataResult;
     patch.data = dataResult.data;
   }
@@ -183,7 +183,7 @@ export async function publishEntryBlocks(id: string): Promise<Result> {
       set: { blocks: v.blocks, savedAt: Date.now(), savedBy: user.id },
     });
 
-  const schema = getEntitySchema(existing.type);
+  const schema = await getEntitySchema(existing.type);
   const route = `${schema?.basePath ?? ""}/${existing.slug}`;
   await rebuildMediaUsage(ownerType, id, route, v.blocks);
   await writeAudit({

@@ -1,0 +1,39 @@
+.shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--gutter) var(--space-12);
+}
+
+.progress {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  margin-bottom: var(--space-3);
+}
+
+.step {
+  margin-bottom: var(--space-8);
+}
+.title {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  margin: 0 0 var(--space-2);
+}
+.blurb {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  margin: 0 0 var(--space-4);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+.spacer {
+  flex: 1;
+}

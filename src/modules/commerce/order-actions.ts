@@ -7,7 +7,7 @@ import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { payments } from "@/adapters/payments";
-import { orderItems, orders, productVariants, products } from "./schema";
+import { orders } from "./schema";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -19,10 +19,12 @@ const invalidate = () => {
 };
 
 /**
- * Mark an order fulfilled (editor OK) and adjust inventory: each line item
- * decrements its variant's or product's tracked stock. Records the tracking
- * number. There is deliberately no manual pending→paid — payment state is
- * owned by the Stripe webhook state machine.
+ * Mark an order fulfilled (editor OK) and record the tracking number.
+ * Inventory is NOT touched here — it's decremented exactly once, at the
+ * pending→unfulfilled paid transition in the Stripe webhook state machine
+ * (stripe-events.ts's onCheckoutCompleted), so fulfillment never
+ * double-decrements stock. There is deliberately no manual pending→paid
+ * either — payment state is owned by that same webhook state machine.
  */
 export async function fulfillOrder(id: string, tracking: unknown): Promise<Result> {
   const user = await requireUser();
@@ -33,31 +35,6 @@ export async function fulfillOrder(id: string, tracking: unknown): Promise<Resul
   }
   const parsedTracking = trackingSchema.safeParse(tracking);
   if (!parsedTracking.success) return { ok: false, error: "Invalid tracking number" };
-
-  const items = await db.query.orderItems.findMany({ where: eq(orderItems.orderId, id) });
-  for (const item of items) {
-    if (item.variantId) {
-      const variant = await db.query.productVariants.findFirst({
-        where: eq(productVariants.id, item.variantId),
-      });
-      if (variant) {
-        await db
-          .update(productVariants)
-          .set({ inventory: Math.max(0, variant.inventory - item.qty) })
-          .where(eq(productVariants.id, item.variantId));
-      }
-    } else if (item.productId) {
-      const product = await db.query.products.findFirst({
-        where: eq(products.id, item.productId),
-      });
-      if (product && product.trackInventory) {
-        await db
-          .update(products)
-          .set({ inventory: Math.max(0, product.inventory - item.qty), updatedAt: Date.now() })
-          .where(eq(products.id, item.productId));
-      }
-    }
-  }
 
   await db
     .update(orders)
@@ -74,11 +51,18 @@ export async function fulfillOrder(id: string, tracking: unknown): Promise<Resul
   return { ok: true };
 }
 
+const refundReasonSchema = z.enum(["duplicate", "fraudulent", "requested_by_customer"]).optional();
+
 /**
- * Refund an order (owner-only). Calls the payments adapter, then sets the
- * order refunded optimistically. The webhook reconciles the final state.
+ * Refund an order (owner-only), in full or in part. Calls the payments
+ * adapter, then updates the running refunded total; the order only flips
+ * to "refunded" once the full total has been refunded (across one or more
+ * partial refunds). The webhook reconciles the final state independently.
  */
-export async function refundOrder(id: string): Promise<Result> {
+export async function refundOrder(
+  id: string,
+  options?: { amountCents?: number; reason?: unknown },
+): Promise<Result> {
   const user = await requireUser("owner");
   const order = await db.query.orders.findFirst({ where: eq(orders.id, id) });
   if (!order) return { ok: false, error: "Order not found" };
@@ -87,19 +71,39 @@ export async function refundOrder(id: string): Promise<Result> {
   }
   if (order.status === "refunded") return { ok: true };
 
+  const parsedReason = refundReasonSchema.safeParse(options?.reason);
+  if (!parsedReason.success) return { ok: false, error: "Invalid refund reason" };
+
+  const remainingCents = order.totalCents - order.refundedCents;
+  let amountCents = options?.amountCents;
+  if (amountCents !== undefined) {
+    if (!Number.isInteger(amountCents) || amountCents <= 0 || amountCents > remainingCents) {
+      return { ok: false, error: "Invalid refund amount" };
+    }
+  } else {
+    amountCents = remainingCents;
+  }
+
   try {
-    await payments.refund(order.stripePaymentIntentId);
+    await payments.refund(order.stripePaymentIntentId, amountCents, parsedReason.data);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Refund failed" };
   }
 
-  await db.update(orders).set({ status: "refunded" }).where(eq(orders.id, id));
+  const refundedCents = order.refundedCents + amountCents;
+  await db
+    .update(orders)
+    .set({
+      refundedCents,
+      status: refundedCents >= order.totalCents ? "refunded" : order.status,
+    })
+    .where(eq(orders.id, id));
   await writeAudit({
     userId: user.id,
     action: "order.refund",
     ownerType: "order",
     ownerId: id,
-    meta: { paymentIntentId: order.stripePaymentIntentId, amountCents: order.totalCents },
+    meta: { paymentIntentId: order.stripePaymentIntentId, amountCents, reason: parsedReason.data },
   });
   invalidate();
   return { ok: true };

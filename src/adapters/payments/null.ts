@@ -16,5 +16,6 @@ export const nullPayments: PaymentsAdapter = {
   constructWebhookEvent: async () => notConfigured(),
   refund: async () => notConfigured(),
   syncProduct: async () => notConfigured(),
+  createCustomAmountPrice: async () => notConfigured(),
   billingPortalUrl: async () => notConfigured(),
 };

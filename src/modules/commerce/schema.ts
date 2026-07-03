@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 /** Products. Prices are integer cents; inventory is the single source of truth. */
 export const products = sqliteTable("products", {
@@ -26,6 +26,10 @@ export const products = sqliteTable("products", {
   seo: text("seo", { mode: "json" }).$type<{ title?: string; description?: string }>(),
   stripeProductId: text("stripe_product_id"),
   stripePriceId: text("stripe_price_id"),
+  /** Pack-product link. When non-null, this product sells a block_pack or
+   *  design_pack entry; purchase grants a download/install entitlement. */
+  packType: text("pack_type", { enum: ["block_pack", "design_pack"] }),
+  packEntryId: text("pack_entry_id"),
   updatedAt: integer("updated_at").notNull().$defaultFn(() => Date.now()),
 });
 
@@ -77,6 +81,8 @@ export const orders = sqliteTable("orders", {
   stripeCheckoutSessionId: text("stripe_checkout_session_id"),
   shippingAddress: text("shipping_address", { mode: "json" }).$type<Record<string, string>>(),
   tracking: text("tracking").notNull().default(""),
+  refundedCents: integer("refunded_cents").notNull().default(0),
+  source: text("source", { enum: ["shop", "donation"] }).notNull().default("shop"),
   placedAt: integer("placed_at").notNull().$defaultFn(() => Date.now()),
 });
 
@@ -119,3 +125,21 @@ export const stripeEvents = sqliteTable("stripe_events", {
   processedAt: integer("processed_at"),
   payload: text("payload", { mode: "json" }).$type<unknown>(),
 });
+
+/**
+ * Pack entitlements — granted automatically when an order containing a
+ * pack product is paid. Entitles the buyer (a `people` row) to download or
+ * install the linked block_pack / design_pack entry.
+ */
+export const packEntitlements = sqliteTable(
+  "pack_entitlements",
+  {
+    id: text("id").primaryKey().$defaultFn(createId),
+    personId: text("person_id").notNull(),
+    packType: text("pack_type", { enum: ["block_pack", "design_pack"] }).notNull(),
+    packEntryId: text("pack_entry_id").notNull(),
+    orderId: text("order_id").notNull(),
+    grantedAt: integer("granted_at").notNull().$defaultFn(() => Date.now()),
+  },
+  (t) => [uniqueIndex("pack_entitlements_person_pack_order_idx").on(t.personId, t.packType, t.packEntryId, t.orderId)],
+);

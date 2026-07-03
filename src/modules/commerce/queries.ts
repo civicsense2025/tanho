@@ -76,17 +76,27 @@ export async function listCollectionsWithCounts(): Promise<CollectionWithCount[]
   return rows.map((c) => ({ ...c, productCount: countByCollection.get(c.id) ?? 0 }));
 }
 
-export type OrderTab = "all" | "unfulfilled" | "fulfilled" | "disputed" | "refunded";
+export type OrderTab = "all" | "unfulfilled" | "fulfilled" | "disputed" | "refunded" | "donations";
 
-/** Orders list for a status tab (uncached), newest first. */
+/**
+ * Orders list for a status tab (uncached), newest first. Donations are a
+ * distinct order `source` and are excluded from every shop tab by default —
+ * they only ever appear under the "donations" tab, keeping the two segmented
+ * even though both are backed by the same `orders` table.
+ */
 export async function listOrders(tab: OrderTab = "all", search?: string): Promise<OrderRow[]> {
-  const statusFor: Record<Exclude<OrderTab, "all">, OrderRow["status"][]> = {
+  const statusFor: Record<Exclude<OrderTab, "all" | "donations">, OrderRow["status"][]> = {
     unfulfilled: ["paid", "unfulfilled"],
     fulfilled: ["fulfilled"],
     disputed: ["disputed"],
     refunded: ["refunded"],
   };
-  const where = tab === "all" ? undefined : inArray(orders.status, statusFor[tab]);
+  const where =
+    tab === "donations"
+      ? eq(orders.source, "donation")
+      : tab === "all"
+        ? eq(orders.source, "shop")
+        : and(eq(orders.source, "shop"), inArray(orders.status, statusFor[tab]));
   let rows = await db.query.orders.findMany({ where, orderBy: [desc(orders.placedAt)] });
   const needle = search?.trim().toLowerCase();
   if (needle) {

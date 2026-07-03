@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { getAnalyticsSettings } from "@/modules/analytics/settings";
 import { eventsOverTime } from "@/modules/analytics/queries";
@@ -9,8 +10,16 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Analytics" };
 
+export default function AnalyticsOverviewPage() {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsOverviewPageInner />
+    </Suspense>
+  );
+}
+
 /** Analytics → Overview. Editor-viewable; the connect action is owner-only. */
-export default async function AnalyticsOverviewPage() {
+async function AnalyticsOverviewPageInner() {
   const user = await requireUser();
   const read = await getAnalyticsRead();
   const [settings, connected, kpis, overTime] = await Promise.all([

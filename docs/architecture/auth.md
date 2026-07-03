@@ -32,6 +32,25 @@ Two principal types, two cookies, one sessions table:
 
 Every mutation lands in `audit_log` (who, what, when).
 
+## API tokens (bearer auth for external clients)
+
+Cookie sessions are for browsers. External clients — the OYS Swift app, scripts,
+integrations — authenticate with **personal access tokens** instead
+(`modules/auth/api-tokens/`):
+
+- An owner mints a token at **Admin → Settings → API tokens**. The raw token
+  (`oys_<43 chars>`) is shown once; only its SHA-256 hash is stored in
+  `api_tokens.token_hash` — the same hash-only pattern as sessions.
+- Clients send `Authorization: Bearer <token>` on `/api/v1/*` requests.
+  `requireApiUser(role?)` (`api-tokens/guards.ts`) validates the header, loads
+  the user, stamps `lastUsedAt`, and enforces the same owner/editor gates as
+  `requireUser(role?)` — so a token's power is exactly the user's role.
+- Tokens never expire by default; owners can revoke at any time. `ApiAuthError`
+  (401/403) is thrown — never `redirect()` — so route handlers return proper
+  JSON error envelopes.
+
+See `docs/api/v1.md` for the full endpoint reference.
+
 ## Fit it to your cause
 
 - Add roles: extend the `role` enum in `modules/auth/schema.ts` and the

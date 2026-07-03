@@ -39,6 +39,7 @@ import { productDef } from "./product/def";
 import { productgridDef } from "./productgrid/def";
 import { pricingDef } from "./pricing/def";
 import { checkoutDef } from "./checkout/def";
+import { donationDef } from "./donation/def";
 import { bookingDef } from "./booking/def";
 import { formDef } from "./form/def";
 
@@ -98,6 +99,7 @@ const defs: Array<BlockDef<any>> = [
   productgridDef,
   pricingDef,
   checkoutDef,
+  donationDef,
   bookingDef,
   formDef,
 ];

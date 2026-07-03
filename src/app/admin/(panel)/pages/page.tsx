@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { requireUser } from "@/modules/auth/guards";
 import { listPages } from "@/modules/pages/queries";
@@ -8,7 +9,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Pages" };
 
-export default async function AdminPagesPage() {
+export default function AdminPagesPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminPagesPageInner />
+    </Suspense>
+  );
+}
+
+async function AdminPagesPageInner() {
   await requireUser();
   const pages = await listPages();
   return (

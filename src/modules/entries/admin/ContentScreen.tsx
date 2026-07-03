@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { get } from "@/entities/registry";
+import type { EntitySchemaSummary } from "@/entities/types";
+import type { FieldDef } from "@/modules/custom-types/validation";
 import type { EntryRow } from "@/modules/entries/schema";
 import { deleteEntry } from "@/modules/entries/actions";
 import {
@@ -43,29 +44,28 @@ function renderCell(item: EntryRow, key: string): React.ReactNode {
 
 /**
  * Generic content list screen, reused by the projects / guides / resources
- * routes. Owns the create/edit panel state and refreshes the server list
- * after every mutation.
+ * routes (and the dynamic /admin/content/[type] route for custom types).
+ * Owns the create/edit panel state and refreshes the server list after every
+ * mutation. The caller resolves `schema` server-side (via
+ * `getEntitySchema`/`entities/registry.ts`) and passes it down — a client
+ * component can't await a server lookup mid-render, and custom types are
+ * resolved from the DB per-request rather than a static registry Map.
  */
 export function ContentScreen({
-  entity,
+  schema,
   items,
+  customFields,
 }: {
-  entity: string;
+  schema: EntitySchemaSummary;
   items: EntryRow[];
+  /** For `custom:<slug>` types: threaded through to EntryForm for field-descriptor derivation. */
+  customFields?: FieldDef[];
 }) {
   const router = useRouter();
-  const schema = get(entity);
+  const entity = schema.entity;
   const [editing, setEditing] = useState<EntryRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [, startTransition] = useTransition();
-
-  if (!schema) {
-    return (
-      <main className={styles.page}>
-        <p>Unknown content type: {entity}</p>
-      </main>
-    );
-  }
 
   const label = schema.label;
   const plural = schema.plural;
@@ -116,6 +116,7 @@ export function ContentScreen({
       {panelOpen ? (
         <EntryForm
           entity={entity}
+          customFields={customFields}
           initial={editing ?? undefined}
           onDone={onDone}
           onCancel={closePanel}

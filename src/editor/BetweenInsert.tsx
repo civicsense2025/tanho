@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { categories, pickerDefs } from "@/blocks/registry";
+import { useEditor } from "./store";
 import styles from "./editor.module.css";
 
 /**
  * A compact circular ＋ button that opens a grouped block menu and inserts at
  * this position — the design's inline InsertMenu. Reused between canvas blocks
- * and (via BetweenInsert) in the stacked list.
+ * and (via BetweenInsert) in the stacked list. Filters to the store's
+ * enabled-types set so disabled blocks never appear.
  */
 export function BetweenMenuButton({ onInsert }: { onInsert: (type: string) => void }) {
+  const enabledTypes = useEditor((s) => s.enabledTypes);
+  const groups = useMemo(
+    () =>
+      categories.map((cat) => ({
+        cat,
+        items: pickerDefs(cat.id).filter((d) => !enabledTypes || enabledTypes.has(d.type)),
+      })),
+    [enabledTypes],
+  );
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -43,8 +54,7 @@ export function BetweenMenuButton({ onInsert }: { onInsert: (type: string) => vo
           style={{ position: "absolute", zIndex: 45, left: "50%", top: "calc(100% + 6px)", transform: "translateX(-50%)" }}
           onClick={(e) => e.stopPropagation()}
         >
-          {categories.map((cat) => {
-            const items = pickerDefs(cat.id);
+          {groups.map(({ cat, items }) => {
             if (!items.length) return null;
             return (
               <div key={cat.id}>

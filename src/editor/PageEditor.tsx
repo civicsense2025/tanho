@@ -51,13 +51,24 @@ export function PageEditor({
   initialBlocks,
   isDirtyVsPublished,
   pageOptions = [],
+  enabledTypes,
 }: {
   page: PageRow;
   initialBlocks: BlockNode[];
   isDirtyVsPublished: boolean;
   pageOptions?: PageOption[];
+  /** Enabled block types from the DB registry (server-fetched). Drives picker
+   *  filtering; undefined = show all compiled defs. */
+  enabledTypes?: string[];
 }) {
   const storeBlocks = useEditor((s) => s.blocks);
+  const setEnabledTypes = useEditor((s) => s.setEnabledTypes);
+
+  // Push the server-fetched enabled-types set into the store once so every
+  // picker (BlockPicker/AddBlockMenu/BetweenInsert) filters to it.
+  useEffect(() => {
+    setEnabledTypes(enabledTypes ? new Set(enabledTypes) : null);
+  }, [enabledTypes, setEnabledTypes]);
   const readyFor = useEditor((s) => s.readyFor);
   const init = useEditor((s) => s.init);
   // Until the post-paint init effect has loaded this page into the store, render

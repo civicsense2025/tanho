@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { getAnnouncementConfig } from "@/modules/chrome/queries";
 import { NavTabs } from "@/modules/chrome/admin/NavTabs";
@@ -6,7 +7,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Announcement bar" };
 
-export default async function NavAnnouncementPage() {
+export default function NavAnnouncementPage() {
+  return (
+    <Suspense fallback={null}>
+      <NavAnnouncementPageInner />
+    </Suspense>
+  );
+}
+
+async function NavAnnouncementPageInner() {
   await requireUser("owner");
   const config = await getAnnouncementConfig();
   return (

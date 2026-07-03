@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { payments } from "@/adapters/payments";
 import { getEcommerceSettings } from "@/modules/commerce/ecommerce-settings";
@@ -13,7 +14,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Collections" };
 
-export default async function CollectionsPage() {
+export default function CollectionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <CollectionsPageInner />
+    </Suspense>
+  );
+}
+
+async function CollectionsPageInner() {
   const user = await requireUser();
   const { unlocked } = await getEcommerceSettings();
   if (!unlocked) return <LockedStore isOwner={user.role === "owner"} />;

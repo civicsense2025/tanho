@@ -57,13 +57,15 @@ export type CheckoutSessionInput = {
   automaticTax?: boolean;
 };
 
+export type RefundReason = "duplicate" | "fraudulent" | "requested_by_customer";
+
 export type PaymentsAdapter = {
   /** True when real keys are configured (drives the connect/locked UI). */
   isConfigured(): boolean;
   createCheckoutSession(input: CheckoutSessionInput): Promise<{ id: string; url: string }>;
   /** Verifies the webhook signature and returns the typed event, or throws. */
   constructWebhookEvent(payload: string, signature: string): Promise<ProviderEvent>;
-  refund(paymentIntentId: string, amountCents?: number): Promise<void>;
+  refund(paymentIntentId: string, amountCents?: number, reason?: RefundReason): Promise<void>;
   /** Upsert a durable product + price; returns provider ids. */
   syncProduct(input: {
     name: string;
@@ -71,6 +73,20 @@ export type PaymentsAdapter = {
     priceCents: number;
     currency: string;
     existingProductId?: string;
+  }): Promise<{ productId: string; priceId: string }>;
+  /**
+   * Create-or-reuse a durable Product + a customer-adjustable-amount Price
+   * (Stripe's "pay what you want" pattern) — used for donations. The Price
+   * is created once and its id reused across every checkout; re-syncing
+   * (e.g. new min/max/preset) always mints a fresh Price, since Prices are
+   * immutable, same as syncProduct.
+   */
+  createCustomAmountPrice(input: {
+    productId?: string;
+    currency: string;
+    minCents?: number;
+    maxCents?: number;
+    presetCents?: number;
   }): Promise<{ productId: string; priceId: string }>;
   billingPortalUrl(stripeCustomerId: string, returnUrl: string): Promise<string>;
 };
@@ -114,4 +130,64 @@ export type AnalyticsReadAdapter = {
   overview(days?: number): Promise<AnalyticsOverviewData>;
   topPages(days?: number, limit?: number): Promise<AnalyticsPageStat[]>;
   topQueries(days?: number, limit?: number): Promise<AnalyticsQueryStat[]>;
+};
+
+/**
+ * External data sources — lets bound blocks read live rows from a
+ * self-hoster's OWN database (Postgres, Supabase, later Turso/MongoDB)
+ * without the platform hardcoding any vendor. See
+ * docs/architecture/adapters.md and src/modules/data-sources/.
+ *
+ * The entire injection defense lives in `QuerySpec`'s shape: it is a
+ * strictly-typed, allowlisted query descriptor — never a raw SQL/query
+ * string. Every implementation must translate `QuerySpec` into a
+ * parameterized call on its native driver (never string concatenation).
+ * Only single-table/collection flat filtering is supported; there is no
+ * escape hatch for joins or raw passthrough, by design.
+ */
+export type ColumnDesc = {
+  name: string;
+  type: "string" | "number" | "boolean" | "date" | "json";
+};
+
+export type TableDesc = { name: string; columns: ColumnDesc[] };
+
+export type FilterOp = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "contains";
+
+export type DataSourceFilter = {
+  column: string;
+  op: FilterOp;
+  value: string | number | boolean | (string | number)[];
+};
+
+export type QuerySpec = {
+  /** Must be present in the connection's stored allowlist. */
+  table: string;
+  /** Must be a subset of the allowlisted columns for `table`. */
+  columns: string[];
+  filters?: DataSourceFilter[];
+  sort?: { column: string; dir: "asc" | "desc" }[];
+  /** Requested cap; every adapter clamps this to its own hard max regardless. */
+  limit: number;
+};
+
+export type DataSourceQueryResult = {
+  rows: Record<string, unknown>[];
+  /** True when the result was cut off by the server-enforced row cap. */
+  truncated: boolean;
+};
+
+export type DataSourceAdapter = {
+  isConfigured(): boolean;
+  /**
+   * Forward-compat only: `write` is always false/unused in phase 1 — there
+   * is no `mutate()` yet, so this describes the adapter's eventual shape,
+   * not current behavior. No write path exists from blocks to external
+   * databases today, regardless of what this reports.
+   */
+  capabilities(): { read: boolean; write: boolean };
+  testConnection(): Promise<{ ok: boolean; error?: string }>;
+  /** Introspection for the admin allowlist editor only — never called at render time. */
+  listTables(): Promise<TableDesc[]>;
+  query(spec: QuerySpec): Promise<DataSourceQueryResult>;
 };

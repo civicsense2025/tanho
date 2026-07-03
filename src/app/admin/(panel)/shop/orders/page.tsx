@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { payments } from "@/adapters/payments";
 import { getEcommerceSettings } from "@/modules/commerce/ecommerce-settings";
@@ -14,9 +15,21 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Orders" };
 
-const TABS: OrderTab[] = ["all", "unfulfilled", "fulfilled", "disputed", "refunded"];
+const TABS: OrderTab[] = ["all", "unfulfilled", "fulfilled", "disputed", "refunded", "donations"];
 
-export default async function OrdersPage({
+export default function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <OrdersPageInner searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function OrdersPageInner({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string }>;

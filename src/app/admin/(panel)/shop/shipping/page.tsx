@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { payments } from "@/adapters/payments";
 import { getEcommerceSettings } from "@/modules/commerce/ecommerce-settings";
@@ -9,7 +10,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Shipping" };
 
-export default async function ShippingPage() {
+export default function ShippingPage() {
+  return (
+    <Suspense fallback={null}>
+      <ShippingPageInner />
+    </Suspense>
+  );
+}
+
+async function ShippingPageInner() {
   const user = await requireUser();
   const settings = await getEcommerceSettings();
   if (!settings.unlocked) return <LockedStore isOwner={user.role === "owner"} />;

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { AdminPage } from "@/components/admin/AdminPage";
 import { listCustomTypes } from "@/modules/custom-types/queries";
@@ -9,7 +10,15 @@ import { listProducts, listCollectionsWithCounts } from "@/modules/commerce/quer
 
 export const metadata = { title: "Content types" };
 
-export default async function AdminTypesPage() {
+export default function AdminTypesPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminTypesPageInner />
+    </Suspense>
+  );
+}
+
+async function AdminTypesPageInner() {
   await requireUser("owner");
 
   const [allPages, projects, guides, resources, products, collections, custom, settings] =

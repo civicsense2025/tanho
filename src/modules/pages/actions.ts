@@ -9,6 +9,15 @@ import { rebuildMediaUsage } from "@/modules/media/usage";
 import { blockSets, pages } from "./schema";
 import { treeHasPaywall, validateBlockTree } from "./blocks-io";
 import { pageDetailsSchema } from "./validation";
+import { ROUTE_TYPE } from "@/modules/entries/router";
+import { resolveCodePage } from "@/app/(public)/code-pages/registry";
+
+/** True when `route` collides with a reserved entity-route prefix (/work, /guides, /resources) or an exact code-page route. */
+function collidesWithReservedRoute(route: string): boolean {
+  if (resolveCodePage(route)) return true;
+  const firstSegment = route.split("/").filter(Boolean)[0];
+  return firstSegment !== undefined && firstSegment in ROUTE_TYPE;
+}
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -24,6 +33,9 @@ export async function createPage(input: unknown): Promise<Result<{ id: string }>
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid page" };
   }
   const d = parsed.data;
+  if (collidesWithReservedRoute(d.route)) {
+    return { ok: false, error: `Route ${d.route} is reserved by a built-in section of the site` };
+  }
   const dupe = await db.query.pages.findFirst({
     where: eq(pages.route, d.route),
   });

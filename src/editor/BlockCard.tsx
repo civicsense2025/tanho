@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { blockDef } from "@/blocks/registry";
 import { isContainer, kidsOf } from "@/blocks/tree";
+import { UnsupportedBlock } from "@/blocks/UnsupportedBlock";
 import type { BlockNode } from "@/blocks/types";
 import { ValueField } from "./ValueField";
 import styles from "./editor.module.css";
@@ -27,7 +28,20 @@ export function BlockCard({
 }) {
   const [open, setOpen] = useState(false);
   const def = blockDef(block.type);
-  if (!def) return null;
+  if (!def) {
+    return (
+      <div className={styles.card}>
+        <div className={styles.cardHead}>
+          <span className={styles.cardTitle}>Unsupported block ({block.type})</span>
+          <span style={{ flex: 1 }} />
+          <button type="button" className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remove" onClick={onRemove}>✕</button>
+        </div>
+        <div className={styles.cardBody}>
+          <UnsupportedBlock type={block.type} />
+        </div>
+      </div>
+    );
+  }
   const container = isContainer(block);
 
   return (

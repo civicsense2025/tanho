@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { getAnalyticsSettings } from "@/modules/analytics/settings";
 import { getAnalyticsRead } from "@/adapters/analytics";
@@ -9,7 +10,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 export const metadata = { title: "Traffic" };
 
 /** Analytics → Traffic. Editor-viewable; the connect action is owner-only. */
-export default async function AnalyticsTrafficPage() {
+export default function AnalyticsTrafficPage() {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsTrafficPageInner />
+    </Suspense>
+  );
+}
+
+async function AnalyticsTrafficPageInner() {
   const user = await requireUser();
   const read = await getAnalyticsRead();
   const [settings, connected, pages, queries] = await Promise.all([

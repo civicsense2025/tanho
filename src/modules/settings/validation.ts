@@ -19,6 +19,9 @@ import {
 import { analyticsSettingsSchema } from "@/modules/analytics/validation";
 import { aiCrawlersSettingsSchema } from "@/modules/ai-crawlers/validation";
 import { contentTypesSettingsSchema } from "@/modules/custom-types/content-types-settings";
+import { onboardingStateSchema } from "@/modules/onboarding/validation";
+import { marketplaceSettingsSchema } from "@/modules/marketplace/schema";
+import { donationsSettingsSchema } from "@/modules/donations/validation";
 
 /** Site identity + locale + visibility — the "General" settings screen. */
 export const generalSettingsSchema = z.object({
@@ -58,4 +61,7 @@ export const settingsSchemas: Record<string, z.ZodTypeAny> = {
   analytics: analyticsSettingsSchema,
   ai_crawlers: aiCrawlersSettingsSchema,
   content_types: contentTypesSettingsSchema,
+  onboarding: onboardingStateSchema,
+  marketplace: marketplaceSettingsSchema,
+  donations: donationsSettingsSchema,
 };

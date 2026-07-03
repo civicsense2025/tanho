@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { listRedirects } from "@/modules/redirects/queries";
 import { RedirectsManager } from "@/modules/redirects/admin/RedirectsManager";
@@ -5,7 +6,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Redirects" };
 
-export default async function RedirectsPage() {
+export default function RedirectsPage() {
+  return (
+    <Suspense fallback={null}>
+      <RedirectsPageInner />
+    </Suspense>
+  );
+}
+
+async function RedirectsPageInner() {
   await requireUser("owner");
   const redirects = await listRedirects();
   return (

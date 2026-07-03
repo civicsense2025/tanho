@@ -26,10 +26,15 @@ type EditorState = {
    *  canvas AND the Inspector's style controls read one source — the device
    *  is both the previewed viewport and the breakpoint the Style section edits. */
   device: Device;
+  /** The set of block types enabled in the DB registry (server-fetched). The
+   *  pickers filter to this; null = show all compiled defs (backward compat for
+   *  callers that don't wire the registry through). Set once by PageEditor. */
+  enabledTypes: Set<string> | null;
 
   init(blocks: BlockNode[], onChange: (blocks: BlockNode[]) => void, key?: string | null): void;
   apply(fn: (bs: BlockNode[]) => BlockNode[]): void;
   setDevice(device: Device): void;
+  setEnabledTypes(types: Set<string> | null): void;
 
   select(id: string, mode?: "single" | "toggle" | "range"): void;
   clearSelection(): void;
@@ -55,6 +60,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   onChange: null,
   readyFor: null,
   device: "desktop",
+  enabledTypes: null,
 
   init(blocks, onChange, key = null) {
     set({ blocks, onChange, selection: new Set(), lastSelected: null, readyFor: key });
@@ -67,6 +73,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   setDevice: (device) => set({ device }),
+  setEnabledTypes: (enabledTypes) => set({ enabledTypes }),
 
   select(id, mode = "single") {
     const { selection, lastSelected, blocks } = get();

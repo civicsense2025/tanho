@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { listTagsWithCounts } from "@/modules/tags/queries";
 import { TagsScreen } from "@/modules/tags/admin/TagsScreen";
@@ -5,7 +6,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Tags" };
 
-export default async function AdminTagsPage() {
+export default function AdminTagsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminTagsPageInner />
+    </Suspense>
+  );
+}
+
+async function AdminTagsPageInner() {
   await requireUser("owner");
   const tags = await listTagsWithCounts();
   return (

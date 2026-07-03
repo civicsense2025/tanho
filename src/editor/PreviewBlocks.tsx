@@ -1,6 +1,7 @@
 "use client";
 
 import { blockDef } from "@/blocks/registry";
+import { UnsupportedBlock } from "@/blocks/UnsupportedBlock";
 import type { BlockNode, Device } from "@/blocks/types";
 
 /**
@@ -21,7 +22,7 @@ export function PreviewBlocks({ blocks, device }: { blocks: BlockNode[]; device:
 
 function PreviewBlock({ block, device }: { block: BlockNode; device: Device }) {
   const def = blockDef(block.type);
-  if (!def) return null;
+  if (!def) return <UnsupportedBlock type={block.type} />;
   const parsed = def.schema.safeParse(block.content);
   if (!parsed.success) return null;
   const ctx = {

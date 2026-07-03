@@ -1,0 +1,83 @@
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.name {
+  font-size: var(--text-body);
+  color: var(--text);
+}
+.meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.status {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+}
+.statusConnected {
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+}
+.statusError {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.grow {
+  flex: 1;
+  min-width: 160px;
+}
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.error {
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+.empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.allowlistEntry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+}

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { media } from "@/modules/media/schema";
@@ -9,7 +10,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Profile" };
 
-export default async function ProfilePage() {
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfilePageInner />
+    </Suspense>
+  );
+}
+
+async function ProfilePageInner() {
   await requireUser();
   const p = await getProfile();
 

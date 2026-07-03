@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { getGeneralSettings } from "@/modules/settings/queries";
 import { getSeoSettings } from "@/modules/seo/queries";
@@ -8,7 +9,15 @@ import { SEO_CONTENT_TYPES } from "@/modules/seo/validation";
 
 export const metadata = { title: "SEO" };
 
-export default async function AdminSeoPage() {
+export default function AdminSeoPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminSeoPageInner />
+    </Suspense>
+  );
+}
+
+async function AdminSeoPageInner() {
   await requireUser("owner");
   const [seo, general, contentTypes] = await Promise.all([
     getSeoSettings(),

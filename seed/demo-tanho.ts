@@ -23,7 +23,6 @@ import { seedDemoNewsletter } from "./demo/demo-newsletter";
 import { seedDemoProjects } from "./demo/demo-projects";
 import { seedDemoGuidesTaxonomy } from "./demo/demo-guides-taxonomy";
 import { seedDemoGuides } from "./demo/demo-guides";
-import { seedDemoStackGuides } from "./demo/demo-guides-stacks";
 import { seedDemoShop } from "./demo/demo-shop";
 import { seedDemoMembership } from "./demo/demo-membership";
 import { seedDemoPeople } from "./demo/demo-people";
@@ -40,7 +39,6 @@ async function main() {
 
   await seedDemoGuidesTaxonomy(db);
   await seedDemoGuides(db);
-  await seedDemoStackGuides(db);
 
   await seedDemoShop(db);
   await seedDemoMembership(db);

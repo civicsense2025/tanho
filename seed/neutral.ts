@@ -8,6 +8,7 @@ import { seedDb, log } from "./lib";
 import { seedSettings } from "./modules/settings";
 import { seedTheme } from "./modules/theme";
 import { seedOwner } from "./modules/users";
+import { seedBlockRegistry } from "./modules/blocks";
 import { seedPages } from "./modules/pages";
 import { seedMenus } from "./modules/menus";
 import { seedChrome } from "./modules/chrome";
@@ -27,6 +28,7 @@ async function main() {
   await seedSettings(db);
   await seedTheme(db);
   await seedOwner(db);
+  await seedBlockRegistry(db);
   await seedPages(db);
   const { mainMenuId } = await seedMenus(db);
   await seedChrome(db, mainMenuId);

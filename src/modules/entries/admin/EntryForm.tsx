@@ -7,6 +7,8 @@ import { Field } from "@/components/forms/Field";
 import { Input } from "@/components/forms/Input";
 import { Select } from "@/components/forms/Select";
 import { Button } from "@/components/core/Button";
+import { descriptorsFromFieldDefs } from "@/modules/custom-types/admin/descriptors";
+import type { FieldDef } from "@/modules/custom-types/validation";
 import { FIELD_DESCRIPTORS, FieldControl, type FieldDescriptor } from "./fields";
 import styles from "./entry-form.module.css";
 
@@ -52,16 +54,20 @@ function seedData(
  */
 export function EntryForm({
   entity,
+  customFields,
   initial,
   onDone,
   onCancel,
 }: {
   entity: string;
+  /** For `custom:<slug>` types: the type's own field list, since built-ins have no entry in FIELD_DESCRIPTORS to fall back from. */
+  customFields?: FieldDef[];
   initial?: EntryRow;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const descriptors = FIELD_DESCRIPTORS[entity] ?? [];
+  const descriptors =
+    FIELD_DESCRIPTORS[entity] ?? (customFields ? descriptorsFromFieldDefs(customFields) : []);
   const isEdit = Boolean(initial);
 
   const [title, setTitle] = useState(initial?.title ?? "");

@@ -51,7 +51,7 @@ jobs:
 
       - name: Build, sign, and publish release to the hub
         env:
-          HUB_URL: ${{ secrets.HUB_URL || 'https://hub.own-your-site.com' }}
+          HUB_URL: ${{ secrets.HUB_URL }}
           HUB_ADMIN_TOKEN: ${{ secrets.HUB_ADMIN_TOKEN }}
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
         run: npx tsx scripts/build-release.ts

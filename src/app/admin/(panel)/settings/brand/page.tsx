@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { requireUser } from "@/modules/auth/guards";
 import { getTheme } from "@/modules/theme/queries";
@@ -12,7 +13,15 @@ export const metadata = { title: "Brand" };
  * import/export and the Themes library live below the editor and on the Themes
  * sub-screen.
  */
-export default async function BrandSettingsPage() {
+export default function BrandSettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <BrandSettingsPageInner />
+    </Suspense>
+  );
+}
+
+async function BrandSettingsPageInner() {
   await requireUser("owner");
   const theme = await getTheme();
   return (

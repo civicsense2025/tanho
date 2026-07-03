@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards";
 import { getPerson } from "@/modules/people/queries";
@@ -6,7 +7,19 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Person" };
 
-export default async function PersonPage({
+export default function PersonPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <PersonPageInner params={params} />
+    </Suspense>
+  );
+}
+
+async function PersonPageInner({
   params,
 }: {
   params: Promise<{ id: string }>;

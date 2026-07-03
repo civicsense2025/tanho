@@ -13,6 +13,7 @@ const TABS: { value: OrderTab; label: string }[] = [
   { value: "fulfilled", label: "Fulfilled" },
   { value: "disputed", label: "Disputed" },
   { value: "refunded", label: "Refunded" },
+  { value: "donations", label: "Donations" },
 ];
 
 /** Orders list: status tabs (URL-driven) + shared EntityList. */

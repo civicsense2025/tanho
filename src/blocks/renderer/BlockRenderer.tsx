@@ -4,6 +4,7 @@ import { blockResolvers } from "../resolvers";
 import { paywallSchema } from "../paywall/fields";
 import { viewerPassesPaywall } from "../paywall/gate";
 import { resolveStyleLayer, styleToCss, hasStyle } from "./style";
+import { UnsupportedBlock } from "../UnsupportedBlock";
 import type { BlockStyle } from "../common";
 import type { BlockNode, Device, RenderViewer } from "../types";
 
@@ -63,7 +64,20 @@ export async function RenderBlock({
   viewer: RenderViewer;
 }) {
   const def = blockDef(block.type);
-  if (!def) return null;
+  if (!def) {
+    // Unknown block type — e.g. an imported pack references a type this install
+    // lacks (or a plugin not loaded). Never crash the page: in the editor show a
+    // visible placeholder so the author knows what's missing; on the public site
+    // render nothing so visitors see a clean (if incomplete) page.
+    if (mode === "editor") {
+      return (
+        <div data-block={block.type}>
+          <UnsupportedBlock type={block.type} />
+        </div>
+      );
+    }
+    return null;
+  }
 
   const parsed = def.schema.safeParse(block.content);
   if (!parsed.success) {

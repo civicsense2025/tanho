@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { payments } from "@/adapters/payments";
 import { getPaymentsSettings } from "@/modules/commerce/payments-settings";
@@ -6,7 +7,15 @@ import { SettingsShell } from "@/components/admin/SettingsShell";
 
 export const metadata = { title: "Payments settings" };
 
-export default async function PaymentsSettingsPage() {
+export default function PaymentsSettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PaymentsSettingsPageInner />
+    </Suspense>
+  );
+}
+
+async function PaymentsSettingsPageInner() {
   await requireUser("owner");
   const initial = await getPaymentsSettings();
   return (

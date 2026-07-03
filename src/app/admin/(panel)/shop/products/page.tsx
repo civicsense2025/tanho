@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { payments } from "@/adapters/payments";
 import { getEcommerceSettings } from "@/modules/commerce/ecommerce-settings";
@@ -14,7 +15,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Products" };
 
-export default async function ProductsPage() {
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProductsPageInner />
+    </Suspense>
+  );
+}
+
+async function ProductsPageInner() {
   const user = await requireUser();
   const { unlocked } = await getEcommerceSettings();
   if (!unlocked) return <LockedStore isOwner={user.role === "owner"} />;

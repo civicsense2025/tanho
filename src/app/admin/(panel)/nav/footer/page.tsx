@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { getGeneralSettings } from "@/modules/settings/queries";
 import { listMenus } from "@/modules/menus/queries";
@@ -8,7 +9,15 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Footer" };
 
-export default async function NavFooterPage() {
+export default function NavFooterPage() {
+  return (
+    <Suspense fallback={null}>
+      <NavFooterPageInner />
+    </Suspense>
+  );
+}
+
+async function NavFooterPageInner() {
   await requireUser("owner");
   const [config, menus, general] = await Promise.all([
     getFooterConfig(),

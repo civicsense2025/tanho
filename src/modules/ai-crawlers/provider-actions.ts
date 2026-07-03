@@ -10,6 +10,10 @@ import {
   connectionSummary,
   type ConnectionSummary,
 } from "@/modules/integrations";
+import type { AiAdapter } from "@/adapters/ai/types";
+import { AnthropicAdapter } from "@/adapters/ai/anthropic";
+import { OpenAiAdapter } from "@/adapters/ai/openai";
+import { OpenAiCompatibleAdapter } from "@/adapters/ai/openai-compatible";
 import { getAiCrawlersSettings } from "./queries";
 
 /**
@@ -26,6 +30,17 @@ const saveAiKeyInput = z.object({
 
 export type SaveAiKeyState = { ok?: boolean; error?: string };
 
+/** Builds a live adapter for the just-submitted key, without reading anything back from the DB — the key isn't persisted yet. */
+function adapterForSubmittedKey(which: string, apiKey: string, baseUrl: string | undefined): AiAdapter | null {
+  if (which === "anthropic") return new AnthropicAdapter(apiKey);
+  if (which === "openai") return new OpenAiAdapter(apiKey);
+  if (which === "custom") {
+    if (!baseUrl) return null;
+    return new OpenAiCompatibleAdapter(apiKey, baseUrl, "");
+  }
+  return null;
+}
+
 export async function saveAiKey(input: unknown): Promise<SaveAiKeyState> {
   const user = await requireUser("owner");
   const parsed = saveAiKeyInput.safeParse(input);
@@ -34,6 +49,16 @@ export async function saveAiKey(input: unknown): Promise<SaveAiKeyState> {
   }
   const { apiKey, baseUrl } = parsed.data;
   const { provider } = await getAiCrawlersSettings();
+
+  const adapter = adapterForSubmittedKey(provider.which, apiKey, baseUrl || undefined);
+  if (adapter) {
+    try {
+      await adapter.complete({ prompt: "Reply with the single word: ok", maxTokens: 5 });
+    } catch (err) {
+      console.error("[ai-crawlers] saveAiKey verification failed", err instanceof Error ? err.message : "unknown error");
+      return { error: "Could not verify this key. Check it's correct and try again." };
+    }
+  }
 
   await saveConnection({
     provider: "ai",

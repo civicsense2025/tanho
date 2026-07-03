@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { categories, pickerDefs } from "@/blocks/registry";
 import { Button } from "@/components/core/Button";
+import { useEditor } from "./store";
 import styles from "./editor.module.css";
 
 /** Simple category-grouped block picker (row/menu/panel/palette in Phase 4). */
@@ -13,6 +14,15 @@ export function AddBlockMenu({
   onAdd: (type: string) => void;
   label?: string;
 }) {
+  const enabledTypes = useEditor((s) => s.enabledTypes);
+  const groups = useMemo(
+    () =>
+      categories.map((cat) => ({
+        cat,
+        items: pickerDefs(cat.id).filter((d) => !enabledTypes || enabledTypes.has(d.type)),
+      })),
+    [enabledTypes],
+  );
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,8 +41,7 @@ export function AddBlockMenu({
       </Button>
       {open ? (
         <div className={styles.pickerMenu}>
-          {categories.map((cat) => {
-            const items = pickerDefs(cat.id);
+          {groups.map(({ cat, items }) => {
             if (!items.length) return null;
             return (
               <div key={cat.id}>

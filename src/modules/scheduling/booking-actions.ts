@@ -162,21 +162,35 @@ export async function createBooking(input: unknown): Promise<CreateBookingResult
   // still works without payment keys.
   const chargeable = eventType.priceCents > 0 && paidBookingsEnabled();
 
-  await db.insert(bookings).values({
-    code,
-    eventTypeId: eventType.id,
-    personId,
-    date: req.date,
-    time: req.time,
-    tz: settings.timezone,
-    location: req.location,
-    // Held `pending` while payment is in flight; the Stripe webhook promotes it
-    // to `confirmed`. A pending booking still occupies its slot (see slots.ts).
-    status: chargeable ? "pending" : "confirmed",
-    answers: req.person.answers,
-    stripePaymentIntentId: null,
-    remindersSent: {},
-  });
+  // The `slotsFor` check above is re-validated here at the DB level: a
+  // `bookings_slot_idx` partial unique index on (eventTypeId, date, time)
+  // (non-cancelled rows only) rejects a genuinely concurrent second insert
+  // for the same slot, closing the check-then-insert race the app-level
+  // check alone can't prevent.
+  try {
+    await db.insert(bookings).values({
+      code,
+      eventTypeId: eventType.id,
+      personId,
+      date: req.date,
+      time: req.time,
+      tz: settings.timezone,
+      location: req.location,
+      // Held `pending` while payment is in flight; the Stripe webhook promotes it
+      // to `confirmed`. A pending booking still occupies its slot (see slots.ts).
+      status: chargeable ? "pending" : "confirmed",
+      answers: req.person.answers,
+      stripePaymentIntentId: null,
+      remindersSent: {},
+    });
+  } catch (err) {
+    const errCode =
+      typeof err === "object" && err !== null && "code" in err ? (err as { code?: string }).code : undefined;
+    if (errCode === "SQLITE_CONSTRAINT") {
+      return { ok: false, error: "That time is no longer available. Please pick another." };
+    }
+    throw err;
+  }
 
   await logActivity(personId, "form", `Booked ${eventType.name}`, {
     code,

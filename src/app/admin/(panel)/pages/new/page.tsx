@@ -1,10 +1,19 @@
+import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
 import { NewPageForm } from "@/modules/pages/admin/NewPageForm";
 import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "New page" };
 
-export default async function NewPagePage() {
+export default function NewPagePage() {
+  return (
+    <Suspense fallback={null}>
+      <NewPagePageInner />
+    </Suspense>
+  );
+}
+
+async function NewPagePageInner() {
   await requireUser();
   return (
     <AdminPage>

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards";
 import { payments } from "@/adapters/payments";
@@ -7,7 +8,19 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Product" };
 
-export default async function ProductPage({
+export default function ProductPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ProductPageInner params={params} />
+    </Suspense>
+  );
+}
+
+async function ProductPageInner({
   params,
 }: {
   params: Promise<{ id: string }>;

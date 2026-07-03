@@ -9,7 +9,7 @@ import type { GuideData } from "@/entities/schemas/guide";
 import { getContentTypesSettings, isTypeDisabled } from "@/modules/custom-types/content-types-settings";
 
 /** Which content type a public entity route base belongs to. */
-const ROUTE_TYPE: Record<string, string> = { work: "project", guides: "guide", resources: "resource" };
+export const ROUTE_TYPE: Record<string, string> = { work: "project", guides: "guide", resources: "resource" };
 
 /**
  * Discriminated union describing what a public site-relative route resolves to.
