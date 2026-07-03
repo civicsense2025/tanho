@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { commonContent, trackEventSchema, trackParamsSchema } from "../common";
+import { commonContent, styleContent, trackEventSchema, trackParamsSchema } from "../common";
 
 /** Newsletter subscribe band — an email input that posts to subscribeAction. */
 export const newsletterSchema = z.object({
   ...commonContent,
+  ...styleContent,
   title: z.string().max(120).default("Subscribe to the newsletter"),
   body: z.string().max(400).default("Get new posts in your inbox. No spam, unsubscribe anytime."),
   placeholder: z.string().max(80).default("you@example.com"),

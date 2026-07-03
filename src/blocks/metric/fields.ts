@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 export const metricItemSchema = z.object({
   value: z.string().max(100).default(""),
@@ -8,6 +8,7 @@ export const metricItemSchema = z.object({
 
 export const metricSchema = z.object({
   ...commonContent,
+  ...styleContent,
   cols: z.number().int().min(2).max(4).default(3),
   items: z.array(metricItemSchema).max(50).default([]),
 });

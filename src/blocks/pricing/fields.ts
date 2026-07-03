@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, trackEventSchema, trackParamsSchema } from "../common";
+import { commonContent, styleContent, trackEventSchema, trackParamsSchema } from "../common";
 
 const hrefSchema = z
   .string()
@@ -23,6 +23,7 @@ export const pricingTierSchema = z.object({
 /** Stripe-style tier table — author copy only. */
 export const pricingSchema = z.object({
   ...commonContent,
+  ...styleContent,
   tiers: z.array(pricingTierSchema).max(6).default([]),
 });
 

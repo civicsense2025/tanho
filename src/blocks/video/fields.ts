@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 import { mediaSrcSchema } from "../image/fields";
 
 export const videoSchema = z.object({
   ...commonContent,
+  ...styleContent,
   src: mediaSrcSchema,
   poster: mediaSrcSchema,
   caption: z.string().max(300).default(""),

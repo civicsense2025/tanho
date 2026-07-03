@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 /**
  * Paywall — a server-enforced cut line. Every sibling block AFTER this one
@@ -9,6 +9,7 @@ import { commonContent } from "../common";
  */
 export const paywallSchema = z.object({
   ...commonContent,
+  ...styleContent,
   tier: z.string().max(60).default(""),
   title: z.string().max(200).default("The rest is for members"),
   body: z.string().max(500).default("Become a member to keep reading."),

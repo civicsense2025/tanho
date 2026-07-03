@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 export const timelineItemSchema = z.object({
   date: z.string().max(100).default(""),
@@ -9,6 +9,7 @@ export const timelineItemSchema = z.object({
 
 export const timelineSchema = z.object({
   ...commonContent,
+  ...styleContent,
   items: z.array(timelineItemSchema).max(50).default([]),
 });
 

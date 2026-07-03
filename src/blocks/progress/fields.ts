@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 export const progressItemSchema = z.object({
   label: z.string().max(200).default(""),
@@ -8,6 +8,7 @@ export const progressItemSchema = z.object({
 
 export const progressSchema = z.object({
   ...commonContent,
+  ...styleContent,
   items: z.array(progressItemSchema).max(50).default([]),
 });
 

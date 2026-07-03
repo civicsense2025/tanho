@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 export const tableSchema = z.object({
   ...commonContent,
+  ...styleContent,
   columns: z.array(z.string().max(200)).max(50).default([]),
   rows: z.array(z.array(z.string().max(500)).max(50)).max(50).default([]),
 });

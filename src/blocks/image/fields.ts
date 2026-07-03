@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 /**
  * Media source: a site-relative media-library path or an https URL — or
@@ -12,6 +12,7 @@ export const mediaSrcSchema = z
 
 export const imageSchema = z.object({
   ...commonContent,
+  ...styleContent,
   src: mediaSrcSchema,
   alt: z.string().max(300).default(""),
   caption: z.string().max(300).default(""),

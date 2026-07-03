@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 /**
  * Rich text stores EITHER markdown (md) or html — html wins when both are
@@ -7,6 +7,7 @@ import { commonContent } from "../common";
  */
 export const richtextSchema = z.object({
   ...commonContent,
+  ...styleContent,
   md: z.string().max(100_000).default(""),
   html: z.string().max(200_000).default(""),
 });

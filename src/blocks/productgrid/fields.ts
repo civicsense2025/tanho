@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 export const productGridItemSchema = z.object({
   name: z.string().max(160).default(""),
@@ -13,6 +13,7 @@ export const productGridItemSchema = z.object({
  */
 export const productgridSchema = z.object({
   ...commonContent,
+  ...styleContent,
   cols: z.number().int().min(2).max(4).default(3),
   items: z.array(productGridItemSchema).max(48).default([]),
 });

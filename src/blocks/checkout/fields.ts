@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent } from "../common";
 
 const hrefSchema = z
   .string()
@@ -19,6 +19,7 @@ export const checkoutItemSchema = z.object({
  */
 export const checkoutSchema = z.object({
   ...commonContent,
+  ...styleContent,
   items: z.array(checkoutItemSchema).max(50).default([]),
   total: z.string().max(60).default(""),
   cta: z.string().max(60).default("Checkout"),
