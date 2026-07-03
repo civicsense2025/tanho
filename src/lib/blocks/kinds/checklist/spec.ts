@@ -14,5 +14,4 @@ export const checklistSpec = defineBlock({
   category: "text",
   schema,
   defaultContent: { items: [] },
-  styleCaps: { align: true, width: true, padding: true },
 });

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Field, Input, Select, Textarea, Button } from "@/components/ui";
 import { SeoFields, type SeoFieldsValue } from "@/components/SeoFields";
 import { PageBuilder } from "@/components/PageBuilder";
+import type { Block } from "@/lib/blocks/types";
 import { RichTextEditor } from "@/lib/richtext/RichTextEditor";
 import { slugify } from "@/lib/utils";
 import type { FieldDef, ContentEntry, ContentType, Platform, Collection } from "@/lib/db";
@@ -13,7 +14,6 @@ interface Props {
   contentType: ContentType;
   entryId?: string;
   initial?: Partial<ContentEntry>;
-  onUpload: (file: File) => Promise<string>;
   /** Passed down from the server-rendered parent page (listPlatforms()) for any 'select' field
    * declaring dynamicOptions: "platforms" -- e.g. the built-in guide type's sourcePlatform/
    * targetPlatform fields. Omitted/empty is fine for content types with no such field. */
@@ -49,7 +49,16 @@ function parseEntryData(dataJson: string): Record<string, unknown> {
   }
 }
 
-export function EntryForm({ contentType, entryId, initial, onUpload, platforms, allCollections, entryCollectionIds }: Props) {
+async function uploadFile(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  if (!res.ok) throw new Error("Upload failed");
+  const { url } = await res.json();
+  return url;
+}
+
+export function EntryForm({ contentType, entryId, initial, platforms, allCollections, entryCollectionIds }: Props) {
   const router = useRouter();
   const fields = parseFields(contentType.fields);
   const initialData = initial?.data ? parseEntryData(initial.data) : {};
@@ -166,7 +175,7 @@ export function EntryForm({ contentType, entryId, initial, onUpload, platforms, 
             field={field}
             value={data[field.key]}
             onChange={(v) => updateField(field.key, v)}
-            onUpload={onUpload}
+            onUpload={uploadFile}
             platforms={platforms}
           />
         ))}
@@ -310,10 +319,13 @@ function FieldRenderer({
       );
     }
     case "block-list": {
-      const blocks = Array.isArray(value) ? (value as Array<{ type: string; content: Record<string, unknown>; sortOrder: number }>) : [];
+      // Persisted block objects carry optional style/variant alongside type/content/sortOrder;
+      // typing to Block (not a narrowed shape) is what lets them round-trip through the editor
+      // and out via save()'s JSON.stringify(data) instead of being silently dropped.
+      const blocks = Array.isArray(value) ? (value as Block[]) : [];
       return (
         <Field label={label}>
-          <PageBuilder blocks={blocks as never} onChange={onChange} onUpload={onUpload} />
+          <PageBuilder blocks={blocks} onChange={onChange} onUpload={onUpload} />
         </Field>
       );
     }

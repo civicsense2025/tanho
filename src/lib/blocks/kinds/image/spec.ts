@@ -16,5 +16,4 @@ export const imageSpec = defineBlock({
   category: "media",
   schema,
   defaultContent: {},
-  styleCaps: { align: true, width: true, padding: true },
 });

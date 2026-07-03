@@ -80,4 +80,36 @@ describe("parseBlocks", () => {
     const out = parseBlocks({ blocks: entryData.blocks });
     expect(out.map((b) => b.type)).toEqual(["text"]);
   });
+
+  it("carries through mobile-first responsive style (base + tablet/desktop overrides)", () => {
+    const raw = JSON.stringify({
+      blocks: [
+        {
+          type: "text",
+          content: { html: "hi" },
+          style: { padTop: "2", align: "center", tablet: { padTop: "6" }, desktop: { padTop: "12" } },
+        },
+      ],
+    });
+    const out = parseBlocks(raw);
+    expect(out[0].style).toEqual({
+      padTop: "2",
+      align: "center",
+      tablet: { padTop: "6" },
+      desktop: { padTop: "12" },
+    });
+  });
+
+  it("drops a block whose responsive override violates the schema, keeps siblings", () => {
+    const raw = JSON.stringify({
+      blocks: [
+        { type: "text", content: { html: "keep" } },
+        { type: "text", content: { html: "drop" }, style: { tablet: { padTop: "bogus-step" } } },
+      ],
+    });
+    const out = parseBlocks(raw);
+    // Only the first survives; the invalid tablet override fails styleSchema → whole block dropped.
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toEqual({ html: "keep" });
+  });
 });

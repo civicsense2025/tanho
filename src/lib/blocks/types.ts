@@ -4,6 +4,7 @@
 // the content types can never drift from their Zod schemas.
 import type { RegisteredBlockType } from "./registry";
 import { BLOCK_TYPES as REGISTERED_BLOCK_TYPES } from "./registry";
+import type { StyleProps } from "./core/style-schema";
 import type { TextContent } from "./kinds/text/spec";
 import type { ImageContent } from "./kinds/image/spec";
 import type { VideoContent } from "./kinds/video/spec";
@@ -20,6 +21,12 @@ export interface Block {
   type: BlockType;
   content: Record<string, unknown>;
   sortOrder: number;
+  /** Optional shared style (positioning/spacing/typography/color/…), token-referencing enums
+   * applied centrally by BlockShell. Round-trips through the editor + persisted block JSON.
+   * Absent = the block's built-in defaults (exact legacy behavior). */
+  style?: StyleProps;
+  /** Optional selectable layout variant id (e.g. "grid-3"); read by layout-aware renderers. */
+  variant?: string;
 }
 
 // Old per-block content interfaces, now aliased to the schema-inferred types so a single Zod

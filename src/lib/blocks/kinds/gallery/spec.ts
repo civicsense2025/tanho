@@ -19,5 +19,7 @@ export const gallerySpec = defineBlock({
     { id: "grid-3", label: "3 columns" },
     { id: "grid-4", label: "4 columns" },
   ],
-  styleCaps: { align: true, width: true, padding: true, columns: true },
+  // Only `columns` needs opting in (off by default); every other universal control is
+  // available because a present styleCaps NARROWS rather than lists.
+  styleCaps: { columns: true },
 });

@@ -15,5 +15,4 @@ export const codeSpec = defineBlock({
   category: "text",
   schema,
   defaultContent: {},
-  styleCaps: { align: true, width: true, padding: true },
 });
