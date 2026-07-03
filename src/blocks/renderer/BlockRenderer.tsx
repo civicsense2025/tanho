@@ -3,6 +3,8 @@ import { blockDef } from "../registry";
 import { blockResolvers } from "../resolvers";
 import { paywallSchema } from "../paywall/fields";
 import { viewerPassesPaywall } from "../paywall/gate";
+import { resolveStyleLayer, styleToCss, hasStyle } from "./style";
+import type { BlockStyle } from "../common";
 import type { BlockNode, Device, RenderViewer } from "../types";
 
 /**
@@ -97,5 +99,16 @@ export async function RenderBlock({
       <RenderBlocks blocks={kids} device={device} mode={mode} viewer={viewer} />
     ),
   };
-  return <div data-block={block.type}>{def.Render({ content, ctx })}</div>;
+
+  // Universal style layer (opt-in blocks only; `style` is stripped from others by
+  // safeParse above, so this reads the VALIDATED copy). Resolve the mobile-first
+  // layer for the active device; unstyled blocks get today's exact wrapper — no
+  // style prop — so nothing regresses. Inner-box props only (see blocks/renderer/style.ts).
+  const layer = resolveStyleLayer((content as { style?: BlockStyle }).style, device);
+  const styleProps = hasStyle(layer) ? { style: styleToCss(layer) } : undefined;
+  return (
+    <div data-block={block.type} {...styleProps}>
+      {def.Render({ content, ctx })}
+    </div>
+  );
 }
