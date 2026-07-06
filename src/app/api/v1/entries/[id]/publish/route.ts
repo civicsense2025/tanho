@@ -3,16 +3,17 @@ import { writeAudit } from "@/modules/audit/log";
 import { blockSets } from "@/modules/pages/schema";
 import { validateBlockTree } from "@/modules/pages/blocks-io";
 import { rebuildMediaUsage } from "@/modules/media/usage";
+import { indexEntry } from "@/modules/search/index-document";
 import { entries } from "@/modules/entries/schema";
 import { getEntitySchema } from "@/entities/registry-async";
 import { db } from "@/lib/db/client";
 import { and, eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail } from "@/lib/api/v1";
 
 const invalidate = (type: string) => {
-  updateTag("entries");
-  updateTag(`entries:${type}`);
+  revalidateTag("entries", "max");
+  revalidateTag(`entries:${type}`, "max");
 };
 
 /**
@@ -50,6 +51,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const schema = await getEntitySchema(existing.type);
     const route = `${schema?.basePath ?? ""}/${existing.slug}`;
     await rebuildMediaUsage(ownerType, id, route, v.blocks);
+    await indexEntry({ id, entryType: existing.type, slug: existing.slug, title: existing.title, blocks: v.blocks });
     await writeAudit({ userId: user.id, action: "entry.publish", ownerType, ownerId: id });
     invalidate(existing.type);
     return ok();

@@ -3,14 +3,16 @@ import { writeAudit } from "@/modules/audit/log";
 import { blockSets, pages } from "@/modules/pages/schema";
 import { validateBlockTree, treeHasPaywall } from "@/modules/pages/blocks-io";
 import { rebuildMediaUsage } from "@/modules/media/usage";
+import { indexPage } from "@/modules/search/index-document";
 import { db } from "@/lib/db/client";
 import { eq, and } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail } from "@/lib/api/v1";
 
+// Route handlers must use revalidateTag, NOT updateTag (Server-Action-only).
 const invalidatePage = (id: string) => {
-  updateTag("pages");
-  updateTag(`page:${id}`);
+  revalidateTag("pages", "max");
+  revalidateTag(`page:${id}`, "max");
 };
 
 /**
@@ -54,9 +56,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         updatedAt: Date.now(),
       })
       .where(eq(pages.id, id))
-      .returning({ route: pages.route })
+      .returning({ route: pages.route, title: pages.title })
       .then((r) => r[0]);
     await rebuildMediaUsage("page", id, row?.route ?? "", v.blocks);
+    await indexPage({ id, route: row?.route ?? "", title: row?.title ?? "", blocks: v.blocks });
     await writeAudit({ userId: user.id, action: "page.publish", ownerType: "page", ownerId: id });
     invalidatePage(id);
     return ok();

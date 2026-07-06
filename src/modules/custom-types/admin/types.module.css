@@ -62,3 +62,72 @@
   gap: var(--space-2);
   align-items: center;
 }
+
+/* Data-backed (table-backed) content types — a real ct_* table per type. */
+.badge {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent-2);
+  background: var(--accent-2-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.badgeMuted {
+  color: var(--text-faint);
+  background: transparent;
+}
+.tableName {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+.metaField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.metaLabel {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.disclosure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.disclosureHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Nav links from a data-backed type card to its rows / template editors. */
+.cardLink {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.cardLink:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}

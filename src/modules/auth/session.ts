@@ -45,7 +45,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
   if (!token) return null;
 
   const id = hashSessionToken(token);
-  const row = await db
+  const [row] = await db
     .select({
       sessionId: sessions.id,
       expiresAt: sessions.expiresAt,
@@ -57,8 +57,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(eq(sessions.id, id))
-    .get();
+    .where(eq(sessions.id, id));
 
   if (!row || row.status !== "active") return null;
   if (row.expiresAt < Date.now()) {

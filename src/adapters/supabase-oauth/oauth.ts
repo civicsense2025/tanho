@@ -97,7 +97,15 @@ export async function exchangeCode(code: string, codeVerifier: string): Promise<
   };
 }
 
-export type RefreshedTokens = { accessToken: string; expiresIn: number; scope: string };
+export type RefreshedTokens = {
+  accessToken: string;
+  /** Non-null when the token endpoint rotated the refresh token (common
+   *  OAuth2.1 behavior for single-use refresh tokens) — the caller MUST
+   *  persist this and use it for the next refresh instead of the old one. */
+  refreshToken: string | null;
+  expiresIn: number;
+  scope: string;
+};
 
 /** Exchange a refresh token for a fresh access token. */
 export async function refreshAccessToken(refreshToken: string): Promise<RefreshedTokens> {
@@ -116,7 +124,12 @@ export async function refreshAccessToken(refreshToken: string): Promise<Refreshe
     throw new Error(`Supabase token refresh failed: ${res.status} ${await res.text()}`);
   }
   const data = (await res.json()) as TokenResponse;
-  return { accessToken: data.access_token, expiresIn: data.expires_in, scope: data.scope ?? "" };
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token ?? null,
+    expiresIn: data.expires_in,
+    scope: data.scope ?? "",
+  };
 }
 
 /** Small safety margin so a token doesn't expire mid-request. */
@@ -140,7 +153,10 @@ export async function getAccessToken(id: string): Promise<string | null> {
 
   const refreshed = await refreshAccessToken(creds.refreshToken);
   const next: OAuthConnectionCredentials = {
-    refreshToken: creds.refreshToken,
+    // Use the rotated refresh token when the server issued one — reusing
+    // the old one after rotation would fail on the NEXT refresh attempt,
+    // permanently breaking the connection until the owner re-authorizes.
+    refreshToken: refreshed.refreshToken ?? creds.refreshToken,
     accessToken: refreshed.accessToken,
     accessTokenExpiresAt: now + refreshed.expiresIn * 1000,
     scope: refreshed.scope || creds.scope,

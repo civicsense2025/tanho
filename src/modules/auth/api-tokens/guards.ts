@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { apiTokens } from "./schema";
 import { users } from "../schema";
 import { hashApiToken } from "./tokens";
+import { isApiTokenRateLimited, recordFailedApiTokenAttempt } from "./rate-limit";
 import type { AdminUser } from "../session";
 
 /**
@@ -32,15 +33,33 @@ export class ApiAuthError extends Error {
  */
 export async function requireApiUser(role?: "owner"): Promise<AdminUser> {
   const hdrs = await headers();
+  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+
+  // Fail fast if this IP has already burned the failed-attempt budget. This is a
+  // read-only check: a successful request below never touches the counter, so a
+  // legitimate high-volume client (e.g. a bulk import) is not throttled — only a
+  // credential-guesser who keeps sending bad tokens is.
+  if (await isApiTokenRateLimited(ip)) {
+    throw new ApiAuthError(401, "Too many attempts. Try again in a minute.");
+  }
+
+  // A credential-guessing attempt is a MISSING or WRONG token; record those (and
+  // only those) against the limiter. A valid token that merely lacks the owner
+  // role (403 below) is authenticated, not a brute-force signal, so it isn't.
+  const failAuth = async (message: string): Promise<never> => {
+    await recordFailedApiTokenAttempt(ip);
+    throw new ApiAuthError(401, message);
+  };
+
   const auth = hdrs.get("authorization") ?? "";
   const match = auth.match(/^Bearer\s+(.+)$/i);
   if (!match) {
-    throw new ApiAuthError(401, "Missing or malformed Authorization header");
+    return failAuth("Missing or malformed Authorization header");
   }
   const token = match[1].trim();
   const tokenHash = hashApiToken(token);
 
-  const row = await db
+  const [row] = await db
     .select({
       tokenId: apiTokens.id,
       tokenExpiresAt: apiTokens.expiresAt,
@@ -52,14 +71,13 @@ export async function requireApiUser(role?: "owner"): Promise<AdminUser> {
     })
     .from(apiTokens)
     .innerJoin(users, eq(apiTokens.userId, users.id))
-    .where(eq(apiTokens.tokenHash, tokenHash))
-    .get();
+    .where(eq(apiTokens.tokenHash, tokenHash));
 
   if (!row || row.status !== "active") {
-    throw new ApiAuthError(401, "Invalid or revoked API token");
+    return failAuth("Invalid or revoked API token");
   }
   if (row.tokenExpiresAt && row.tokenExpiresAt < Date.now()) {
-    throw new ApiAuthError(401, "API token has expired");
+    return failAuth("API token has expired");
   }
   if (role === "owner" && row.role !== "owner") {
     throw new ApiAuthError(403, "Forbidden: owner role required");

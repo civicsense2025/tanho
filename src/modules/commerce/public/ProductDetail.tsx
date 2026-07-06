@@ -1,10 +1,15 @@
-import { sanitizeRichHtml, safeJsonLd } from "@/lib/sanitize";
+import { sanitizeRichHtml } from "@/lib/sanitize";
 import { getSeoSettings } from "@/modules/seo/queries";
 import { getGeneralSettings } from "@/modules/settings/queries";
-import type { ProductDetail as ProductDetailData } from "../storefront-queries";
+import { getCanonicalSiteUrl } from "@/modules/domain/queries";
+import { JsonLd, product as productSchema } from "@/modules/seo";
+import { RenderBlocks } from "@/blocks/renderer/BlockRenderer";
+import { getPublishedProductBlocks, type ProductDetail as ProductDetailData } from "../storefront-queries";
 import { stockLine } from "./stock-line";
 import { BuyBox } from "./BuyBox";
 import styles from "./shop.module.css";
+
+const BASE_FALLBACK = process.env.APP_URL ?? "http://localhost:3000";
 
 const SHIPPING_LABEL: Record<string, string> = {
   standard: "Standard shipping",
@@ -14,34 +19,35 @@ const SHIPPING_LABEL: Record<string, string> = {
 
 /** Public product page: gallery + add-to-cart buy box + meta + description. */
 export async function ProductDetail({ product }: { product: ProductDetailData }) {
-  const [seo, general] = await Promise.all([getSeoSettings(), getGeneralSettings()]);
-  const siteUrl = (seo.siteUrl || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const [seo, general, blocks] = await Promise.all([
+    getSeoSettings(),
+    getGeneralSettings(),
+    getPublishedProductBlocks(product.id),
+  ]);
+  const siteUrl = (await getCanonicalSiteUrl(seo.siteUrl, BASE_FALLBACK)).replace(/\/$/, "");
   const href = `/shop/${product.slug}`;
   const stock = stockLine(product);
   const descHtml = product.description ? sanitizeRichHtml(product.description) : "";
 
-  const jsonLd = safeJsonLd({
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    image: product.images?.length ? product.images.map((i) => absolute(siteUrl, i)) : undefined,
-    sku: product.sku || undefined,
-    brand: { "@type": "Brand", name: general.name },
-    offers: {
-      "@type": "Offer",
-      url: `${siteUrl}${href}`,
-      priceCurrency: product.currency.toUpperCase(),
-      price: (product.priceCents / 100).toFixed(2),
-      availability:
-        product.trackInventory && product.inventory <= 0 && !product.allowBackorder
-          ? "https://schema.org/OutOfStock"
-          : "https://schema.org/InStock",
+  // Product schema now comes from the shared builder (was inline here); the
+  // emitted markup is identical, but the availability rule lives in one place.
+  const inStock = !(product.trackInventory && product.inventory <= 0 && !product.allowBackorder);
+  const ld = productSchema(
+    {
+      name: product.name,
+      url: href,
+      images: product.images,
+      sku: product.sku,
+      priceCents: product.priceCents,
+      currency: product.currency,
+      inStock,
     },
-  });
+    { siteName: general.name, siteUrl },
+  );
 
   return (
     <article>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+      <JsonLd schema={ld} />
       <div className={styles.detail}>
         <div className={styles.gallery}>
           <div className={styles.galleryMain}>
@@ -87,7 +93,11 @@ export async function ProductDetail({ product }: { product: ProductDetailData })
         </div>
       </div>
 
-      {descHtml ? (
+      {blocks.length > 0 ? (
+        <div style={{ marginTop: "var(--space-10)" }}>
+          <RenderBlocks blocks={blocks} />
+        </div>
+      ) : descHtml ? (
         <div
           className="prose"
           style={{ marginTop: "var(--space-10)", maxWidth: "42rem" }}
@@ -97,6 +107,3 @@ export async function ProductDetail({ product }: { product: ProductDetailData })
     </article>
   );
 }
-
-const absolute = (siteUrl: string, path: string) =>
-  path.startsWith("http") ? path : `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;

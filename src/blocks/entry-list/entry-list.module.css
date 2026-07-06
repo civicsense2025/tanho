@@ -1,0 +1,42 @@
+/* Entry-list block — a card grid of a content type's published rows.
+   Presentation only; CSS-var vocabulary mirrored from the blocks house style
+   (matches the entries public card grid). */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.subtitle {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-muted);
+}

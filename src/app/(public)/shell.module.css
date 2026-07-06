@@ -1,0 +1,33 @@
+/* Public page shell — flex column wrapping the chrome:header block tree, the
+   page content, and the chrome:footer block tree. The header/footer blocks own
+   their own sticky/layout behaviour; the shell only guarantees the footer sits
+   at the bottom on short pages. */
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.grow {
+  flex: 1 1 auto;
+}
+
+/* A sidebar-layout header swaps the shell from stacked (header above content)
+   to side-by-side (header beside content+footer) — see isSidebarHeader() in
+   layout.tsx. */
+.withSidebar {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: stretch;
+}
+.sidebarContent {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 720px) {
+  .withSidebar {
+    display: block;
+  }
+}

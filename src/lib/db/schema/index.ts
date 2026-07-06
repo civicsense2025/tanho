@@ -5,6 +5,7 @@
 
 export * from "@/modules/settings/schema";
 export * from "@/modules/theme/schema";
+export * from "@/modules/fonts/schema";
 export * from "@/modules/auth/schema";
 export * from "@/modules/auth/api-tokens/schema";
 export * from "@/modules/audit/schema";
@@ -23,6 +24,9 @@ export * from "@/modules/analytics/schema";
 export * from "@/modules/forms/schema";
 export * from "@/modules/policies/schema";
 export * from "@/modules/redirects/schema";
+export * from "@/modules/seo/schema";
 export * from "@/modules/integrations/schema";
 export * from "@/modules/data-sources/schema";
 export * from "@/modules/data-sources/oauth-schema";
+export * from "@/modules/importers/ghost/schema";
+export * from "@/modules/imports/schema";

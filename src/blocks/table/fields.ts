@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { dataSourceBindingSchema } from "@/modules/data-sources/validation";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 export const tableSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   columns: z.array(z.string().max(200)).max(50).default([]),
   rows: z.array(z.array(z.string().max(500)).max(50)).max(50).default([]),
   /**

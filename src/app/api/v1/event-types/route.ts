@@ -5,7 +5,7 @@ import { eventTypes } from "@/modules/scheduling/schema";
 import { eventTypeSchema } from "@/modules/scheduling/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /** GET /api/v1/event-types — list all event types. Editor+. */
@@ -32,7 +32,7 @@ export async function POST(req: Request): Promise<Response> {
       .insert(eventTypes)
       .values(parsed.data)
       .returning({ id: eventTypes.id });
-    updateTag("pages");
+    revalidateTag("pages", "max");
     await writeAudit({ userId: user.id, action: "scheduling.eventType.create", ownerType: "event_type", ownerId: row.id });
     return ok({ id: row.id }, 201);
   });

@@ -27,7 +27,14 @@ export const analyticsEvents = sqliteTable(
       .notNull()
       .default({}),
   },
-  (t) => [index("analytics_events_name_at_idx").on(t.name, t.at)],
+  (t) => [
+    index("analytics_events_name_at_idx").on(t.name, t.at),
+    // Serves the join key both quietReaders() (people/digest.ts) and
+    // contentToPurchaseCorrelations() (analytics/correlation.ts) depend on —
+    // added proactively since analyticsEvents is the fastest-growing table
+    // in this schema and neither query had an index to use before this.
+    index("analytics_events_person_id_idx").on(t.personId),
+  ],
 );
 
 export type AnalyticsEventRow = typeof analyticsEvents.$inferSelect;

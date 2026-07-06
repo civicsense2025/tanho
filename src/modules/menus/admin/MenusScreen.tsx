@@ -6,6 +6,7 @@ import type { Menu } from "../queries";
 import { createMenu } from "../actions";
 import { MenuEditor } from "./MenuEditor";
 import { Button } from "@/components/core/Button";
+import styles from "./menus-screen.module.css";
 
 const listBtn = (active: boolean): React.CSSProperties => ({
   display: "block",
@@ -43,7 +44,7 @@ export function MenusScreen({ menus }: { menus: Menu[] }) {
     });
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "210px 1fr", gap: "var(--space-6)", alignItems: "start" }}>
+    <div className={styles.layout}>
       <aside
         style={{
           border: "1px solid var(--border)",

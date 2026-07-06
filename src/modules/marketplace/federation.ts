@@ -1,3 +1,5 @@
+import { hostnameResolvesToBlockedIp, isLoopbackOrLinkLocalIp, isPrivateRangeIp } from "@/lib/ssrf-guard";
+
 /**
  * Federation — fetching catalogs and packs from peer platform instances.
  *
@@ -5,6 +7,13 @@
  * JSON, and wrong format tags all return `{ ok: false, error }` rather than
  * throwing. Callers (the federated browse screen, the install action) can
  * render peer failures inline without try/catch gymnastics.
+ *
+ * SSRF guard: peerUrl must be in the caller-supplied allowlist (the owner's
+ * settings.peerInstances) AND must not resolve to a loopback/link-local/
+ * private-range address — a peer is a third-party server, not the owner's
+ * own infrastructure, so (unlike data-sources) private ranges are blocked
+ * too, closing both "peerUrl isn't configured at all" and "an allowlisted
+ * hostname resolves somewhere it shouldn't (DNS rebinding)".
  */
 
 /** A single pack entry inside a peer's catalog.json. */
@@ -33,6 +42,40 @@ function joinUrl(peerUrl: string, path: string): string {
   return `${peerUrl.replace(/\/+$/, "")}${path}`;
 }
 
+/**
+ * Rejects a peer URL that isn't https, isn't in the owner's configured
+ * allowlist, or resolves to a loopback/link-local/private-range address.
+ * Called immediately before every outbound fetch (not just once at the
+ * call site) so a TOCTOU DNS change between validation and fetch can't slip
+ * through — the resolved-address check happens right here, right before use.
+ */
+async function assertSafePeerUrl(
+  url: string,
+  allowedPeerUrls: string[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { ok: false, error: "Invalid peer URL" };
+  }
+  if (parsed.protocol !== "https:") {
+    return { ok: false, error: "Peer URL must use https" };
+  }
+  const normalized = url.replace(/\/+$/, "");
+  if (!allowedPeerUrls.some((p) => p.replace(/\/+$/, "") === normalized)) {
+    return { ok: false, error: "Peer URL is not in the configured peer instances list" };
+  }
+  const blocked = await hostnameResolvesToBlockedIp(
+    parsed.hostname,
+    (ip) => isLoopbackOrLinkLocalIp(ip) || isPrivateRangeIp(ip),
+  );
+  if (blocked) {
+    return { ok: false, error: "Peer URL resolves to a disallowed address" };
+  }
+  return { ok: true };
+}
+
 /** Run a fetch with a 10s abort timeout; never throws. */
 async function fetchWithTimeout(
   url: string,
@@ -43,6 +86,7 @@ async function fetchWithTimeout(
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { accept: "application/json" },
+      redirect: "error", // a redirect to a disallowed host would bypass assertSafePeerUrl's one-time check
     });
     return { ok: true, res };
   } catch (err) {
@@ -60,7 +104,10 @@ async function fetchWithTimeout(
  */
 export async function fetchPeerCatalog(
   peerUrl: string,
+  allowedPeerUrls: string[],
 ): Promise<{ ok: true; catalog: PeerCatalog } | { ok: false; error: string }> {
+  const safe = await assertSafePeerUrl(peerUrl, allowedPeerUrls);
+  if (!safe.ok) return safe;
   const url = joinUrl(peerUrl, "/marketplace/catalog.json");
   const fetched = await fetchWithTimeout(url);
   if (!fetched.ok) return { ok: false, error: fetched.error };
@@ -110,7 +157,10 @@ export async function fetchPeerPack(
   peerUrl: string,
   type: string,
   slug: string,
+  allowedPeerUrls: string[],
 ): Promise<{ ok: true; pack: unknown } | { ok: false; error: string }> {
+  const safe = await assertSafePeerUrl(peerUrl, allowedPeerUrls);
+  if (!safe.ok) return safe;
   const url = joinUrl(peerUrl, `/marketplace/${encodeURIComponent(type)}/${encodeURIComponent(slug)}/download`);
   const fetched = await fetchWithTimeout(url);
   if (!fetched.ok) return { ok: false, error: fetched.error };
@@ -136,7 +186,7 @@ export async function fetchAllPeerCatalogs(
   const results = await Promise.all(
     peerUrls.map(async (peerUrl) => ({
       peerUrl,
-      result: await fetchPeerCatalog(peerUrl),
+      result: await fetchPeerCatalog(peerUrl, peerUrls),
     })),
   );
   return results;

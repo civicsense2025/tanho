@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { markdownToSafeHtml } from "@/lib/sanitize";
 import { getPublishedPolicy } from "@/modules/policies/queries";
-import { getGeneralSettings } from "@/modules/settings/queries";
+import { buildPageMetadata } from "@/modules/seo";
 
 // This route is already static: both queries below are "use cache" reads and it
 // never calls cookies()/getViewer(). Under Cache Components the route-segment
@@ -19,11 +19,11 @@ export async function generateMetadata({
   const { slug } = await params;
   const policy = await getPublishedPolicy(slug);
   if (!policy) return {};
-  const general = await getGeneralSettings();
-  return {
-    title: `${policy.title} · ${general.name}`,
-    robots: general.indexable ? undefined : { index: false, follow: false },
-  };
+  return buildPageMetadata({
+    contentType: "page",
+    title: policy.title,
+    path: `/policies/${slug}`,
+  });
 }
 
 /** Public policy page — renders a published policy's title, date, and body. */

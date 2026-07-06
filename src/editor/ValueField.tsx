@@ -6,6 +6,7 @@ import { Textarea } from "@/components/forms/Textarea";
 import { Toggle } from "@/components/admin/Seg";
 import { Button } from "@/components/core/Button";
 import { MediaPicker } from "@/modules/media/admin/MediaPicker";
+import { InsertFieldToken } from "./InsertFieldToken";
 
 const MEDIA_FIELDS = new Set(["src", "poster"]);
 
@@ -67,6 +68,9 @@ export function ValueField({
         ) : (
           <Input value={value} onChange={(e) => onChange(e.target.value)} />
         )}
+        {/* In a content-type template editor, offer a one-click {{field}} insert
+            so owners don't have to remember/type token syntax. No-op elsewhere. */}
+        <InsertFieldToken onInsert={(token) => onChange(`${value}${token}`)} />
       </Field>
     );
   }

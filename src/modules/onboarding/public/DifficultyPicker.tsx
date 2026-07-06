@@ -1,4 +1,3 @@
-import { Button } from "@/components/core/Button";
 import styles from "./WizardShell.module.css";
 
 const TIERS: Array<{ value: 1 | 2 | 3; label: string; blurb: string }> = [
@@ -19,7 +18,7 @@ export function DifficultyPicker({
     <div>
       <h2 className={styles.title}>How much guidance do you want?</h2>
       <p className={styles.blurb}>
-        This only changes how much explanation you see and what's pre-filled — every setting is
+        This only changes how much explanation you see and what&apos;s pre-filled — every setting is
         still reachable either way.
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>

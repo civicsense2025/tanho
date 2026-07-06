@@ -13,6 +13,17 @@ const eslintConfig = defineConfig([
         "error",
         { max: 300, skipBlankLines: true, skipComments: true },
       ],
+      // Honor the `_`-prefix convention for intentionally-unused bindings —
+      // e.g. `const { secret: _secret, ...rest } = row` to strip a key.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
   // Override default ignores of eslint-config-next.

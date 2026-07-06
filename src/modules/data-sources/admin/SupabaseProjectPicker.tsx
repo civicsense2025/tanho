@@ -3,6 +3,8 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/forms/Input";
+import { Select } from "@/components/forms/Select";
+import { Field } from "@/components/forms/Field";
 import { Button } from "@/components/core/Button";
 import {
   connectExistingOAuthProject,
@@ -136,30 +138,34 @@ export function SupabaseProjectPicker({
     return (
       <div className={styles.form}>
         <div className={styles.fieldRow}>
-          <Input
-            className={styles.grow}
-            placeholder="Connection name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
+          <Field label="Connection name" className={styles.grow}>
+            <Input
+              placeholder="e.g. Production Postgres"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </Field>
         </div>
         <div className={styles.fieldRow}>
-          <select value={orgId} onChange={(e) => setOrgId(e.target.value)} className={styles.grow}>
-            <option value="" disabled>
-              Select an organization
-            </option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
+          <Field label="Organization" className={styles.grow}>
+            <Select value={orgId} onChange={(e) => setOrgId(e.target.value)}>
+              <option value="" disabled>
+                Select an organization
               </option>
-            ))}
-          </select>
-          <Input
-            className={styles.grow}
-            placeholder="Region (e.g. us-east-1)"
-            value={newRegion}
-            onChange={(e) => setNewRegion(e.target.value)}
-          />
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Region" className={styles.grow}>
+            <Input
+              placeholder="us-east-1"
+              value={newRegion}
+              onChange={(e) => setNewRegion(e.target.value)}
+            />
+          </Field>
         </div>
         <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
           We&apos;ll generate a strong database password and store it encrypted — you never need to
@@ -182,34 +188,36 @@ export function SupabaseProjectPicker({
   return (
     <div className={styles.form}>
       <div className={styles.fieldRow}>
-        <select
-          className={styles.grow}
-          value={selectedRef}
-          onChange={(e) => {
-            setSelectedRef(e.target.value);
-            const proj = projects.find((p) => p.id === e.target.value);
-            if (proj) setExistingName(proj.name);
-          }}
-        >
-          <option value="" disabled>
-            Select a project
-          </option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.id}) · {p.region}
+        <Field label="Project" className={styles.grow}>
+          <Select
+            value={selectedRef}
+            onChange={(e) => {
+              setSelectedRef(e.target.value);
+              const proj = projects.find((p) => p.id === e.target.value);
+              if (proj) setExistingName(proj.name);
+            }}
+          >
+            <option value="" disabled>
+              Select a project
             </option>
-          ))}
-        </select>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.id}) · {p.region}
+              </option>
+            ))}
+          </Select>
+        </Field>
       </div>
       {selectedProject ? (
         <>
           <div className={styles.fieldRow}>
-            <Input
-              className={styles.grow}
-              placeholder="Connection name"
-              value={existingName}
-              onChange={(e) => setExistingName(e.target.value)}
-            />
+            <Field label="Connection name" className={styles.grow}>
+              <Input
+                placeholder="e.g. Production Postgres"
+                value={existingName}
+                onChange={(e) => setExistingName(e.target.value)}
+              />
+            </Field>
           </div>
           <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
             Supabase doesn&apos;t allow any app to retrieve your database password through an API —

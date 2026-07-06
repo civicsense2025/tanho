@@ -6,11 +6,17 @@ import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { rebuildMediaUsage } from "@/modules/media/usage";
+import { recordSlugChange } from "@/modules/seo";
+import { indexEntry, removeEntryFromIndex } from "@/modules/search/index-document";
+import { entryPublicPath } from "./paths";
 import { blockSets } from "@/modules/pages/schema";
-import { validateBlockTree } from "@/modules/pages/blocks-io";
 import { getEntitySchema } from "@/entities/registry-async";
-import { entries } from "./schema";
+import { saveOwnerBlocks, publishOwnerBlocks } from "@/modules/blocks/actions";
+import { getEditorChromePreview } from "@/modules/chrome/queries";
+import type { BlockNode } from "@/blocks/types";
+import { entries, type EntryRow } from "./schema";
 import { entryDetailsSchema } from "./validation";
+import { getEntryForEdit } from "./queries";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -86,14 +92,29 @@ export async function updateEntry(id: string, input: unknown): Promise<Result> {
     patch.data = dataResult.data;
   }
 
-  if (details.slug && details.slug !== existing.slug) {
+  const slugChanged = !!details.slug && details.slug !== existing.slug;
+  if (slugChanged) {
     const dupe = await db.query.entries.findFirst({
-      where: and(eq(entries.type, existing.type), eq(entries.slug, details.slug)),
+      where: and(eq(entries.type, existing.type), eq(entries.slug, details.slug!)),
     });
     if (dupe) return { ok: false, error: `Slug ${details.slug} is already in use` };
   }
 
   await db.update(entries).set(patch).where(eq(entries.id, id));
+
+  // A published entry whose slug changed keeps its old URL working via a 301.
+  // Paths are built from the shared entryPublicPath (same builder the sitemap
+  // uses), so a type with no per-item page (e.g. resource) simply skips this.
+  if (slugChanged && existing.status === "published") {
+    const newData = (patch.data ?? existing.data ?? {}) as Record<string, unknown>;
+    const oldPath = entryPublicPath(existing.type, existing.slug, (existing.data ?? {}) as Record<string, unknown>);
+    const newPath = entryPublicPath(existing.type, details.slug!, newData);
+    if (oldPath && newPath && oldPath !== newPath) {
+      await recordSlugChange("entry", id, oldPath, newPath);
+      updateTag("redirects");
+    }
+  }
+
   await writeAudit({
     userId: user.id,
     action: "entry.update",
@@ -117,6 +138,7 @@ export async function deleteEntry(id: string): Promise<Result> {
       ),
     );
   await db.delete(entries).where(eq(entries.id, id));
+  await removeEntryFromIndex(id);
   await writeAudit({
     userId: user.id,
     action: "entry.delete",
@@ -127,29 +149,36 @@ export async function deleteEntry(id: string): Promise<Result> {
   return { ok: true };
 }
 
+/**
+ * Content-editor load, callable from the client — `getEntryForEdit` lives in
+ * the plain (non-"use server") queries module, so the admin entry panel
+ * (which opens the block canvas without a page navigation) needs this thin
+ * auth-checked wrapper to fetch it on demand.
+ */
+export async function loadEntryForContentEdit(
+  id: string,
+): Promise<
+  Result<{
+    entry: EntryRow;
+    blocks: BlockNode[];
+    publishedBlocks: BlockNode[];
+    headerBlocks: BlockNode[];
+    footerBlocks: BlockNode[];
+  }>
+> {
+  await requireUser();
+  const [hit, chrome] = await Promise.all([getEntryForEdit(id), getEditorChromePreview()]);
+  if (!hit) return { ok: false, error: "Entry not found" };
+  // Ship the resolved chrome trees too so the entry canvas previews the real
+  // site header/footer, same as the page builder.
+  return { ok: true, data: { ...hit, ...chrome } };
+}
+
 /** Autosave target — writes the DRAFT block variant for an entry page. */
 export async function saveEntryDraftBlocks(id: string, tree: unknown): Promise<Result> {
-  const user = await requireUser();
   const existing = await db.query.entries.findFirst({ where: eq(entries.id, id) });
   if (!existing) return { ok: false, error: "Entry not found" };
-  const v = validateBlockTree(tree);
-  if (!v.ok) return { ok: false, error: v.error };
-  const ownerType = `entry:${existing.type}`;
-  await db
-    .insert(blockSets)
-    .values({
-      ownerType,
-      ownerId: id,
-      variant: "draft",
-      blocks: v.blocks,
-      savedAt: Date.now(),
-      savedBy: user.id,
-    })
-    .onConflictDoUpdate({
-      target: [blockSets.ownerType, blockSets.ownerId, blockSets.variant],
-      set: { blocks: v.blocks, savedAt: Date.now(), savedBy: user.id },
-    });
-  return { ok: true };
+  return saveOwnerBlocks(`entry:${existing.type}`, id, tree);
 }
 
 /** Publish an entry page: copy draft → published (mirrors pages' publish). */
@@ -158,34 +187,13 @@ export async function publishEntryBlocks(id: string): Promise<Result> {
   const existing = await db.query.entries.findFirst({ where: eq(entries.id, id) });
   if (!existing) return { ok: false, error: "Entry not found" };
   const ownerType = `entry:${existing.type}`;
-  const draft = await db.query.blockSets.findFirst({
-    where: and(
-      eq(blockSets.ownerType, ownerType),
-      eq(blockSets.ownerId, id),
-      eq(blockSets.variant, "draft"),
-    ),
-  });
-  const v = validateBlockTree(draft?.blocks ?? []);
-  if (!v.ok) return { ok: false, error: v.error };
-
-  await db
-    .insert(blockSets)
-    .values({
-      ownerType,
-      ownerId: id,
-      variant: "published",
-      blocks: v.blocks,
-      savedAt: Date.now(),
-      savedBy: user.id,
-    })
-    .onConflictDoUpdate({
-      target: [blockSets.ownerType, blockSets.ownerId, blockSets.variant],
-      set: { blocks: v.blocks, savedAt: Date.now(), savedBy: user.id },
-    });
+  const published = await publishOwnerBlocks(ownerType, id);
+  if (!published.ok) return published;
 
   const schema = await getEntitySchema(existing.type);
   const route = `${schema?.basePath ?? ""}/${existing.slug}`;
-  await rebuildMediaUsage(ownerType, id, route, v.blocks);
+  await rebuildMediaUsage(ownerType, id, route, published.blocks);
+  await indexEntry({ id, entryType: existing.type, slug: existing.slug, title: existing.title, blocks: published.blocks });
   await writeAudit({
     userId: user.id,
     action: "entry.publish",

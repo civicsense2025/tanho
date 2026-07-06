@@ -1,8 +1,11 @@
 import { z } from "zod";
-import { childBlocksSchema, commonContent } from "../common";
+import { childBlocksSchema, commonContent, layoutStyleContent, customCssContent, motionContent } from "../common";
 
 export const containerSchema = z.object({
   ...commonContent,
+  ...layoutStyleContent,
+  ...customCssContent,
+  ...motionContent,
   maxWidth: z.enum(["content", "prose", "full"]).default("content"),
   blocks: childBlocksSchema.default([]),
 });

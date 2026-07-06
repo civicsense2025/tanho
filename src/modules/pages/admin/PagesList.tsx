@@ -8,6 +8,7 @@ import { deletePage } from "@/modules/pages/actions";
 import { Button } from "@/components/core/Button";
 import { pageRenderMode, renderModeHint } from "@/modules/pages/render-mode";
 import type { CodePageSummary } from "@/app/(public)/code-pages/registry";
+import styles from "./pages-list.module.css";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-label)",
@@ -16,8 +17,6 @@ const eyebrow: React.CSSProperties = {
   letterSpacing: "var(--tracking-wide)",
   color: "var(--text-muted)",
 };
-
-const GRID_COLUMNS = "2fr 1.2fr 100px 100px 120px 90px";
 
 /** Static/Dynamic badge — subtle, matches the eyebrow label styling. */
 function RenderModeBadge({ hasPaywall }: { hasPaywall?: boolean }) {
@@ -79,7 +78,7 @@ export function PagesList({
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: GRID_COLUMNS, gap: "var(--space-3)", padding: "8px var(--space-4)", background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+      <div className={styles.head} style={{ padding: "8px var(--space-4)", background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
         {["Title", "Route", "Kind", "Mode", "Status", ""].map((h, i) => (
           <span key={i} style={eyebrow}>{h}</span>
         ))}
@@ -87,15 +86,22 @@ export function PagesList({
       {pages.map((p, i) => (
         <div
           key={p.id}
-          style={{ display: "grid", gridTemplateColumns: GRID_COLUMNS, gap: "var(--space-3)", alignItems: "center", padding: "10px var(--space-4)", borderBottom: i < pages.length - 1 || codePages.length ? "1px solid var(--border)" : "none" }}
+          className={styles.row}
+          style={{ padding: "10px var(--space-4)", borderBottom: i < pages.length - 1 || codePages.length ? "1px solid var(--border)" : "none" }}
         >
-          <Link href={`/admin/pages/${p.id}`} style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" as never, color: "var(--text)", textDecoration: "none" }}>
-            {p.title}
-          </Link>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{p.route}</span>
-          <span style={eyebrow}>{p.kind}</span>
-          <RenderModeBadge hasPaywall={p.hasPaywall} />
+          <span className={styles.cell} data-label="Title">
+            <Link href={`/admin/pages/${p.id}`} style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" as never, color: "var(--text)", textDecoration: "none" }}>
+              {p.title}
+            </Link>
+          </span>
+          <span className={styles.cell} data-label="Route" style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{p.route}</span>
+          <span className={styles.cell} data-label="Kind" style={eyebrow}>{p.kind}</span>
+          <span className={styles.cell} data-label="Mode">
+            <RenderModeBadge hasPaywall={p.hasPaywall} />
+          </span>
           <span
+            className={styles.cell}
+            data-label="Status"
             style={{
               ...eyebrow,
               display: "inline-flex",
@@ -107,7 +113,7 @@ export function PagesList({
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentcolor" }} />
             {p.status}
           </span>
-          <span style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
+          <span className={styles.cell} style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
             <Button variant="ghost" size="sm" onClick={() => remove(p)}>
               Delete
             </Button>
@@ -117,20 +123,21 @@ export function PagesList({
       {codePages.map((cp, i) => (
         <div
           key={cp.route}
+          className={styles.row}
           title="Defined in code — not editable in the block editor."
-          style={{ display: "grid", gridTemplateColumns: GRID_COLUMNS, gap: "var(--space-3)", alignItems: "center", padding: "10px var(--space-4)", borderBottom: i < codePages.length - 1 ? "1px solid var(--border)" : "none", opacity: 0.75 }}
+          style={{ padding: "10px var(--space-4)", borderBottom: i < codePages.length - 1 ? "1px solid var(--border)" : "none", opacity: 0.75 }}
         >
-          <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" as never, color: "var(--text)" }}>
+          <span className={styles.cell} data-label="Title" style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" as never, color: "var(--text)" }}>
             {cp.title ?? cp.route}
           </span>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{cp.route}</span>
-          <span style={eyebrow}>Code page</span>
-          <span style={{ ...eyebrow, display: "inline-flex", alignItems: "center", gap: 5, color: "var(--text-faint)" }}>
+          <span className={styles.cell} data-label="Route" style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{cp.route}</span>
+          <span className={styles.cell} data-label="Kind" style={eyebrow}>Code page</span>
+          <span className={styles.cell} data-label="Mode" style={{ ...eyebrow, display: "inline-flex", alignItems: "center", gap: 5, color: "var(--text-faint)" }}>
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentcolor" }} />
             static
           </span>
-          <span style={eyebrow}>—</span>
-          <span />
+          <span className={styles.cell} data-label="Status" style={eyebrow}>—</span>
+          <span className={styles.cell} />
         </div>
       ))}
     </div>

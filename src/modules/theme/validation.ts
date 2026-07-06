@@ -19,7 +19,8 @@ export const themeInputSchema = z.object({
   density: z.number().min(0.8).max(1.3),
   radius: z.enum(["square", "soft", "round"]),
   shadow: z.enum(["flat", "subtle", "elevated"]),
-  logoMediaId: z.string().nullable().default(null),
+  /** Active custom/Google font family id; null falls back to the `font` preset. */
+  fontFamilyId: z.string().nullable().default(null),
   faviconMediaId: z.string().nullable().default(null),
 });
 

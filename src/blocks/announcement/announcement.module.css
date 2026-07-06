@@ -1,0 +1,84 @@
+/* announcement — thin strip above the header. Tokens only. z-index 50 matches
+   blocks/chrome-constants.ts (sits above the sticky header, z-index 40). */
+.bar {
+  position: relative;
+  z-index: 50;
+  font-size: var(--text-xs);
+}
+
+/* tones (solid style) */
+.ink {
+  background: var(--ink-0);
+  color: var(--paper-0);
+}
+.accent {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.accent2 {
+  background: var(--accent-2);
+  color: var(--text-on-accent);
+}
+.paper {
+  background: var(--surface);
+  color: var(--text);
+}
+/* styles that override tone */
+.gradient {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: var(--text-on-accent);
+}
+.outline {
+  background: var(--bg);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  min-height: 34px;
+  padding: 7px var(--space-10);
+  text-align: center;
+}
+.cta {
+  color: inherit;
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+/* marquee — pure CSS scroll of the concatenated messages, no JS. */
+.marqueeWrap {
+  overflow: hidden;
+  padding: 8px 0;
+}
+.marqueeTrack {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: announcement-ticker 22s linear infinite;
+  will-change: transform;
+}
+.marqueeWrap:hover .marqueeTrack {
+  animation-play-state: paused;
+}
+.marqueeItem {
+  padding-right: var(--space-10);
+}
+@keyframes announcement-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrack {
+    animation: none;
+  }
+}

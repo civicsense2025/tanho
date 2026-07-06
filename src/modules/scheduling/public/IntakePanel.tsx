@@ -76,7 +76,7 @@ export function IntakePanel({
           <select
             value={location}
             onChange={(e) => onLocation(e.target.value)}
-            className={styles.navBtn}
+            className={`${styles.navBtn} ${styles.locationSelect}`}
           >
             {event.locations.map((l) => (
               <option key={l} value={l}>

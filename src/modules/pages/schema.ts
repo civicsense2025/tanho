@@ -23,6 +23,12 @@ export const pages = sqliteTable("pages", {
   ogImageMediaId: text("og_image_media_id"),
   canonicalUrl: text("canonical_url").notNull().default(""),
   noIndex: integer("no_index", { mode: "boolean" }).notNull().default(false),
+  // Per-page custom code. customCss is sanitised on save (any admin); customHead/
+  // BodyHtml are OWNER-ONLY, rendered verbatim (analytics/pixels/widgets). See
+  // modules/pages/actions.ts for the role gate + sanitisation.
+  customCss: text("custom_css").notNull().default(""),
+  customHeadHtml: text("custom_head_html").notNull().default(""),
+  customBodyHtml: text("custom_body_html").notNull().default(""),
   hasPaywall: integer("has_paywall", { mode: "boolean" }).notNull().default(false),
   publishedAt: integer("published_at"),
   updatedAt: integer("updated_at")

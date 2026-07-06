@@ -10,7 +10,7 @@ export function ReviewStep({ state, initial }: WizardStepProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
       <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
-        You&apos;re all set. Here&apos;s what's configured — you can revisit any of it in Settings
+        You&apos;re all set. Here&apos;s what&apos;s configured — you can revisit any of it in Settings
         whenever you like.
       </p>
       <ul style={{ margin: 0, paddingLeft: "var(--space-5)", fontSize: "var(--text-sm)", color: "var(--text)" }}>

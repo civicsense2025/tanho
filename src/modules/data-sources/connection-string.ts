@@ -6,11 +6,17 @@ const SUPPORTED_PROTOCOLS = new Set(["postgres:", "postgresql:"]);
  * Parse a standard `postgres://` or `postgresql://` connection URI into a
  * `PostgresConfig`, using Node's built-in `URL` parser.
  *
- * The parsed result is always run through the EXISTING
- * `postgresConfigSchema.safeParse()` before being returned — this is what
- * keeps `assertNoDisabledTls` (see `./validation.ts`) applying identically
- * to pasted connection strings and manually-typed fields. This function
- * never bypasses that check; it only reshapes input into the same schema.
+ * This runs client-side (CreateConnectionForm) purely to pre-fill the
+ * individual form fields from a pasted string — it's a UX convenience, NOT
+ * the security boundary. The parsed result is run through
+ * `postgresConfigSchema.safeParse()` for shape/TLS validation
+ * (`assertNoDisabledTls`), but deliberately uses the SYNC parse, which skips
+ * the schema's async host-blocklist check (that check needs a DNS lookup,
+ * which isn't meaningful in the browser and wouldn't be trustworthy from a
+ * client anyway). The real enforcement is server-side:
+ * `createConnection`/`updateConnection` in `./connection-actions.ts` use
+ * `safeParseAsync`, so every connection is actually gated there regardless
+ * of what this function returns.
  *
  * Returns `{ error }` (never throws) for any malformed input, including
  * strings that aren't valid URLs at all.

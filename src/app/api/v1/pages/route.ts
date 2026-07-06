@@ -2,15 +2,17 @@ import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { listPages } from "@/modules/pages/queries";
 import { pages } from "@/modules/pages/schema";
-import { pageDetailsSchema } from "@/modules/pages/validation";
+import { pageDetailsSchema, secureCustomCode } from "@/modules/pages/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
+// Route handlers must use revalidateTag, NOT updateTag (which is Server-Action-only
+// and throws here). See the /api/v1 cache-invalidation cleanup task.
 const invalidatePage = (id: string) => {
-  updateTag("pages");
-  updateTag(`page:${id}`);
+  revalidateTag("pages", "max");
+  revalidateTag(`page:${id}`, "max");
 };
 
 /**
@@ -34,6 +36,7 @@ export async function POST(req: Request): Promise<Response> {
       return fail(parsed.error.issues[0]?.message ?? "Invalid page", 400);
     }
     const d = parsed.data;
+    secureCustomCode(d as Record<string, unknown>, user.role === "owner");
     const dupe = await db.query.pages.findFirst({ where: eq(pages.route, d.route) });
     if (dupe) return fail(`Route ${d.route} is already in use`, 409);
     const [row] = await db

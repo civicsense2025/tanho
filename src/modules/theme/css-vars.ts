@@ -8,8 +8,12 @@ import type { SemanticTokens } from "./derive";
  * pattern here — a value that fails is dropped, never emitted.
  */
 
+// `+` admits fluid clamp()/calc() expressions (typeVars' fluid heading sizes);
+// still a fixed character allowlist over fully-computed values, never free-form
+// input — lib/css-sanitizer.ts's stricter (adversarial-input) allowlist already
+// includes `+`, so this only brings the two in line.
 const SAFE_VALUE_RE =
-  /^[#a-zA-Z0-9(),.\s%\-\/"']+$/;
+  /^[#a-zA-Z0-9(),.\s%\-\/"'+]+$/;
 
 /** Maps semantic tokens to the full CSS variable vocabulary the design uses. */
 export function colorVars(t: SemanticTokens): Record<string, string> {

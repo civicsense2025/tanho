@@ -18,8 +18,14 @@ export type PageDraft = {
   priority: number;
   seoTitle: string;
   seoDescription: string;
+  ogImageMediaId: string | null;
   canonicalUrl: string;
   noIndex: boolean;
+  /** Per-page custom code. customCss is sanitised; head/body HTML are owner-only,
+   *  rendered verbatim. Persisted via savePageDetails (which gates + sanitises). */
+  customCss: string;
+  customHeadHtml: string;
+  customBodyHtml: string;
 };
 
 /** A minimal page reference for the "parent" picker (posts nest under a page). */

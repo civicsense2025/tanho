@@ -1,0 +1,36 @@
+/* Pages table. Below 640px each row collapses from the 6-column grid to a
+   single stacked column, re-labeling every cell via its data-label attribute
+   — the same convention EntityList.module.css uses for the generic content
+   grid, so a table doesn't turn into an unlabeled stack of bare values. */
+
+.head,
+.row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 100px 100px 120px 90px;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .head {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+  }
+
+  .cell::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--text-faint);
+    margin-bottom: 2px;
+  }
+}

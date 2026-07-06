@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getGeneralSettings } from "@/modules/settings/queries";
 import { getSeoSettings } from "@/modules/seo/queries";
+import { getCanonicalSiteUrl } from "@/modules/domain/queries";
 import { getAiCrawlersSettings } from "@/modules/ai-crawlers/queries";
 import { buildCrawlerRules } from "@/modules/ai-crawlers/robots-extra";
 
@@ -22,7 +23,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     getSeoSettings(),
     getAiCrawlersSettings(),
   ]);
-  const base = (seo.siteUrl || BASE_FALLBACK).replace(/\/$/, "");
+  const base = (await getCanonicalSiteUrl(seo.siteUrl, BASE_FALLBACK)).replace(/\/$/, "");
 
   if (!general.indexable) {
     return { rules: { userAgent: "*", disallow: "/" } };

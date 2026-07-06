@@ -4,12 +4,12 @@ import { shippingZones } from "@/modules/commerce/schema";
 import { shippingZoneSchema } from "@/modules/commerce/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 const invalidate = () => {
-  updateTag("shipping");
-  updateTag("storefront");
+  revalidateTag("shipping", "max");
+  revalidateTag("storefront", "max");
 };
 
 /**

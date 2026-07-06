@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, styleContent, trackEventSchema, trackParamsSchema } from "../common";
+import { commonContent, styleContent, trackEventSchema, trackParamsSchema, advancedStyleContent, motionContent } from "../common";
 
 /** Safe link targets only: web URLs, site-relative paths, anchors, mailto. */
 const hrefSchema = z
@@ -21,6 +21,8 @@ export const buttonItemSchema = z.object({
 export const buttonsSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   align: z.enum(["left", "center", "right"]).default("left"),
   items: z.array(buttonItemSchema).max(50).default([]),
 });

@@ -4,7 +4,7 @@ import { menus } from "@/modules/menus/schema";
 import { MAX_MENU_BYTES, menuSchema } from "@/modules/menus/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -25,7 +25,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return fail(parsed.error.issues[0]?.message ?? "Invalid menu", 400);
     }
     await db.update(menus).set({ ...parsed.data, updatedAt: Date.now() }).where(eq(menus.id, id));
-    updateTag("menus");
+    revalidateTag("menus", "max");
     await writeAudit({ userId: user.id, action: "menu.save", ownerType: "menu", ownerId: id });
     return ok();
   });
@@ -36,7 +36,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const user = await requireApiUser("owner");
     const { id } = await params;
     await db.delete(menus).where(eq(menus.id, id));
-    updateTag("menus");
+    revalidateTag("menus", "max");
     await writeAudit({ userId: user.id, action: "menu.delete", ownerType: "menu", ownerId: id });
     return ok();
   });

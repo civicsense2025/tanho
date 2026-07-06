@@ -5,7 +5,7 @@ import { redirects } from "@/modules/redirects/schema";
 import { redirectInputSchema } from "@/modules/redirects/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -34,7 +34,7 @@ export async function POST(req: Request): Promise<Response> {
       .insert(redirects)
       .values(parsed.data)
       .returning({ id: redirects.id });
-    updateTag("redirects");
+    revalidateTag("redirects", "max");
     await writeAudit({ userId: user.id, action: "redirect.create", ownerType: "redirect", ownerId: row.id });
     return ok({ id: row.id }, 201);
   });

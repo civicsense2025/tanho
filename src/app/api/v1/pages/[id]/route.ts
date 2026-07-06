@@ -2,15 +2,16 @@ import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { getPageForEdit } from "@/modules/pages/queries";
 import { pages, blockSets } from "@/modules/pages/schema";
-import { pageDetailsSchema } from "@/modules/pages/validation";
+import { pageDetailsSchema, secureCustomCode } from "@/modules/pages/validation";
+import { removePageFromIndex } from "@/modules/search/index-document";
 import { db } from "@/lib/db/client";
 import { eq, and } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 const invalidatePage = (id: string) => {
-  updateTag("pages");
-  updateTag(`page:${id}`);
+  revalidateTag("pages", "max");
+  revalidateTag(`page:${id}`, "max");
 };
 
 /**
@@ -39,6 +40,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!parsed.success) {
       return fail(parsed.error.issues[0]?.message ?? "Invalid page", 400);
     }
+    // Same authoritative gate as the server action — sanitise customCss and strip the
+    // owner-only verbatim code fields for non-owners, so REST can't bypass the UI gate.
+    secureCustomCode(parsed.data as Record<string, unknown>, user.role === "owner");
     await db.update(pages).set({ ...parsed.data, updatedAt: Date.now() }).where(eq(pages.id, id));
     await writeAudit({ userId: user.id, action: "page.details", ownerType: "page", ownerId: id });
     invalidatePage(id);
@@ -52,6 +56,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     await db.delete(blockSets).where(and(eq(blockSets.ownerType, "page"), eq(blockSets.ownerId, id)));
     await db.delete(pages).where(eq(pages.id, id));
+    await removePageFromIndex(id);
     await writeAudit({ userId: user.id, action: "page.delete", ownerType: "page", ownerId: id });
     invalidatePage(id);
     return ok();

@@ -20,7 +20,6 @@ export type AccountResolved = {
  * requesting reader's data — one viewer can't render another's membership.
  */
 export async function resolveAccount(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _content: AccountContent,
 ): Promise<AccountResolved> {
   const viewer = await getViewer();

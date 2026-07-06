@@ -9,8 +9,17 @@ import { Input } from "@/components/forms/Input";
 import { Textarea } from "@/components/forms/Textarea";
 import { Select } from "@/components/forms/Select";
 import { Button } from "@/components/core/Button";
+import type { BlockNode } from "@/blocks/types";
+import { BlockCanvasEditor } from "@/editor/BlockCanvasEditor";
+import { saveOwnerBlocks } from "@/modules/blocks/actions";
 import { dollarsToCents } from "../money";
-import { deleteProduct, setProductCollections, updateProduct } from "../product-actions";
+import {
+  deleteProduct,
+  loadProductForContentEdit,
+  publishProductBlocks,
+  setProductCollections,
+  updateProduct,
+} from "../product-actions";
 import type { ProductRow, VariantRow } from "../queries";
 import { CURRENCIES } from "../validation";
 import { PhotosField } from "./PhotosField";
@@ -19,6 +28,7 @@ import { CollectionsField, type CollectionOption } from "./CollectionsField";
 import { ProductDetailSections } from "./ProductDetailSections";
 import { initState, intOf, type FormState } from "./product-form-state";
 import styles from "./commerce.module.css";
+import shell from "@/editor/editor-shell.module.css";
 
 /** Product editor — Core, Photos, Collections, Inventory, Variants, Shipping, SEO. */
 export function ProductForm({
@@ -40,6 +50,37 @@ export function ProductForm({
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Content blocks: loaded on demand (not prefetched with the structured
+  // form) since this is a client-side view toggle, no server round-trip —
+  // see loadProductForContentEdit's doc comment.
+  const [contentBlocks, setContentBlocks] = useState<{
+    blocks: BlockNode[];
+    dirty: boolean;
+    headerBlocks: BlockNode[];
+    footerBlocks: BlockNode[];
+  } | null>(null);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
+
+  const openContentEditor = () => {
+    setContentError(null);
+    setContentLoading(true);
+    startTransition(async () => {
+      const res = await loadProductForContentEdit(product.id);
+      setContentLoading(false);
+      if (!res.ok) {
+        setContentError(res.error);
+        return;
+      }
+      setContentBlocks({
+        blocks: res.data!.blocks,
+        dirty: JSON.stringify(res.data!.blocks) !== JSON.stringify(res.data!.publishedBlocks),
+        headerBlocks: res.data!.headerBlocks,
+        footerBlocks: res.data!.footerBlocks,
+      });
+    });
+  };
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => {
     setS((p) => ({ ...p, [k]: v }));
@@ -90,6 +131,30 @@ export function ProductForm({
       ? `Synced to Stripe · ${product.stripeProductId}`
       : "Not yet synced to Stripe — save while active to sync.";
 
+  if (contentBlocks) {
+    return (
+      <BlockCanvasEditor
+        ownerType="product"
+        ownerId={product.id}
+        initialBlocks={contentBlocks.blocks}
+        initialDraftDiffers={contentBlocks.dirty}
+        status={product.status === "active" ? "published" : "draft"}
+        headerBlocks={contentBlocks.headerBlocks}
+        footerBlocks={contentBlocks.footerBlocks}
+        settingsPanel={<p className={styles.syncLine}>Editing content for {product.name || "this product"}.</p>}
+        settingsLabel="Product"
+        topBarLeft={
+          <button type="button" className={shell.back} onClick={() => setContentBlocks(null)}>
+            ← {product.name || "Product"}
+          </button>
+        }
+        screenLabel={`Product content · ${product.name}`}
+        onSaveBlocks={(tree) => saveOwnerBlocks("product", product.id, tree)}
+        onPublish={() => publishProductBlocks(product.id)}
+      />
+    );
+  }
+
   return (
     <main className={styles.page}>
       <div className={styles.headerRow}>
@@ -98,9 +163,13 @@ export function ProductForm({
         </Link>
         <span style={{ flex: 1 }} />
         {error ? <span className={styles.error}>{error}</span> : null}
+        {contentError ? <span className={styles.error}>{contentError}</span> : null}
         {flash ? (
           <span style={{ fontSize: "var(--text-xs)", color: "var(--success)" }}>{flash}</span>
         ) : null}
+        <Button variant="outline" size="sm" onClick={openContentEditor} loading={contentLoading}>
+          Edit content
+        </Button>
         <Button variant="ghost" size="sm" onClick={remove} disabled={pending}>
           Delete
         </Button>

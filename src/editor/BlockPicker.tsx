@@ -1,20 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { categories, pickerDefs } from "@/blocks/registry";
+import { categories, pickerDefs, isSuggestedFor } from "@/blocks/registry";
+import type { BlockCategory } from "@/blocks/types";
 import { Button } from "@/components/core/Button";
 import { useEditor } from "./store";
 import styles from "./editor.module.css";
 
 export type PickerStyle = "menu" | "row" | "panel" | "command";
+/** One category, several categories, or (undefined) all of them. */
+export type PickerCategory = BlockCategory | BlockCategory[];
 
 type Def = { type: string; label: string; blurb: string };
-/** Compiled picker defs filtered to the store's enabled-types set (when set). */
-function useAllDefs(): Def[] {
+/** Compiled picker defs filtered to the store's enabled-types set (when set),
+ *  and optionally scoped to one or more categories (e.g. the chrome editor,
+ *  which offers chrome + content + layout + media). */
+function useAllDefs(only?: PickerCategory): Def[] {
   const enabledTypes = useEditor((s) => s.enabledTypes);
+  // Serialize the (possibly array) scope for a stable memo dependency.
+  const scopeKey = Array.isArray(only) ? only.join(",") : (only ?? "");
   return useMemo(
-    () => categories.flatMap((c) => pickerDefs(c.id)).filter((d) => !enabledTypes || enabledTypes.has(d.type)),
-    [enabledTypes],
+    () => {
+      const allow = only == null ? null : new Set(Array.isArray(only) ? only : [only]);
+      return categories
+        .filter((c) => !allow || allow.has(c.id))
+        .flatMap((c) => pickerDefs(c.id))
+        .filter((d) => !enabledTypes || enabledTypes.has(d.type));
+    },
+    [enabledTypes, scopeKey], // eslint-disable-line react-hooks/exhaustive-deps
   );
 }
 
@@ -29,19 +42,26 @@ function useAllDefs(): Def[] {
  * store (`enabledTypes`, server-fetched by PageEditor) so a disabled block
  * never shows in the picker.
  */
+/** Insert a block type, optionally with a starting content patch (used by the
+ *  content-type "Field" suggestions to pre-bind a field block to a column). */
+export type OnAddBlock = (type: string, contentPatch?: Record<string, unknown>) => void;
+
 export function BlockPicker({
   onAdd,
   label = "Add block",
   style = "menu",
+  category,
 }: {
-  onAdd: (type: string) => void;
+  onAdd: OnAddBlock;
   label?: string;
   style?: PickerStyle;
+  /** Scope the picker to one or more block categories (e.g. the chrome editor). */
+  category?: PickerCategory;
 }) {
-  if (style === "row") return <RowPicker onAdd={onAdd} />;
-  if (style === "panel") return <PanelPicker onAdd={onAdd} label={label} />;
-  if (style === "command") return <CommandPicker onAdd={onAdd} label={label} />;
-  return <MenuPicker onAdd={onAdd} label={label} />;
+  if (style === "row") return <RowPicker onAdd={onAdd} category={category} />;
+  if (style === "panel") return <PanelPicker onAdd={onAdd} label={label} category={category} />;
+  if (style === "command") return <CommandPicker onAdd={onAdd} label={label} category={category} />;
+  return <MenuPicker onAdd={onAdd} label={label} category={category} />;
 }
 
 function useOutside(open: boolean, close: () => void) {
@@ -57,35 +77,73 @@ function useOutside(open: boolean, close: () => void) {
   return ref;
 }
 
-/** Compiled defs grouped by category, filtered to the store's enabled set. */
-function useGroupedDefs(): Array<{ cat: (typeof categories)[number]; items: Def[] }> {
+/** Compiled defs grouped by category, filtered to the store's enabled set and
+ *  optionally to a single category. */
+function useGroupedDefs(
+  only?: PickerCategory,
+): Array<{ cat: (typeof categories)[number]; items: Def[] }> {
   const enabledTypes = useEditor((s) => s.enabledTypes);
+  const scopeKey = Array.isArray(only) ? only.join(",") : (only ?? "");
   return useMemo(
-    () =>
-      categories.map((cat) => ({
-        cat,
-        items: pickerDefs(cat.id).filter((d) => !enabledTypes || enabledTypes.has(d.type)),
-      })),
-    [enabledTypes],
+    () => {
+      const allow = only == null ? null : new Set(Array.isArray(only) ? only : [only]);
+      return categories
+        .filter((c) => !allow || allow.has(c.id))
+        .map((cat) => ({
+          cat,
+          items: pickerDefs(cat.id).filter((d) => !enabledTypes || enabledTypes.has(d.type)),
+        }));
+    },
+    [enabledTypes, scopeKey], // eslint-disable-line react-hooks/exhaustive-deps
   );
 }
 
-function MenuPicker({ onAdd, label }: { onAdd: (t: string) => void; label: string }) {
+function MenuPicker({ onAdd, label, category }: { onAdd: OnAddBlock; label: string; category?: PickerCategory }) {
   const [open, setOpen] = useState(false);
   const ref = useOutside(open, () => setOpen(false));
-  const groups = useGroupedDefs();
+  const groups = useGroupedDefs(category);
+  const ctx = useEditor((s) => s.contentTypeContext);
   return (
     <div ref={ref} className={styles.picker}>
       <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>+ {label}</Button>
       {open ? (
         <div className={styles.pickerMenu}>
+          {/* When templating a content type, surface one "Field" preset per
+              field at the top — each drops a field block already bound to that
+              column, so the owner doesn't hunt for it or type a token. */}
+          {ctx && ctx.fields.length > 0 ? (
+            <div>
+              <div className={`${styles.pickerCat} ${styles.pickerCatSuggested}`}>
+                Fields · {ctx.slug}
+              </div>
+              {ctx.fields.map((f) => (
+                <button
+                  key={`field:${f.key}`}
+                  type="button"
+                  className={`${styles.pickerItem} ${styles.pickerItemSuggested}`}
+                  onClick={() => {
+                    onAdd("field", { field: f.key, display: f.key === "title" ? "heading" : "auto" });
+                    setOpen(false);
+                  }}
+                >
+                  <span className={styles.pickerItemLabel}>{f.label}</span>
+                  <span className={styles.pickerItemBlurb}>Show this field from the row</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
           {groups.map(({ cat, items }) => {
             if (!items.length) return null;
             return (
               <div key={cat.id}>
                 <div className={styles.pickerCat}>{cat.label}</div>
                 {items.map((d) => (
-                  <button key={d.type} type="button" className={styles.pickerItem} onClick={() => { onAdd(d.type); setOpen(false); }}>
+                  <button
+                    key={d.type}
+                    type="button"
+                    className={`${styles.pickerItem} ${ctx && isSuggestedFor(d.type, ctx.slug) ? styles.pickerItemSuggested : ""}`}
+                    onClick={() => { onAdd(d.type); setOpen(false); }}
+                  >
                     <span className={styles.pickerItemLabel}>{d.label}</span>
                     <span className={styles.pickerItemBlurb}>{d.blurb}</span>
                   </button>
@@ -99,8 +157,8 @@ function MenuPicker({ onAdd, label }: { onAdd: (t: string) => void; label: strin
   );
 }
 
-function RowPicker({ onAdd }: { onAdd: (t: string) => void }) {
-  const defs = useAllDefs();
+function RowPicker({ onAdd, category }: { onAdd: OnAddBlock; category?: PickerCategory }) {
+  const defs = useAllDefs(category);
   return (
     <div className={styles.rowPicker}>
       {defs.map((d) => (
@@ -112,8 +170,8 @@ function RowPicker({ onAdd }: { onAdd: (t: string) => void }) {
   );
 }
 
-function PanelPicker({ onAdd, label }: { onAdd: (t: string) => void; label: string }) {
-  const allDefs = useAllDefs();
+function PanelPicker({ onAdd, label, category }: { onAdd: OnAddBlock; label: string; category?: PickerCategory }) {
+  const allDefs = useAllDefs(category);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const ref = useOutside(open, () => setOpen(false));
@@ -137,8 +195,8 @@ function PanelPicker({ onAdd, label }: { onAdd: (t: string) => void; label: stri
   );
 }
 
-function CommandPicker({ onAdd, label }: { onAdd: (t: string) => void; label: string }) {
-  const allDefs = useAllDefs();
+function CommandPicker({ onAdd, label, category }: { onAdd: OnAddBlock; label: string; category?: PickerCategory }) {
+  const allDefs = useAllDefs(category);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);

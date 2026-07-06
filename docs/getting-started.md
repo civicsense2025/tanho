@@ -7,6 +7,10 @@
 
 No external services are required for local development: the database is a
 local libSQL file, uploads go to local disk, and email prints to the console.
+Prefer Postgres/Supabase instead? See
+[docs/recipes/swap-database-to-postgres.md](recipes/swap-database-to-postgres.md)
+before running `npm run db:migrate` below — it's easiest to pick your
+database before the first migration, not after.
 
 ## Setup
 

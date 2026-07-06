@@ -48,6 +48,12 @@
 .rowStack {
   display: block;
 }
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .rowLabel {
   display: inline-flex;
   align-items: center;

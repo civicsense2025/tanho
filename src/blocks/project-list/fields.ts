@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 export const projectListSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   limit: z.number().int().min(1).max(24).default(6),
   eyebrow: z.string().max(60).default(""),
 });

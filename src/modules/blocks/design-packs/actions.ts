@@ -10,6 +10,7 @@ import { theme } from "@/modules/theme/schema";
 import { pages, blockSets } from "@/modules/pages/schema";
 import { validatePackTree, treeReferencedTypes } from "@/modules/pages/blocks-io";
 import { slugSchema } from "@/modules/pages/validation";
+import { slugify } from "@/lib/slug";
 import { exportDesignPackJson, importPackJson, type PortablePack } from "../packs/portable";
 import type { BlockNode } from "@/blocks/types";
 import type { ThemeInput } from "@/modules/theme/validation";
@@ -21,13 +22,6 @@ const invalidate = () => {
   updateTag("entries:design_pack");
   updateTag("design-packs");
 };
-
-const slugify = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
 
 const OWNER_TYPE = "entry:design_pack";
 
@@ -196,16 +190,27 @@ export async function activateDesignPack(id: string): Promise<Result<ActivateDia
 
   for (const tmpl of data.pageTemplates) {
     const route = tmpl.route || `/${slugify(tmpl.name) || "page"}`;
-    const collision = await db.query.pages.findFirst({ where: eq(pages.route, route) });
-    if (collision) {
+    const routeCollision = await db.query.pages.findFirst({ where: eq(pages.route, route) });
+    if (routeCollision) {
       skipped.push({ name: tmpl.name, route, reason: "Route already in use" });
+      continue;
+    }
+    // pages.slug has its own unique() constraint independent of route — two
+    // templates whose names slugify the same (or re-activating a pack whose
+    // slug is already taken) would otherwise throw an unhandled constraint
+    // violation mid-loop and abort every template after it. Same
+    // skip-don't-overwrite handling as the route check above.
+    const slug = slugify(tmpl.name) || `page-${Date.now()}`;
+    const slugCollision = await db.query.pages.findFirst({ where: eq(pages.slug, slug) });
+    if (slugCollision) {
+      skipped.push({ name: tmpl.name, route, reason: "A page with this slug already exists" });
       continue;
     }
     const [pageRow] = await db
       .insert(pages)
       .values({
         title: tmpl.name,
-        slug: slugify(tmpl.name) || `page-${Date.now()}`,
+        slug,
         route,
         kind: "page",
         status: "published",

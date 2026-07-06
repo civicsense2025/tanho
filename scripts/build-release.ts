@@ -185,6 +185,9 @@ async function publishMetadata(
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
+  if (args.unsigned && !args.dryRun) {
+    die("--unsigned may only be combined with --dry-run — publishing an unsigned release to the hub is not allowed.");
+  }
   const hubUrl = (process.env.HUB_URL ?? "https://hub.own-your-site.com").replace(/\/$/, "");
   const version = resolveVersion(args);
   const baseCommit = args.baseCommit ?? git("rev-parse", "HEAD");

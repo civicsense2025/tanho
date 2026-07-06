@@ -5,6 +5,7 @@ import { saveSettings } from "@/modules/settings/actions";
 import { Section, Row } from "@/components/admin/Section";
 import { Toggle } from "@/components/admin/Seg";
 import { Input } from "@/components/forms/Input";
+import { Textarea } from "@/components/forms/Textarea";
 import { MediaPicker } from "@/modules/media/admin/MediaPicker";
 import { Button } from "@/components/core/Button";
 import { SEO_CONTENT_TYPES, type SeoSettings, type SeoTemplate } from "../validation";
@@ -116,6 +117,61 @@ export function SeoForm({
             disabled={!!disabledTypes[type]}
           />
         ))}
+      </Section>
+
+      <Section
+        title="Site verification"
+        desc="Ownership codes from each provider's console. Rendered as <meta> tags in the site <head>."
+      >
+        <Row label="Google (Search Console)">
+          <Input
+            value={s.verification.google}
+            placeholder="verification token"
+            onChange={(e) => patch({ verification: { ...s.verification, google: e.target.value } })}
+          />
+        </Row>
+        <Row label="Bing (Webmaster)">
+          <Input
+            value={s.verification.bing}
+            placeholder="verification token"
+            onChange={(e) => patch({ verification: { ...s.verification, bing: e.target.value } })}
+          />
+        </Row>
+        <Row label="Pinterest">
+          <Input
+            value={s.verification.pinterest}
+            placeholder="verification token"
+            onChange={(e) => patch({ verification: { ...s.verification, pinterest: e.target.value } })}
+          />
+        </Row>
+        <Row label="Yandex">
+          <Input
+            value={s.verification.yandex}
+            placeholder="verification token"
+            onChange={(e) => patch({ verification: { ...s.verification, yandex: e.target.value } })}
+          />
+        </Row>
+      </Section>
+
+      <Section
+        title="Social profiles"
+        desc="Public profile URLs (one per line). Emitted as Organization sameAs for knowledge-panel linking."
+      >
+        <Row label="Profile URLs" stack>
+          <Textarea
+            value={s.socialProfiles.join("\n")}
+            rows={4}
+            placeholder={"https://x.com/yourhandle\nhttps://www.linkedin.com/company/you"}
+            onChange={(e) =>
+              patch({
+                socialProfiles: e.target.value
+                  .split("\n")
+                  .map((u) => u.trim())
+                  .filter(Boolean),
+              })
+            }
+          />
+        </Row>
       </Section>
     </div>
   );

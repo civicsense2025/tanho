@@ -77,4 +77,34 @@ describe("block tree ops", () => {
     expect(canNest("row", "columns")).toBe(false);
     expect(canNest("container", "heading")).toBe(true);
   });
+
+  it("enforces chrome nesting rules (chrome is now a full content area)", () => {
+    // chrome containers sit at the tree root only.
+    expect(canNest(null, "site-header")).toBe(true);
+    expect(canNest(null, "site-footer")).toBe(true);
+    expect(canNest("section", "site-header")).toBe(false); // never nested in a page
+    expect(canNest("site-header", "site-footer")).toBe(false); // never in each other
+
+    // chrome containers accept chrome sub-blocks AND ordinary content/media/layout.
+    expect(canNest("site-header", "logo")).toBe(true);
+    expect(canNest("site-header", "nav-menu")).toBe(true);
+    expect(canNest("site-footer", "footer-column")).toBe(true);
+    expect(canNest("site-header", "heading")).toBe(true); // content in chrome ✓
+    expect(canNest("site-header", "richtext")).toBe(true);
+    expect(canNest("site-header", "section")).toBe(true); // layout in chrome ✓
+
+    // chrome SUB-blocks need chrome/menu context: allowed in a chrome container
+    // or a layout container (which groups them in a chrome tree), but NEVER at
+    // the page root — the page picker doesn't offer them, and this backstops it.
+    expect(canNest(null, "logo")).toBe(false);
+    expect(canNest(null, "nav-menu")).toBe(false);
+    expect(canNest("section", "logo")).toBe(true); // layout container groups chrome subs
+    expect(canNest("container", "nav-menu")).toBe(true);
+
+    // announcement additionally sits at the chrome root (a top strip beside the
+    // header) so a seeded one is drag-reorderable.
+    expect(canNest(null, "announcement")).toBe(true);
+    expect(canNest("site-header", "announcement")).toBe(true);
+    expect(canNest("section", "announcement")).toBe(true);
+  });
 });

@@ -1,11 +1,10 @@
 import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
-import { getGeneralSettings } from "@/modules/settings/queries";
 import { listMenus } from "@/modules/menus/queries";
-import { getHeaderConfig } from "@/modules/chrome/queries";
-import { NavTabs } from "@/modules/chrome/admin/NavTabs";
-import { HeaderScreen } from "@/modules/chrome/admin/HeaderScreen";
-import { AdminPage } from "@/components/admin/AdminPage";
+import { registryMap } from "@/modules/blocks/registry-queries";
+import { resolveBoundBlocks } from "@/blocks/resolve-tree";
+import { getChromeForEdit } from "@/modules/chrome/queries";
+import { ChromeEditor } from "@/modules/chrome/admin/ChromeEditor";
 
 export const metadata = { title: "Header" };
 
@@ -19,18 +18,24 @@ export default function NavHeaderPage() {
 
 async function NavHeaderPageInner() {
   await requireUser("owner");
-  const [config, menus, general] = await Promise.all([
-    getHeaderConfig(),
+  const [hit, menus, regMap] = await Promise.all([
+    getChromeForEdit("chrome:header"),
     listMenus(),
-    getGeneralSettings(),
+    registryMap(),
   ]);
+  const dirty = JSON.stringify(hit.blocks) !== JSON.stringify(hit.publishedBlocks);
+  // Pre-resolve bound sub-blocks (logo → site name, nav-menu → menu items) so
+  // the editor canvas draws the real chrome, not placeholders — mirrors pages.
+  const resolvedBlocks = await resolveBoundBlocks(hit.blocks);
+  const enabledTypes = [...regMap.values()].filter((r) => r.enabled).map((r) => r.type);
+
   return (
-    <AdminPage>
-      <h1 style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-h2)", fontWeight: "var(--weight-medium)" as never, letterSpacing: "var(--tracking-tight)" }}>
-        Header
-      </h1>
-      <NavTabs />
-      <HeaderScreen initial={config} menus={menus} siteName={general.name} tagline={general.tagline} />
-    </AdminPage>
+    <ChromeEditor
+      ownerType="chrome:header"
+      initialBlocks={resolvedBlocks}
+      isDirtyVsPublished={dirty}
+      enabledTypes={enabledTypes}
+      firstMenuId={menus[0]?.id ?? ""}
+    />
   );
 }

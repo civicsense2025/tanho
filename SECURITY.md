@@ -19,6 +19,12 @@ open public issues for security reports.
 - Stripe webhooks are signature-verified and idempotent (event-id ledger);
   amounts are integer cents and prices never come from the client.
 - Uploads are MIME/extension allowlisted with size caps and randomized
-  storage keys; SVG uploads are disabled by default.
+  storage keys. SVG uploads are accepted only after server-side sanitization
+  (DOMPurify SVG profile: scripts, event handlers, `<foreignObject>`, `<use>`,
+  external references, and `javascript:` URLs are stripped before the file is
+  stored) and are served with a restrictive CSP (`sandbox`) and rendered
+  exclusively via `<img>`/`<link rel=icon>`, which do not execute embedded
+  script. Font uploads (woff2/woff/ttf/otf) are allowlisted and served as
+  static assets; their bytes are parsed only for metadata (fontkit).
 - Integration credentials are AES-GCM encrypted at rest with a key from the
   environment; secrets never reach the client.

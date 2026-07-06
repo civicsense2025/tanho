@@ -1,5 +1,6 @@
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import type { BlockCategory } from "@/blocks/types";
+import { createId } from "@paralleldrive/cuid2";
+import type { BlockCategory, BlockNode } from "@/blocks/types";
 
 /**
  * DB-backed block registry — the metadata half of "which blocks exist." The
@@ -36,3 +37,35 @@ export const blockRegistry = sqliteTable("block_registry", {
 });
 
 export type BlockRegistryRow = typeof blockRegistry.$inferSelect;
+
+/**
+ * Saved reusable content blocks — GLOBAL SYMBOLS (Figma/Webflow-Components model).
+ *
+ * A `symbol` block instance on a page carries only `{ symbolId }` (+ optional
+ * per-instance overrides); the actual block tree lives here, keyed by `id`. The
+ * render walker (BlockRenderer) expands an instance to this `blockTree` at render
+ * time — so editing one symbol updates every instance (linked, edit-once). A
+ * dedicated table (not `blockSets`, which is document-per-owner) because instances
+ * resolve a symbol by id on EVERY page render across many pages: `id` is a join key.
+ *
+ * `blockTree` is stored VALIDATED (validateBlockTree output). Symbol nodes may
+ * appear inside it (nested symbols); cycle/depth safety is a render + save-time
+ * concern, not a storage one. `version` bumps on every definition edit (for cache
+ * invalidation + override-drift UX); instances are LINKED and never pin a version.
+ */
+export const symbols = sqliteTable("symbols", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  name: text("name").notNull(),
+  category: text("category").$type<BlockCategory>().notNull().default("content"),
+  icon: text("icon").notNull().default("component"),
+  blockTree: text("block_tree", { mode: "json" }).$type<BlockNode[]>().notNull().default([]),
+  version: integer("version").notNull().default(1),
+  createdAt: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Date.now()),
+  updatedAt: integer("updated_at")
+    .notNull()
+    .$defaultFn(() => Date.now()),
+});
+
+export type SymbolRow = typeof symbols.$inferSelect;

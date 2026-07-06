@@ -48,7 +48,7 @@ afterEach(() => {
 describe("fetchPeerCatalog", () => {
   it("returns the parsed catalog for a valid peer", async () => {
     mockFetch(() => jsonRes(CATALOG));
-    const res = await fetchPeerCatalog("https://peer.example");
+    const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.catalog.format).toBe("oys-marketplace@1");
@@ -61,7 +61,7 @@ describe("fetchPeerCatalog", () => {
 
   it("strips a trailing slash from the peer URL", async () => {
     const fn = mockFetch(() => jsonRes(CATALOG));
-    await fetchPeerCatalog("https://peer.example/");
+    await fetchPeerCatalog("https://peer.example/", ["https://peer.example/"]);
     expect(fn.mock.calls[0][0]).toBe("https://peer.example/marketplace/catalog.json");
   });
 
@@ -69,28 +69,28 @@ describe("fetchPeerCatalog", () => {
     global.fetch = vi.fn(async () => {
       throw new Error("boom");
     }) as unknown as typeof global.fetch;
-    const res = await fetchPeerCatalog("https://peer.example");
+    const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("boom");
   });
 
   it("returns an error for a non-200 response", async () => {
     mockFetch(() => new Response("nope", { status: 404 }));
-    const res = await fetchPeerCatalog("https://peer.example");
+    const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toContain("404");
   });
 
   it("returns an error for invalid JSON", async () => {
     mockFetch(() => new Response("not json", { status: 200, headers: { "content-type": "text/plain" } }));
-    const res = await fetchPeerCatalog("https://peer.example");
+    const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("Invalid JSON");
   });
 
   it("rejects a catalog with the wrong format tag", async () => {
     mockFetch(() => jsonRes({ format: "oys-marketplace@9", name: "x", packs: [] }));
-    const res = await fetchPeerCatalog("https://peer.example");
+    const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toContain("oys-marketplace@1");
   });
@@ -107,7 +107,7 @@ describe("fetchPeerCatalog", () => {
         ],
       }),
     );
-    const res = await fetchPeerCatalog("https://peer.example");
+    const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.catalog.packs).toHaveLength(1);
   });
@@ -117,14 +117,14 @@ describe("fetchPeerPack", () => {
   it("returns the raw pack JSON for a 200 response", async () => {
     const pack = { format: "oys-pack@1", kind: "block-pack", name: "Hero", blocks: [] };
     mockFetch(() => jsonRes(pack));
-    const res = await fetchPeerPack("https://peer.example", "block-pack", "hero");
+    const res = await fetchPeerPack("https://peer.example", "block-pack", "hero", ["https://peer.example"]);
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.pack).toEqual(pack);
   });
 
   it("encodes the type and slug into the path", async () => {
     const fn = mockFetch(() => jsonRes({}));
-    await fetchPeerPack("https://peer.example", "block-pack", "my hero");
+    await fetchPeerPack("https://peer.example", "block-pack", "my hero", ["https://peer.example"]);
     expect(fn.mock.calls[0][0]).toBe(
       "https://peer.example/marketplace/block-pack/my%20hero/download",
     );
@@ -134,16 +134,40 @@ describe("fetchPeerPack", () => {
     global.fetch = vi.fn(async () => {
       throw new Error("network down");
     }) as unknown as typeof global.fetch;
-    const res = await fetchPeerPack("https://peer.example", "block-pack", "hero");
+    const res = await fetchPeerPack("https://peer.example", "block-pack", "hero", ["https://peer.example"]);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("network down");
   });
 
   it("returns an error for a non-200 response", async () => {
     mockFetch(() => new Response("nope", { status: 500 }));
-    const res = await fetchPeerPack("https://peer.example", "block-pack", "hero");
+    const res = await fetchPeerPack("https://peer.example", "block-pack", "hero", ["https://peer.example"]);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toContain("500");
+  });
+
+  it("rejects a peerUrl not in the configured allowlist, without fetching", async () => {
+    const fn = mockFetch(() => jsonRes({}));
+    const res = await fetchPeerPack("https://evil.example", "block-pack", "hero", ["https://peer.example"]);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("not in the configured peer instances list");
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-https peerUrl even if it's in the allowlist", async () => {
+    const fn = mockFetch(() => jsonRes({}));
+    const res = await fetchPeerPack("http://peer.example", "block-pack", "hero", ["http://peer.example"]);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("https");
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("rejects a peerUrl that resolves to a loopback address", async () => {
+    const fn = mockFetch(() => jsonRes({}));
+    const res = await fetchPeerPack("https://localhost", "block-pack", "hero", ["https://localhost"]);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("disallowed address");
+    expect(fn).not.toHaveBeenCalled();
   });
 });
 

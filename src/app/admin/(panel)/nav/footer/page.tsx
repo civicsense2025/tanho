@@ -1,11 +1,10 @@
 import { Suspense } from "react";
 import { requireUser } from "@/modules/auth/guards";
-import { getGeneralSettings } from "@/modules/settings/queries";
 import { listMenus } from "@/modules/menus/queries";
-import { getFooterConfig } from "@/modules/chrome/queries";
-import { NavTabs } from "@/modules/chrome/admin/NavTabs";
-import { FooterScreen } from "@/modules/chrome/admin/FooterScreen";
-import { AdminPage } from "@/components/admin/AdminPage";
+import { registryMap } from "@/modules/blocks/registry-queries";
+import { resolveBoundBlocks } from "@/blocks/resolve-tree";
+import { getChromeForEdit } from "@/modules/chrome/queries";
+import { ChromeEditor } from "@/modules/chrome/admin/ChromeEditor";
 
 export const metadata = { title: "Footer" };
 
@@ -19,18 +18,22 @@ export default function NavFooterPage() {
 
 async function NavFooterPageInner() {
   await requireUser("owner");
-  const [config, menus, general] = await Promise.all([
-    getFooterConfig(),
+  const [hit, menus, regMap] = await Promise.all([
+    getChromeForEdit("chrome:footer"),
     listMenus(),
-    getGeneralSettings(),
+    registryMap(),
   ]);
+  const dirty = JSON.stringify(hit.blocks) !== JSON.stringify(hit.publishedBlocks);
+  const resolvedBlocks = await resolveBoundBlocks(hit.blocks);
+  const enabledTypes = [...regMap.values()].filter((r) => r.enabled).map((r) => r.type);
+
   return (
-    <AdminPage>
-      <h1 style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-h2)", fontWeight: "var(--weight-medium)" as never, letterSpacing: "var(--tracking-tight)" }}>
-        Footer
-      </h1>
-      <NavTabs />
-      <FooterScreen initial={config} menus={menus} siteName={general.name} tagline={general.tagline} />
-    </AdminPage>
+    <ChromeEditor
+      ownerType="chrome:footer"
+      initialBlocks={resolvedBlocks}
+      isDirtyVsPublished={dirty}
+      enabledTypes={enabledTypes}
+      firstMenuId={menus[0]?.id ?? ""}
+    />
   );
 }

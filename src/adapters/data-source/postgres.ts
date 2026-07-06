@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import type { PostgresConfig } from "@/modules/data-sources/validation";
+import { isLoopbackOrLinkLocalIp, isPrivateRangeIp } from "@/lib/ssrf-guard";
 import type {
   ColumnDesc,
   DataSourceAdapter,
@@ -32,7 +33,49 @@ function toColumnType(pgType: string): ColumnDesc["type"] {
   return PG_TYPE_MAP[pgType] ?? "string";
 }
 
-/** Builds a `Pool` from a validated PostgresConfig, requiring TLS unless explicitly local dev. */
+/**
+ * `connectionStringExtra` is validated (assertNoDisabledTls, ./validation.ts)
+ * to never disable TLS, but is otherwise free-form — parse only the small
+ * set of params `pg` itself understands and are safe to pass through.
+ * `sslmode` is intentionally NOT forwarded: TLS is already enforced below
+ * via `ssl: { rejectUnauthorized: true }`, which is stricter than any
+ * `sslmode` value could relax it to (the validation only proves the value
+ * doesn't say "disable"; it doesn't prove it says "require" with full
+ * verification, so we always use the platform's own strict setting instead
+ * of trusting the pasted string's exact semantics).
+ */
+function extraPoolParams(connectionStringExtra: string | undefined): Partial<Pool["options"]> {
+  if (!connectionStringExtra) return {};
+  const params = new URLSearchParams(connectionStringExtra);
+  const extra: Partial<Pool["options"]> = {};
+  const applicationName = params.get("application_name") || params.get("options");
+  if (applicationName) extra.application_name = applicationName.slice(0, 128);
+  return extra;
+}
+
+/**
+ * True only outside production, for a literal loopback/link-local or
+ * RFC1918-private host — i.e. exactly the docker-compose/local-Supabase
+ * shape this repo's own dev workflow uses. Checked against the literal host
+ * string (no DNS lookup here — this runs on every pool construction, not
+ * just the one-shot test path), so a hostname that merely resolves to a
+ * private IP still gets full TLS; only an actual loopback/private literal
+ * qualifies. NODE_ENV-gated, not an opt-in flag a deployment could leave
+ * set: a production build never takes this branch.
+ */
+function isLocalDevHost(host: string): boolean {
+  if (process.env.NODE_ENV === "production") return false;
+  if (host === "localhost") return true;
+  return isLoopbackOrLinkLocalIp(host) || isPrivateRangeIp(host);
+}
+
+/**
+ * Builds a `Pool` from a validated PostgresConfig. TLS with full cert
+ * verification is required for any real external host; for a local-dev host
+ * (see `isLocalDevHost`) TLS is left undefined so `pg` negotiates whatever
+ * the server offers — most local docker Postgres containers speak no TLS at
+ * all, which would otherwise make this feature untestable against them.
+ */
 function buildPool(config: PostgresConfig): Pool {
   return new Pool({
     host: config.host,
@@ -40,10 +83,11 @@ function buildPool(config: PostgresConfig): Pool {
     database: config.database,
     user: config.user,
     password: config.password,
-    ssl: { rejectUnauthorized: true },
+    ssl: isLocalDevHost(config.host) ? undefined : { rejectUnauthorized: true },
     connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
     statement_timeout: QUERY_TIMEOUT_MS,
     max: 3,
+    ...extraPoolParams(config.connectionStringExtra),
   });
 }
 
@@ -56,8 +100,16 @@ const FAILURE_TRIP_THRESHOLD = 5;
 const COOL_DOWN_MS = 60_000;
 const breakerState = new Map<string, { failures: number; openUntil: number }>();
 
+/**
+ * Includes `user`, not just host/port/database — a pooled Supabase
+ * connection puts every project behind the SAME regional pooler host/port
+ * with the SAME default database name ("postgres"); the project's actual
+ * identity is only in `user` ("postgres.<projectRef>"). Without it, one
+ * failing project would trip the circuit breaker for every other project
+ * sharing that pooler.
+ */
 function breakerKey(config: PostgresConfig): string {
-  return `${config.host}:${config.port}/${config.database}`;
+  return `${config.user}@${config.host}:${config.port}/${config.database}`;
 }
 
 function isBreakerOpen(key: string): boolean {

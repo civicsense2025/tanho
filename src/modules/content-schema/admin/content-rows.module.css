@@ -1,0 +1,128 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-h2);
+  letter-spacing: var(--tracking-tight);
+}
+
+.sub {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.msg {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-8) 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+}
+
+.rowTitle {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.rowSlug {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.pub {
+  font-size: var(--text-xs);
+  color: var(--accent);
+}
+.draft {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ── Form panel (shared with ContentRowForm) ── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 720px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: var(--text-h3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--danger, #e5484d);
+}

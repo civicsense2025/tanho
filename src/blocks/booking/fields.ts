@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 /**
  * The booking block points at an event type by slug (or shows the picker when
@@ -8,6 +8,9 @@ import { commonContent } from "../common";
  */
 export const bookingSchema = z.object({
   ...commonContent,
+  ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   /** Event type slug to feature; empty = link to the full picker. */
   eventTypeSlug: z.string().max(120).default(""),
   /** Optional heading override; falls back to the event name. */

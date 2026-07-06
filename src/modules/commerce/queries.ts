@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { people } from "@/modules/people/schema";
+import { blockSets } from "@/modules/pages/schema";
+import type { BlockNode } from "@/blocks/types";
 import {
   collections,
   disputes,
@@ -63,6 +65,24 @@ export async function getProduct(id: string) {
   return { product, variants, collectionIds: links.map((l) => l.collectionId) };
 }
 
+/** Content-editor load: product row + draft blocks (falls back to published). */
+export async function getProductForEdit(
+  id: string,
+): Promise<{ product: ProductRow; blocks: BlockNode[]; publishedBlocks: BlockNode[] } | null> {
+  const product = await db.query.products.findFirst({ where: eq(products.id, id) });
+  if (!product) return null;
+  const sets = await db.query.blockSets.findMany({
+    where: and(eq(blockSets.ownerType, "product"), eq(blockSets.ownerId, id)),
+  });
+  const draft = sets.find((s) => s.variant === "draft");
+  const published = sets.find((s) => s.variant === "published");
+  return {
+    product,
+    blocks: (draft?.blocks ?? published?.blocks ?? []) as BlockNode[],
+    publishedBlocks: (published?.blocks ?? []) as BlockNode[],
+  };
+}
+
 export type CollectionWithCount = CollectionRow & { productCount: number };
 
 /** All collections with a live product count for the card grid. */
@@ -74,6 +94,24 @@ export async function listCollectionsWithCounts(): Promise<CollectionWithCount[]
     countByCollection.set(l.collectionId, (countByCollection.get(l.collectionId) ?? 0) + 1);
   }
   return rows.map((c) => ({ ...c, productCount: countByCollection.get(c.id) ?? 0 }));
+}
+
+/** Content-editor load: collection row + draft blocks (falls back to published). */
+export async function getCollectionForEdit(
+  id: string,
+): Promise<{ collection: CollectionRow; blocks: BlockNode[]; publishedBlocks: BlockNode[] } | null> {
+  const collection = await db.query.collections.findFirst({ where: eq(collections.id, id) });
+  if (!collection) return null;
+  const sets = await db.query.blockSets.findMany({
+    where: and(eq(blockSets.ownerType, "collection"), eq(blockSets.ownerId, id)),
+  });
+  const draft = sets.find((s) => s.variant === "draft");
+  const published = sets.find((s) => s.variant === "published");
+  return {
+    collection,
+    blocks: (draft?.blocks ?? published?.blocks ?? []) as BlockNode[],
+    publishedBlocks: (published?.blocks ?? []) as BlockNode[],
+  };
 }
 
 export type OrderTab = "all" | "unfulfilled" | "fulfilled" | "disputed" | "refunded" | "donations";
@@ -120,7 +158,15 @@ export async function getOrder(id: string) {
   const order = await db.query.orders.findFirst({ where: eq(orders.id, id) });
   if (!order) return null;
   const items = await db.query.orderItems.findMany({ where: eq(orderItems.orderId, id) });
-  const dispute = await db.query.disputes.findFirst({ where: eq(disputes.orderId, id) });
+  // An order can have more than one disputes row (a Radar early-fraud-warning
+  // and an actual dispute insert separate rows, keyed by their own distinct
+  // Stripe ids — see stripe-events.ts's onEarlyFraudWarning/onDispute).
+  // Most-recent-first so the admin UI shows current state, not whichever
+  // row happened to sort first with no explicit order.
+  const dispute = await db.query.disputes.findFirst({
+    where: eq(disputes.orderId, id),
+    orderBy: [desc(disputes.createdAt)],
+  });
   const person = order.personId
     ? (await db.query.people.findFirst({ where: eq(people.id, order.personId) })) ?? null
     : null;

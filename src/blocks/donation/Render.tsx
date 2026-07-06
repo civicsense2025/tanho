@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { RenderCtx } from "../types";
 import type { DonationContent } from "./fields";
 
@@ -33,7 +34,7 @@ export function RenderDonation({ content }: { content: DonationContent; ctx: Ren
       {content.body ? (
         <span style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>{content.body}</span>
       ) : null}
-      <a
+      <Link
         href="/donate"
         style={{
           display: "inline-flex",
@@ -50,7 +51,7 @@ export function RenderDonation({ content }: { content: DonationContent; ctx: Ren
         }}
       >
         {content.cta}
-      </a>
+      </Link>
     </div>
   );
 }

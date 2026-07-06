@@ -1,16 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { BlockNode } from "@/blocks/types";
 import type { EntryRow } from "@/modules/entries/schema";
-import { createEntry, updateEntry } from "@/modules/entries/actions";
+import {
+  createEntry,
+  loadEntryForContentEdit,
+  saveEntryDraftBlocks,
+  publishEntryBlocks,
+  updateEntry,
+} from "@/modules/entries/actions";
 import { Field } from "@/components/forms/Field";
 import { Input } from "@/components/forms/Input";
 import { Select } from "@/components/forms/Select";
 import { Button } from "@/components/core/Button";
 import { descriptorsFromFieldDefs } from "@/modules/custom-types/admin/descriptors";
 import type { FieldDef } from "@/modules/custom-types/validation";
+import { BlockCanvasEditor } from "@/editor/BlockCanvasEditor";
 import { FIELD_DESCRIPTORS, FieldControl, type FieldDescriptor } from "./fields";
 import styles from "./entry-form.module.css";
+import shell from "@/editor/editor-shell.module.css";
 
 /** Lowercase, spaces→dashes, strip anything outside [a-z0-9-]. */
 export function slugify(input: string): string {
@@ -32,6 +41,12 @@ function seedData(
     const cur = existing?.[d.key];
     if (cur !== undefined) {
       out[d.key] = cur;
+    } else if ("seedValue" in d) {
+      // Explicit override — undefined means "omit the key", which lets an
+      // optional-but-picky field (e.g. a custom-type date/url/color) pass
+      // validation on first save instead of failing on a "" the real
+      // schema doesn't accept. See FieldDescriptor.seedValue's doc comment.
+      if (d.seedValue !== undefined) out[d.key] = d.seedValue;
     } else if (d.kind === "tags") {
       out[d.key] = [];
     } else if (d.kind === "number") {
@@ -82,6 +97,38 @@ export function EntryForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Content blocks: loaded on demand (not prefetched with the list) since
+  // opening the edit panel today is a client-side state flip, no server
+  // round-trip — see loadEntryForContentEdit's doc comment.
+  const [contentBlocks, setContentBlocks] = useState<{
+    blocks: BlockNode[];
+    dirty: boolean;
+    headerBlocks: BlockNode[];
+    footerBlocks: BlockNode[];
+  } | null>(null);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
+
+  const openContentEditor = () => {
+    if (!initial) return;
+    setContentError(null);
+    setContentLoading(true);
+    startTransition(async () => {
+      const res = await loadEntryForContentEdit(initial.id);
+      setContentLoading(false);
+      if (!res.ok) {
+        setContentError(res.error);
+        return;
+      }
+      setContentBlocks({
+        blocks: res.data!.blocks,
+        dirty: JSON.stringify(res.data!.blocks) !== JSON.stringify(res.data!.publishedBlocks),
+        headerBlocks: res.data!.headerBlocks,
+        footerBlocks: res.data!.footerBlocks,
+      });
+    });
+  };
+
   const setTitleAndMaybeSlug = (value: string) => {
     setTitle(value);
     if (!slugTouched) setSlug(slugify(value));
@@ -105,6 +152,30 @@ export function EntryForm({
       onDone();
     });
   };
+
+  if (initial && contentBlocks) {
+    return (
+      <BlockCanvasEditor
+        ownerType={`entry:${initial.type}`}
+        ownerId={initial.id}
+        initialBlocks={contentBlocks.blocks}
+        initialDraftDiffers={contentBlocks.dirty}
+        status={initial.status}
+        headerBlocks={contentBlocks.headerBlocks}
+        footerBlocks={contentBlocks.footerBlocks}
+        settingsPanel={<p className={styles.note}>Editing content for {initial.title || "this entry"}.</p>}
+        settingsLabel="Entry"
+        topBarLeft={
+          <button type="button" className={shell.back} onClick={() => setContentBlocks(null)}>
+            ← {initial.title || "Entry"}
+          </button>
+        }
+        screenLabel={`Entry content · ${initial.title}`}
+        onSaveBlocks={(tree) => saveEntryDraftBlocks(initial.id, tree)}
+        onPublish={() => publishEntryBlocks(initial.id)}
+      />
+    );
+  }
 
   return (
     <div className={styles.panel}>
@@ -168,9 +239,15 @@ export function EntryForm({
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={pending}>
           Cancel
         </Button>
+        {isEdit ? (
+          <Button variant="outline" size="sm" onClick={openContentEditor} loading={contentLoading}>
+            Edit content
+          </Button>
+        ) : null}
         <span style={{ flex: 1 }} />
+        {contentError ? <span className={styles.error}>{contentError}</span> : null}
         <span className={styles.note}>
-          Page content blocks are edited in the page editor.
+          {isEdit ? "" : "Content blocks can be added once the entry is created."}
         </span>
       </div>
     </div>

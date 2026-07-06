@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 export const quoteSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   text: z.string().max(1000).default(""),
   cite: z.string().max(200).default(""),
 });

@@ -1,9 +1,4 @@
 import { z } from "zod";
-import {
-  announcementConfigSchema,
-  footerConfigSchema,
-  headerConfigSchema,
-} from "@/modules/chrome/validation";
 import { seoSettingsSchema } from "@/modules/seo/validation";
 import { peopleSettingsSchema } from "@/modules/people/people-settings";
 import {
@@ -20,8 +15,10 @@ import { analyticsSettingsSchema } from "@/modules/analytics/validation";
 import { aiCrawlersSettingsSchema } from "@/modules/ai-crawlers/validation";
 import { contentTypesSettingsSchema } from "@/modules/custom-types/content-types-settings";
 import { onboardingStateSchema } from "@/modules/onboarding/validation";
+import { installStateSchema } from "@/modules/onboarding/install-validation";
 import { marketplaceSettingsSchema } from "@/modules/marketplace/schema";
 import { donationsSettingsSchema } from "@/modules/donations/validation";
+import { domainSettingsSchema } from "@/modules/domain/validation";
 
 /** Site identity + locale + visibility — the "General" settings screen. */
 export const generalSettingsSchema = z.object({
@@ -47,9 +44,9 @@ export const GENERAL_DEFAULTS: GeneralSettings = generalSettingsSchema.parse({
  */
 export const settingsSchemas: Record<string, z.ZodTypeAny> = {
   general: generalSettingsSchema,
-  header: headerConfigSchema,
-  footer: footerConfigSchema,
-  announcement: announcementConfigSchema,
+  // Header/footer/announcement are no longer settings namespaces — they are
+  // block trees in `block_sets` under the chrome:header / chrome:footer owners
+  // (see modules/chrome). Removed as part of the Phase 3 clean cutover.
   seo: seoSettingsSchema,
   people: peopleSettingsSchema,
   payments: paymentsSettingsSchema,
@@ -62,6 +59,8 @@ export const settingsSchemas: Record<string, z.ZodTypeAny> = {
   ai_crawlers: aiCrawlersSettingsSchema,
   content_types: contentTypesSettingsSchema,
   onboarding: onboardingStateSchema,
+  install: installStateSchema,
   marketplace: marketplaceSettingsSchema,
   donations: donationsSettingsSchema,
+  domain: domainSettingsSchema,
 };

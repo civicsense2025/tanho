@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 import { mediaSrcSchema } from "../image/fields";
 
 export const carouselSlideSchema = z.object({
@@ -10,6 +10,8 @@ export const carouselSlideSchema = z.object({
 export const carouselSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   slides: z.array(carouselSlideSchema).max(50).default([]),
 });
 

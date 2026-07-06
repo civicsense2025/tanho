@@ -6,11 +6,14 @@ import { useRouter } from "next/navigation";
 import { activateTheme, duplicateTheme, deleteTheme } from "../actions";
 import type { ThemePresetRow } from "../preset-queries";
 import { Button } from "@/components/core/Button";
+import { openPreview } from "./open-preview";
 
 /**
  * Grid of saved themes. Each card shows the four base colors as swatches (a
- * cheap preview without deriving the whole set) and Activate / Duplicate /
- * Delete. Activating copies the preset into the live theme row and refreshes.
+ * cheap preview without deriving the whole set) and Preview / Activate /
+ * Duplicate / Delete. Preview opens the full-page modal (real blocks, a real
+ * page you can pick, light/dark) before you commit — Activate copies the
+ * preset into the live theme row.
  */
 export function ThemesGrid({ presets }: { presets: ThemePresetRow[] }) {
   const router = useRouter();
@@ -47,6 +50,7 @@ export function ThemesGrid({ presets }: { presets: ThemePresetRow[] }) {
               {p.builtin ? <span style={{ fontSize: "var(--text-2xs)", color: "var(--text-faint)" }}>built-in</span> : null}
             </div>
             <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+              <Button variant="outline" size="sm" onClick={() => openPreview(router, p.name, p.data)}>Preview</Button>
               <Button variant="accent" size="sm" onClick={() => run(() => activateTheme(p.id))} loading={pending}>Activate</Button>
               <Button variant="outline" size="sm" onClick={() => run(() => duplicateTheme(p.id))}>Duplicate</Button>
               {!p.builtin ? (

@@ -2,11 +2,13 @@
 
 A subscribe band: a title, body, and an email input that posts to the newsletter
 signup action. The `Render` component stays pure; the interactive form is a
-client island (`modules/people/public/SubscribeForm`).
+client island (`modules/people/public/SubscribeForm`). Chrome-eligible — can
+nest inside `site-footer` as well as sit on a page.
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `title` | string | Heading |
+| `variant` | `card \| compact` | `card` — the bordered page-section band (default). `compact` — footer-column's visual language (small-caps label, no border), for use inside `site-footer`. Named `variant`, not `style`/`layout` — both are reserved keys elsewhere in the block system (see fields.ts) |
+| `title` | string | Heading (`compact`: small-caps label) |
 | `body` | string | Supporting copy |
 | `placeholder` | string | Email input placeholder |
 | `cta` | string | Submit button label |
@@ -15,7 +17,7 @@ client island (`modules/people/public/SubscribeForm`).
 | `params` | `Record<string,string>` | Small non-PII props sent with the tracked event |
 
 ```json
-{ "title": "Subscribe", "cta": "Join", "list": "default", "trackEvent": "newsletter_signup" }
+{ "variant": "card", "title": "Subscribe", "cta": "Join", "list": "default", "trackEvent": "newsletter_signup" }
 ```
 
 When `trackEvent` is set the live-site form is wrapped by

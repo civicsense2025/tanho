@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/forms/Input";
+import { Field } from "@/components/forms/Field";
 import { Button } from "@/components/core/Button";
 import { deleteConnection, suggestAllowlist, testConnection, updateConnection } from "../connection-actions";
 import type { DataSourceAllowlistEntry } from "../validation";
@@ -41,6 +42,14 @@ export function AllowlistEditor({
     );
   const removeEntry = (i: number) => setEntries((prev) => prev.filter((_, idx) => idx !== i));
 
+  /** Rows with a table name but zero columns — these can never be saved (an
+   * empty allowlist for a table is meaningless: nothing would be readable),
+   * so catching this client-side avoids a round-trip just to learn that. */
+  const incompleteEntries = useMemo(
+    () => entries.filter((e) => e.table.trim() && e.columns.length === 0),
+    [entries],
+  );
+
   const save = () =>
     startTransition(async () => {
       const res = await updateConnection({ id: connectionId, allowlist: entries });
@@ -78,7 +87,9 @@ export function AllowlistEditor({
       }
       mergeSuggestedTables(res.tables);
       setSuggestResult(
-        res.tables.length > 0 ? `Found ${res.tables.length} table(s). Review and select columns below.` : "No tables found.",
+        res.tables.length > 0
+          ? `Found ${res.tables.length} table(s) below — pick which columns each one can expose.`
+          : "No tables found in the public schema. You can still type a table name in manually below.",
       );
     });
 
@@ -92,8 +103,8 @@ export function AllowlistEditor({
           mergeSuggestedTables(suggested.tables);
           setSuggestResult(
             suggested.tables.length > 0
-              ? `Found ${suggested.tables.length} table(s). Review and select columns below.`
-              : "No tables found.",
+              ? `Found ${suggested.tables.length} table(s) below — pick which columns each one can expose.`
+              : "No tables found in the public schema. You can still type a table name in manually below.",
           );
         } else {
           setSuggestResult(suggested.error);
@@ -115,49 +126,87 @@ export function AllowlistEditor({
         the actual security boundary, re-checked on every query.
       </p>
 
-      {entries.map((entry, i) => (
-        <div key={i} className={styles.allowlistEntry}>
-          <div className={styles.fieldRow}>
-            <Input
-              className={styles.grow}
-              placeholder="Table name"
-              value={entry.table}
-              onChange={(e) => updateTable(i, e.target.value)}
-            />
-            <Button variant="ghost" size="sm" onClick={() => removeEntry(i)}>
-              Remove
-            </Button>
-          </div>
-          <Input
-            placeholder="Allowed columns (comma-separated)"
-            value={entry.columns.join(", ")}
-            onChange={(e) => updateColumns(i, e.target.value)}
-          />
+      <div className={styles.allowlistStep}>
+        <span className={styles.allowlistStepLabel}>1. Confirm the connection works</span>
+        <div className={styles.actions}>
+          <Button variant="outline" size="sm" onClick={runTest} loading={pending}>
+            Test connection
+          </Button>
+          {testResult ? <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{testResult}</span> : null}
         </div>
-      ))}
-
-      <div className={styles.actions}>
-        <Button variant="outline" size="sm" onClick={addEntry}>
-          + Add table
-        </Button>
-        <Button variant="accent" size="sm" onClick={save} loading={pending}>
-          Save allowlist
-        </Button>
-      </div>
-      {error ? <span className={styles.error}>{error}</span> : null}
-
-      <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--space-3)" }} className={styles.actions}>
-        <Button variant="outline" size="sm" onClick={runTest} loading={pending}>
-          Test connection
-        </Button>
-        {testResult ? <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{testResult}</span> : null}
       </div>
 
-      <div className={styles.actions}>
-        <Button variant="outline" size="sm" onClick={runSuggest} loading={pending}>
-          Suggest tables
-        </Button>
-        {suggestResult ? <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{suggestResult}</span> : null}
+      <div className={styles.allowlistStep}>
+        <span className={styles.allowlistStepLabel}>2. Find tables to allow</span>
+        <div className={styles.actions}>
+          <Button variant="outline" size="sm" onClick={runSuggest} loading={pending}>
+            Suggest tables
+          </Button>
+          {suggestResult ? <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{suggestResult}</span> : null}
+        </div>
+      </div>
+
+      <div className={styles.allowlistStep}>
+        <span className={styles.allowlistStepLabel}>3. Pick columns each table may expose</span>
+
+        {entries.length === 0 ? (
+          <p className={styles.empty} style={{ margin: 0 }}>
+            No tables allowed yet. Click &quot;Suggest tables&quot; above, or &quot;+ Add table&quot; below to
+            type one in by hand.
+          </p>
+        ) : (
+          entries.map((entry, i) => {
+            const needsColumns = entry.table.trim() && entry.columns.length === 0;
+            return (
+              <div key={i} className={styles.allowlistEntry}>
+                <div className={styles.fieldRow}>
+                  <Field label="Table name" className={styles.grow}>
+                    <Input
+                      placeholder="e.g. products"
+                      value={entry.table}
+                      onChange={(e) => updateTable(i, e.target.value)}
+                    />
+                  </Field>
+                  <Button variant="ghost" size="sm" onClick={() => removeEntry(i)}>
+                    Remove
+                  </Button>
+                </div>
+                <Field
+                  label="Allowed columns"
+                  hint={needsColumns ? undefined : "Comma-separated, e.g. id, name, price"}
+                >
+                  <Input
+                    placeholder="id, name, price"
+                    value={entry.columns.join(", ")}
+                    onChange={(e) => updateColumns(i, e.target.value)}
+                    invalid={Boolean(needsColumns)}
+                  />
+                </Field>
+                {needsColumns ? (
+                  <span className={styles.error}>
+                    Add at least one column, or remove this table — an empty column list can&apos;t be saved.
+                  </span>
+                ) : null}
+              </div>
+            );
+          })
+        )}
+
+        <div className={styles.actions}>
+          <Button variant="outline" size="sm" onClick={addEntry}>
+            + Add table
+          </Button>
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={save}
+            loading={pending}
+            disabled={incompleteEntries.length > 0}
+          >
+            Save allowlist
+          </Button>
+        </div>
+        {error ? <span className={styles.error}>{error}</span> : null}
       </div>
 
       <div className={styles.actions}>

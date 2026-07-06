@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   // Cache Components: public pages opt into caching with `use cache` +
   // cacheTag(); everything else (admin, gated pages) is dynamic by default.
   cacheComponents: true,
+  // re2 is a native (.node) module used by the redirect pattern engine
+  // (modules/redirects/engine-patterns.ts → the api/redirect-resolve route).
+  // The bundler can't inline a native binary, so opt it out and let the route
+  // handler `require()` it at runtime from node_modules. (Not usable in the
+  // proxy, which is edge-bundled — by design the proxy never imports it.)
+  serverExternalPackages: ["re2"],
   // Lets a phone on the same LAN hit the dev server directly (e.g. testing
   // the Swift app against `npm run dev`) — otherwise Next blocks dev-asset
   // requests (HMR, /_next/*) whose Origin isn't localhost. Dev-only;

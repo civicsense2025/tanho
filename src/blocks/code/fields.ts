@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 export const codeSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   filename: z.string().max(200).default(""),
   language: z.string().max(50).default(""),
   code: z.string().max(20_000).default(""),

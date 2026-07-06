@@ -3,7 +3,7 @@ import { writeAudit } from "@/modules/audit/log";
 import { productVariants } from "@/modules/commerce/schema";
 import { variantSchema } from "@/modules/commerce/validation";
 import { db } from "@/lib/db/client";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -24,7 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .insert(productVariants)
       .values({ ...parsed.data, productId: id })
       .returning({ id: productVariants.id });
-    updateTag("products");
+    revalidateTag("products", "max");
     await writeAudit({ userId: user.id, action: "product.variant.create", ownerType: "product", ownerId: id });
     return ok({ id: row.id }, 201);
   });

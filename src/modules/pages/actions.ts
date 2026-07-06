@@ -1,16 +1,19 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { rebuildMediaUsage } from "@/modules/media/usage";
+import { recordSlugChange } from "@/modules/seo";
+import { indexPage, removePageFromIndex } from "@/modules/search/index-document";
 import { blockSets, pages } from "./schema";
-import { treeHasPaywall, validateBlockTree } from "./blocks-io";
-import { pageDetailsSchema } from "./validation";
+import { treeHasPaywall } from "./blocks-io";
+import { pageDetailsSchema, secureCustomCode } from "./validation";
 import { ROUTE_TYPE } from "@/modules/entries/router";
 import { resolveCodePage } from "@/app/(public)/code-pages/registry";
+import { saveOwnerBlocks, publishOwnerBlocks } from "@/modules/blocks/actions";
 
 /** True when `route` collides with a reserved entity-route prefix (/work, /guides, /resources) or an exact code-page route. */
 function collidesWithReservedRoute(route: string): boolean {
@@ -33,6 +36,7 @@ export async function createPage(input: unknown): Promise<Result<{ id: string }>
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid page" };
   }
   const d = parsed.data;
+  secureCustomCode(d as Record<string, unknown>, user.role === "owner");
   if (collidesWithReservedRoute(d.route)) {
     return { ok: false, error: `Route ${d.route} is reserved by a built-in section of the site` };
   }
@@ -56,10 +60,35 @@ export async function savePageDetails(id: string, input: unknown): Promise<Resul
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid page" };
   }
+  secureCustomCode(parsed.data as Record<string, unknown>, user.role === "owner");
+  // Same checks createPage runs — an edit can shadow a reserved route or
+  // collide with another page's route exactly as easily as creation can.
+  let oldRoute: string | null = null;
+  if (parsed.data.route !== undefined) {
+    if (collidesWithReservedRoute(parsed.data.route)) {
+      return { ok: false, error: `Route ${parsed.data.route} is reserved by a built-in section of the site` };
+    }
+    const dupe = await db.query.pages.findFirst({
+      where: and(eq(pages.route, parsed.data.route), ne(pages.id, id)),
+    });
+    if (dupe) return { ok: false, error: `Route ${parsed.data.route} is already in use` };
+    // Capture the current route so a rename can be turned into a 301 below.
+    const current = await db.query.pages.findFirst({
+      where: eq(pages.id, id),
+      columns: { route: true },
+    });
+    oldRoute = current?.route ?? null;
+  }
   await db
     .update(pages)
     .set({ ...parsed.data, updatedAt: Date.now() })
     .where(eq(pages.id, id));
+  // A published page that changed its route keeps its old URL working: create a
+  // 301 old→new and log it, so inbound links + rankings survive the rename.
+  if (oldRoute && parsed.data.route && oldRoute !== parsed.data.route) {
+    await recordSlugChange("page", id, oldRoute, parsed.data.route);
+    updateTag("redirects");
+  }
   await writeAudit({ userId: user.id, action: "page.details", ownerType: "page", ownerId: id });
   invalidatePage(id);
   return { ok: true };
@@ -67,66 +96,29 @@ export async function savePageDetails(id: string, input: unknown): Promise<Resul
 
 /** Autosave target — writes the DRAFT variant only. */
 export async function saveDraftBlocks(id: string, tree: unknown): Promise<Result> {
-  const user = await requireUser();
-  const v = validateBlockTree(tree);
-  if (!v.ok) return { ok: false, error: v.error };
-  await db
-    .insert(blockSets)
-    .values({
-      ownerType: "page",
-      ownerId: id,
-      variant: "draft",
-      blocks: v.blocks,
-      savedAt: Date.now(),
-      savedBy: user.id,
-    })
-    .onConflictDoUpdate({
-      target: [blockSets.ownerType, blockSets.ownerId, blockSets.variant],
-      set: { blocks: v.blocks, savedAt: Date.now(), savedBy: user.id },
-    });
-  return { ok: true };
+  return saveOwnerBlocks("page", id, tree);
 }
 
 /** Publish = copy draft → published + flip status + recompute hasPaywall. */
 export async function publishPage(id: string): Promise<Result> {
   const user = await requireUser();
-  const draft = await db.query.blockSets.findFirst({
-    where: and(
-      eq(blockSets.ownerType, "page"),
-      eq(blockSets.ownerId, id),
-      eq(blockSets.variant, "draft"),
-    ),
-  });
-  const v = validateBlockTree(draft?.blocks ?? []);
-  if (!v.ok) return { ok: false, error: v.error };
+  const published = await publishOwnerBlocks("page", id);
+  if (!published.ok) return published;
 
-  await db
-    .insert(blockSets)
-    .values({
-      ownerType: "page",
-      ownerId: id,
-      variant: "published",
-      blocks: v.blocks,
-      savedAt: Date.now(),
-      savedBy: user.id,
-    })
-    .onConflictDoUpdate({
-      target: [blockSets.ownerType, blockSets.ownerId, blockSets.variant],
-      set: { blocks: v.blocks, savedAt: Date.now(), savedBy: user.id },
-    });
   const row = await db
     .update(pages)
     .set({
       status: "published",
-      hasPaywall: treeHasPaywall(v.blocks),
+      hasPaywall: treeHasPaywall(published.blocks),
       publishedAt: Date.now(),
       updatedAt: Date.now(),
     })
     .where(eq(pages.id, id))
-    .returning({ route: pages.route })
+    .returning({ route: pages.route, title: pages.title })
     .then((r) => r[0]);
   // Media usage reflects the PUBLISHED tree — rebuilt on every publish.
-  await rebuildMediaUsage("page", id, row?.route ?? "", v.blocks);
+  await rebuildMediaUsage("page", id, row?.route ?? "", published.blocks);
+  await indexPage({ id, route: row?.route ?? "", title: row?.title ?? "", blocks: published.blocks });
   await writeAudit({ userId: user.id, action: "page.publish", ownerType: "page", ownerId: id });
   invalidatePage(id);
   return { ok: true };
@@ -136,6 +128,7 @@ export async function deletePage(id: string): Promise<Result> {
   const user = await requireUser();
   await db.delete(blockSets).where(and(eq(blockSets.ownerType, "page"), eq(blockSets.ownerId, id)));
   await db.delete(pages).where(eq(pages.id, id));
+  await removePageFromIndex(id);
   await writeAudit({ userId: user.id, action: "page.delete", ownerType: "page", ownerId: id });
   invalidatePage(id);
   return { ok: true };

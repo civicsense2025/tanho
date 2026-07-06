@@ -4,6 +4,7 @@ import { updateTag } from "next/cache";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { fetchPeerPack } from "./federation";
+import { getMarketplaceSettings } from "./queries";
 import { importBlockPack } from "@/modules/blocks/packs/actions";
 import { importDesignPack } from "@/modules/blocks/design-packs/actions";
 
@@ -30,7 +31,8 @@ export async function installPackFromPeer(
 ): Promise<Result<InstallDiagnostics>> {
   const user = await requireUser("owner");
 
-  const fetched = await fetchPeerPack(peerUrl, type, slug);
+  const settings = await getMarketplaceSettings();
+  const fetched = await fetchPeerPack(peerUrl, type, slug, settings.peerInstances);
   if (!fetched.ok) return { ok: false, error: fetched.error };
   const pack = fetched.pack;
 

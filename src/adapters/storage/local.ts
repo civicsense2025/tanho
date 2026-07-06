@@ -22,8 +22,13 @@ const EXT_TO_MIME: Record<string, string> = {
   png: "image/png",
   webp: "image/webp",
   gif: "image/gif",
+  svg: "image/svg+xml",
   mp4: "video/mp4",
   pdf: "application/pdf",
+  woff2: "font/woff2",
+  woff: "font/woff",
+  ttf: "font/ttf",
+  otf: "font/otf",
 };
 
 const contentTypeFor = (key: string): string =>

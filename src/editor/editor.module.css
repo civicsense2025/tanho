@@ -124,6 +124,22 @@
   color: var(--text-faint);
 }
 
+/* Content-aware suggestions: the "Fields · <type>" heading + each suggested
+   block, when templating a content type. Accent-tinted so they read as the
+   relevant-to-this-type shortcuts. */
+.pickerCatSuggested {
+  color: var(--accent);
+}
+.pickerItemSuggested {
+  background: var(--accent-tint, color-mix(in srgb, var(--accent) 8%, transparent));
+}
+.pickerItemSuggested:hover {
+  background: var(--accent-tint, color-mix(in srgb, var(--accent) 14%, transparent));
+}
+.pickerItemSuggested .pickerItemLabel {
+  color: var(--accent);
+}
+
 .preview {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

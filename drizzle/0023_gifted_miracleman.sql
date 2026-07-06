@@ -1,0 +1,1 @@
+CREATE INDEX `analytics_events_person_id_idx` ON `analytics_events` (`person_id`);

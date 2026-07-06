@@ -1,29 +1,42 @@
-import { settings } from "../../src/modules/settings/schema";
-import {
-  announcementConfigSchema,
-  footerConfigSchema,
-  headerConfigSchema,
-} from "../../src/modules/chrome/validation";
+import { and, eq } from "drizzle-orm";
+import { blockSets } from "../../src/modules/pages/schema";
+import { validateBlockTree } from "../../src/modules/pages/blocks-io";
+import { CHROME_OWNER_ID, CHROME_OWNER_TYPES } from "../../src/modules/chrome/owners";
+import { defaultChromeTree } from "../../src/modules/chrome/templates";
 import { log, type SeedDb } from "../lib";
 
 /**
- * Default chrome settings rows — schema defaults (header "center-cta" with
- * CTA off, footer "simple-centered", announcement disabled) wired to the
- * seeded Main menu. Logo text and copyright stay empty on purpose: they
- * fall back to the site name at render time (white-label rule).
+ * Default chrome block trees — the clean-cutover successor to the old chrome
+ * settings rows. Writes a default header + footer BLOCK TREE (the nicest
+ * template, wired to the seeded Main menu) into `block_sets` under the new
+ * ownerTypes `chrome:header` / `chrome:footer`, in BOTH draft and published
+ * variants, exactly like the page seed. Idempotent: an owner that already has
+ * rows is left untouched.
+ *
+ * Each tree is run through `validateBlockTree` before it lands — so seeding
+ * doubles as a guarantee that the default templates validate against the block
+ * schemas (the fail-closed write boundary pages use).
  */
 export async function seedChrome(db: SeedDb, mainMenuId: string) {
-  const rows = [
-    { namespace: "header", data: headerConfigSchema.parse({ menuId: mainMenuId }) },
-    {
-      namespace: "footer",
-      data: footerConfigSchema.parse({ columns: [{ title: "Explore", menuId: mainMenuId }] }),
-    },
-    { namespace: "announcement", data: announcementConfigSchema.parse({}) },
-  ];
+  for (const ownerType of CHROME_OWNER_TYPES) {
+    const existing = await db.query.blockSets.findFirst({
+      where: and(eq(blockSets.ownerType, ownerType), eq(blockSets.ownerId, CHROME_OWNER_ID)),
+    });
+    if (existing) continue;
 
-  for (const row of rows) {
-    await db.insert(settings).values(row).onConflictDoNothing();
+    const tree = defaultChromeTree(ownerType, mainMenuId);
+    const v = validateBlockTree(tree);
+    if (!v.ok) {
+      throw new Error(`[seed] default ${ownerType} tree failed validation: ${v.error}`);
+    }
+    for (const variant of ["draft", "published"] as const) {
+      await db.insert(blockSets).values({
+        ownerType,
+        ownerId: CHROME_OWNER_ID,
+        variant,
+        blocks: v.blocks,
+      });
+    }
   }
-  log("chrome settings seeded (skip if present)");
+  log("chrome header/footer block trees seeded (skip if present)");
 }

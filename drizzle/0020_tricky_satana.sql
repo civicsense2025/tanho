@@ -1,0 +1,1 @@
+ALTER TABLE `theme` ADD `font_family_id` text;

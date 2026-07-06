@@ -84,20 +84,21 @@ export function AdminTopBar({
           { label: "Header", href: "/admin/nav/header" },
           { label: "Footer", href: "/admin/nav/footer" },
           { label: "Menus", href: "/admin/nav/menus" },
-          { label: "Announcement bar", href: "/admin/nav/announcement" },
         ]} />
         <NavBucket label="Content" items={[
           { label: "Pages", href: "/admin/pages" },
-          { label: "Block packs", href: "/admin/block-packs" },
-          { label: "Design packs", href: "/admin/design-packs" },
           { label: "Content types", href: "/admin/content/types" },
           { label: "Forms", href: "/admin/content/forms" },
           { label: "Media library", href: "/admin/media" },
+          { label: "Block packs", href: "/admin/block-packs" },
+          { label: "Design packs", href: "/admin/design-packs" },
           { label: "Tags", href: "/admin/content/tags" },
           { label: "Redirects", href: "/admin/content/redirects" },
+          { label: "Import content", href: "/admin/content/import" },
         ]} />
         <NavBucket label="People" items={[
           { label: "All people", href: "/admin/people" },
+          { label: "Reader digest", href: "/admin/people/digest" },
           { label: "People settings", href: "/admin/settings/people" },
         ]} />
         <NavBucket label="Growth" items={[
@@ -108,14 +109,7 @@ export function AdminTopBar({
           { label: "Overview", href: "/admin/analytics/overview" },
           { label: "Traffic", href: "/admin/analytics/traffic" },
         ]} />
-        <NavBucket label="Marketplace" items={[
-          { label: "Browse marketplace", href: "/admin/marketplace/browse" },
-        ]} />
         {shopVisible ? <NavBucket label="Shop" items={shopItems} /> : null}
-        <NavBucket label="Marketplace" items={[
-          { label: "Pack products", href: "/admin/marketplace/products" },
-          { label: "Your purchases", href: "/admin/marketplace/purchases" },
-        ]} />
         <span style={{ flex: 1 }} />
         <NavBucket label="Settings" indicator={!setupComplete} items={[
           { label: "Setup guide", href: "/admin/onboarding" },
@@ -126,7 +120,6 @@ export function AdminTopBar({
           { label: "Payments", href: "/admin/settings/payments" },
           { label: "Donations", href: "/admin/settings/donations" },
           { label: "AI & crawlers", href: "/admin/settings/ai" },
-          { label: "Marketplace", href: "/admin/settings/marketplace" },
           { label: "Policies", href: "/admin/settings/policies" },
         ]} />
       </nav>

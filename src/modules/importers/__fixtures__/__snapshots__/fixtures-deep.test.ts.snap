@@ -1,0 +1,277 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Ghost — deep > snapshot: welcome post block tree 1`] = `
+[
+  {
+    "content": {
+      "html": "<p>Welcome to the blog. This first post shows a captioned image and a gallery.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+  {
+    "content": {
+      "alt": "A wide mountain vista",
+      "caption": "Sunrise over the ridge.",
+      "src": "https://static.ghost.example/content/images/2024/03/hero.jpg",
+    },
+    "type": "image",
+  },
+  {
+    "content": {
+      "cols": 2,
+      "images": [
+        {
+          "alt": "Gallery one",
+          "caption": "",
+          "src": "https://static.ghost.example/content/images/2024/03/g1.jpg",
+        },
+        {
+          "alt": "Gallery two",
+          "caption": "",
+          "src": "https://static.ghost.example/content/images/2024/03/g2.jpg",
+        },
+      ],
+    },
+    "type": "gallery",
+  },
+  {
+    "content": {
+      "html": "
+<p>That's the gallery. Thanks for reading.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+]
+`;
+
+exports[`Markdown — deep > snapshot: hello-markdown block tree 1`] = `
+[
+  {
+    "content": {
+      "html": "Hello, Markdown
+<p>This is a real post written in Markdown, with an image and some code.</p>
+<p>An inline markdown image (renders inside a paragraph):</p>
+<p><img src="https://cdn.example.com/landscape.jpg" alt="A landscape" title="A wide landscape" /></p>
+<p>A raw HTML figure (Obsidian/Hugo allow inline HTML — becomes a native image block):</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+  {
+    "content": {
+      "alt": "A framed figure",
+      "caption": "A framed figure.",
+      "src": "https://cdn.example.com/figure.jpg",
+    },
+    "type": "image",
+  },
+  {
+    "content": {
+      "html": "<p>Here's a snippet:</p>
+<pre><code>console.log("hello from markdown");
+</code></pre>
+<ul>
+<li>first point</li>
+<li>second point</li>
+</ul>
+",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+]
+`;
+
+exports[`Medium — deep > snapshot: first-story block tree 1`] = `
+[
+  {
+    "content": {
+      "html": "
+<p class="graf graf--p">This is my first story on Medium. Below is a figure and a pull quote.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+  {
+    "content": {
+      "alt": "A diagram",
+      "caption": "A diagram explaining the idea.",
+      "src": "https://cdn-images-1.medium.com/max/1600/1*abc.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": {
+      "cite": "",
+      "text": "The best way to predict the future is to invent it.",
+    },
+    "type": "quote",
+  },
+  {
+    "content": {
+      "html": "
+      <p class="graf graf--p">Thanks for reading.</p>
+    ",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+]
+`;
+
+exports[`RSS — deep > snapshot: picture-post block tree 1`] = `
+[
+  {
+    "content": {
+      "html": "<p>Full body text of the first post.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+  {
+    "content": {
+      "alt": "A photo",
+      "caption": "A caption.",
+      "src": "https://feed.example.com/img/photo.jpg",
+    },
+    "type": "image",
+  },
+  {
+    "content": {
+      "html": "<p>Closing paragraph.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+]
+`;
+
+exports[`Squarespace — deep > snapshot: first-light block tree 1`] = `
+[
+  {
+    "content": {
+      "alt": "Studio overview",
+      "caption": "Our studio, first light.",
+      "src": "https://images.squarespace-cdn.com/content/v1/abc/hero.jpg?format=2500w",
+    },
+    "type": "image",
+  },
+  {
+    "content": {
+      "cols": 2,
+      "images": [
+        {
+          "alt": "Gallery one",
+          "caption": "",
+          "src": "https://images.squarespace-cdn.com/content/v1/abc/g1.jpg?format=1000w",
+        },
+        {
+          "alt": "Gallery two",
+          "caption": "",
+          "src": "https://images.squarespace-cdn.com/content/v1/abc/g2.jpg?format=1000w",
+        },
+      ],
+    },
+    "type": "gallery",
+  },
+  {
+    "content": {
+      "html": "<p>Come visit us downtown.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+]
+`;
+
+exports[`Substack — deep > snapshot: welcome newsletter block tree 1`] = `
+[
+  {
+    "content": {
+      "html": "<p>Welcome to the newsletter. Here's an image and a way to subscribe.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+  {
+    "content": {
+      "alt": "A first photo",
+      "caption": "The very first photo.",
+      "src": "https://substackcdn.com/image/fetch/w_1456/first.jpg",
+    },
+    "type": "image",
+  },
+  {
+    "content": {
+      "html": "
+  <p>Thanks for being here.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+  {
+    "content": {
+      "body": "Get new posts in your inbox. No spam, unsubscribe anytime.",
+      "cta": "Subscribe",
+      "list": "default",
+      "params": {},
+      "placeholder": "you@example.com",
+      "title": "Never miss an issue",
+      "trackEvent": "",
+      "variant": "card",
+    },
+    "type": "newsletter",
+  },
+]
+`;
+
+exports[`WordPress — deep > snapshot: getting-started block tree 1`] = `
+[
+  {
+    "content": {
+      "html": "
+<p>Welcome. This post shows a captioned image and a gallery.</p>",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+  {
+    "content": {
+      "alt": "A wide vista",
+      "caption": "Sunrise over the ridge.",
+      "src": "https://old.example.com/wp-content/uploads/2024/03/hero.jpg",
+    },
+    "type": "image",
+  },
+  {
+    "content": {
+      "cols": 2,
+      "images": [
+        {
+          "alt": "Gallery one",
+          "caption": "",
+          "src": "https://old.example.com/wp-content/uploads/2024/03/g1.jpg",
+        },
+        {
+          "alt": "Gallery two",
+          "caption": "",
+          "src": "https://old.example.com/wp-content/uploads/2024/03/g2.jpg",
+        },
+      ],
+    },
+    "type": "gallery",
+  },
+  {
+    "content": {
+      "html": "
+
+<p>Thanks for reading.</p>
+",
+      "md": "",
+    },
+    "type": "richtext",
+  },
+]
+`;

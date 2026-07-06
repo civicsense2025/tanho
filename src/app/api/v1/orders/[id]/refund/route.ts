@@ -4,12 +4,12 @@ import { orders } from "@/modules/commerce/schema";
 import { payments } from "@/adapters/payments";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail } from "@/lib/api/v1";
 
 const invalidate = () => {
-  updateTag("orders");
-  updateTag("storefront");
+  revalidateTag("orders", "max");
+  revalidateTag("storefront", "max");
 };
 
 /**

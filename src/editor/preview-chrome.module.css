@@ -4,55 +4,6 @@
   height: 100%;
   min-height: 0;
 }
-.bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 10px var(--space-4);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  flex-shrink: 0;
-}
-.dots {
-  display: flex;
-  gap: 6px;
-}
-.dots span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-.urlWrap {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-.url {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 320px;
-  padding: 4px 12px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--text-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.urlRoute {
-  color: var(--text-muted);
-}
-.deviceLabel {
-  font-family: var(--font-label);
-  font-size: var(--text-2xs);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
-  color: var(--text-faint);
-}
 .ribbon {
   display: flex;
   align-items: center;
@@ -85,4 +36,39 @@
   background: var(--bg);
   display: flex;
   flex-direction: column;
+}
+
+/* Real published chrome (header/footer) rendered read-only around the page
+   canvas. Full-bleed like production; a hover "Edit" chip deep-links to the
+   chrome editor. The chrome itself is inert (pointer-events off) so clicks
+   land on the page canvas, not the preview. */
+.chromeBand {
+  position: relative;
+  isolation: isolate;
+}
+.chromeInert {
+  pointer-events: none;
+}
+.chromeEdit {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 2;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity var(--dur, 0.15s) var(--ease, ease);
+}
+.chromeBand:hover .chromeEdit,
+.chromeEdit:focus-visible {
+  opacity: 1;
+}
+.chromeEdit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }

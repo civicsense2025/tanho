@@ -50,6 +50,12 @@ export type FieldDef = {
   options?: string[];
   refType?: string;
   multi?: boolean;
+  /**
+   * Internal field: kept as a real column (so it's still stored/queryable) but
+   * never rendered on the public page or indexed for search. The owner's
+   * "pull the data but don't show it" escape hatch — e.g. an internal cost.
+   */
+  hidden?: boolean;
   fields?: FieldDef[];
 };
 
@@ -68,6 +74,7 @@ function fieldSchemaAtDepth(depth: number): z.ZodType<FieldDef> {
     options: z.array(z.string().min(1).max(80)).max(50).optional(),
     refType: z.string().max(40).optional(),
     multi: z.boolean().optional(),
+    hidden: z.boolean().optional(),
   };
 
   if (depth <= 0) {

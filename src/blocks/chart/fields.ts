@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 export const chartSeriesItemSchema = z.object({
   label: z.string().max(100).default(""),
@@ -9,6 +9,8 @@ export const chartSeriesItemSchema = z.object({
 export const chartSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   kind: z.enum(["bar", "line", "donut"]).default("bar"),
   title: z.string().max(200).default(""),
   series: z.array(chartSeriesItemSchema).max(50).default([]),

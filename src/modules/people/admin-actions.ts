@@ -179,9 +179,12 @@ export async function exportPeopleCsv(segment: Segment): Promise<Result<string>>
   return { ok: true, data: lines.join("\n") };
 }
 
-/** Delete a person + cascade activity/memberships/subscriptions (owner-only). */
+/** Delete a person + cascade activity/memberships/subscriptions (owner-only).
+ *  Order history is preserved (not cascade-deleted) by clearing `personId`
+ *  first — same contract as the bulk deletePeople above. */
 export async function deletePerson(id: string): Promise<Result> {
   const user = await requireUser("owner");
+  await db.update(orders).set({ personId: null }).where(eq(orders.personId, id));
   await db.delete(personActivity).where(eq(personActivity.personId, id));
   await db.delete(memberships).where(eq(memberships.personId, id));
   await db.delete(emailSubscriptions).where(eq(emailSubscriptions.personId, id));

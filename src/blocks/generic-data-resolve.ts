@@ -6,6 +6,12 @@ import { allowDataSourceQuery } from "@/modules/data-sources/rate-limit";
 import type { DataSourceBinding } from "@/modules/data-sources/validation";
 
 export type GenericDataResolved = {
+  /** The actually-queried, allowlist-filtered column list — NOT the
+   *  editor-saved binding.columns, which can contain columns the
+   *  allowlist stripped. A block's Render must build headers/lookups from
+   *  THIS list, not the raw binding, or a stripped column shows up as a
+   *  blank column instead of being omitted. */
+  columns: string[];
   rows: Record<string, unknown>[];
   truncated: boolean;
 } | null;
@@ -62,7 +68,7 @@ export async function resolveGenericData(
   try {
     const adapter = getDataSourceAdapter({ provider: connection.provider, config });
     const result = await adapter.query(spec);
-    return result;
+    return { ...result, columns };
   } catch (err) {
     console.warn(`[data-sources] query failed for connection ${connection.id}`, err instanceof Error ? err.message : err);
     return null;

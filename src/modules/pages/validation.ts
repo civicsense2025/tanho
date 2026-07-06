@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sanitizeCss } from "@/lib/css-sanitizer";
 
 /** URL-safe slug segment. */
 export const slugSchema = z
@@ -34,11 +35,40 @@ export const pageDetailsSchema = z.object({
   layout: pageLayoutSchema.partial().default({}),
   seoTitle: z.string().max(200).default(""),
   seoDescription: z.string().max(400).default(""),
+  ogImageMediaId: z.string().nullable().default(null),
   canonicalUrl: z.string().max(400).default(""),
   noIndex: z.boolean().default(false),
+  // Per-page custom code. `customCss` is sanitised (available to any admin);
+  // customHead/BodyHtml are rendered VERBATIM and are OWNER-ONLY — the save action
+  // (modules/pages/actions.ts) enforces role and sanitises CSS. Schema-layer caps only.
+  customCss: z.string().max(50000).default(""),
+  customHeadHtml: z.string().max(50000).default(""),
+  customBodyHtml: z.string().max(50000).default(""),
 });
 
 export type PageDetails = z.infer<typeof pageDetailsSchema>;
+
+/** The page-detail fields that carry OWNER-ONLY raw code (rendered verbatim, no
+ *  sanitiser). The save path strips these unless the caller is role "owner". */
+export const OWNER_ONLY_PAGE_FIELDS = ["customHeadHtml", "customBodyHtml"] as const;
+
+/**
+ * Secure the per-page custom-code fields IN PLACE before they hit the DB — the single
+ * authoritative gate, shared by BOTH write paths (the savePageDetails server action AND
+ * the /api/v1/pages REST route, so neither can be used to bypass the other):
+ *  - `customCss` is SANITISED (AST-rebuilt, allow-listed, page-scoped) — any admin.
+ *  - `customHeadHtml` / `customBodyHtml` render VERBATIM (real <script>), so they are
+ *    OWNER-ONLY: when `isOwner` is false these keys are DELETED from the payload.
+ * Only touches keys that are present (works on a `.partial()` object).
+ */
+export function secureCustomCode(data: Record<string, unknown>, isOwner: boolean): void {
+  if (typeof data.customCss === "string") {
+    data.customCss = data.customCss ? sanitizeCss(data.customCss) : "";
+  }
+  if (!isOwner) {
+    for (const f of OWNER_ONLY_PAGE_FIELDS) delete data[f];
+  }
+}
 
 /** A block node; children validated recursively. Content is validated
  *  per-type against the registry schema in the save action. */

@@ -1,4 +1,5 @@
-import { requireUser } from "@/modules/auth/guards";
+import { requireOwnerSessionOrToken } from "@/modules/auth/admin-or-token";
+import { authErrorResponse } from "@/modules/auth/admin-or-token-response";
 import { buildExportArchive } from "@/modules/portability/archive";
 import { buildSiteExport } from "@/modules/portability/export";
 
@@ -9,11 +10,18 @@ import { buildSiteExport } from "@/modules/portability/export";
  * people tables (see modules/portability/manifest.ts for the allowlist and
  * why the rest is excluded).
  *
+ * Owner auth accepts EITHER an API bearer token (native app) or the admin
+ * session cookie (browser download) — see requireOwnerSessionOrToken.
+ *
  * Route handlers access the DB + filesystem directly here — no "use cache"
  * involved, this is always a request-time, non-cached response.
  */
 export async function GET(request: Request): Promise<Response> {
-  await requireUser("owner");
+  try {
+    await requireOwnerSessionOrToken();
+  } catch (e) {
+    return authErrorResponse(e);
+  }
 
   const includePeople = new URL(request.url).searchParams.get("people") === "1";
   const now = Date.now();

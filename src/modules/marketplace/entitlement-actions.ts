@@ -11,7 +11,8 @@ import { serializeDesignPack } from "@/modules/blocks/design-packs/actions";
 import { importBlockPack } from "@/modules/blocks/packs/actions";
 import { importDesignPack } from "@/modules/blocks/design-packs/actions";
 import { urlTypeForEntryType } from "./public";
-import { hasPackEntitlement } from "./entitlements";
+import { resolveEntitlement } from "@/modules/entitlements/gate";
+import type { RenderViewer } from "@/blocks/types";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -38,6 +39,15 @@ async function resolveBuyerPersonId(): Promise<string | null> {
 }
 
 /**
+ * A resolveEntitlement()-shaped viewer for a resolved buyer personId. Only
+ * personId matters for a "pack" gate (see modules/entitlements/gate.ts) —
+ * memberActive/tier are irrelevant to pack purchases, so they're inert here.
+ */
+function buyerViewer(personId: string): RenderViewer {
+  return { personId, memberActive: false, tier: null };
+}
+
+/**
  * Download an entitled pack as portable JSON. For logged-in buyers with an
  * entitlement (storefront viewer or admin whose email matches a person).
  * Returns the serialized pack object.
@@ -49,8 +59,8 @@ export async function downloadEntitledPack(
   const personId = await resolveBuyerPersonId();
   if (!personId) return { ok: false, error: "You must be logged in to download your purchases." };
 
-  const entitled = await hasPackEntitlement(personId, packType, packEntryId);
-  if (!entitled) return { ok: false, error: "You don't have access to this pack." };
+  const gate = await resolveEntitlement(buyerViewer(personId), { kind: "pack", packType, packEntryId });
+  if (!gate.passed) return { ok: false, error: "You don't have access to this pack." };
 
   const result =
     packType === "block_pack"
@@ -86,8 +96,8 @@ export async function installEntitledPack(
   const personId = await resolveBuyerPersonId();
   if (!personId) return { ok: false, error: "No matching person record for your account." };
 
-  const entitled = await hasPackEntitlement(personId, packType, packEntryId);
-  if (!entitled) return { ok: false, error: "You don't have access to this pack." };
+  const gate = await resolveEntitlement(buyerViewer(personId), { kind: "pack", packType, packEntryId });
+  if (!gate.passed) return { ok: false, error: "You don't have access to this pack." };
 
   // Serialize the pack from the source entry, then re-import it.
   const serialized =

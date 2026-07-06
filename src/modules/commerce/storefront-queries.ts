@@ -1,6 +1,8 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { blockSets } from "@/modules/pages/schema";
+import type { BlockNode } from "@/blocks/types";
 import {
   collections,
   productCollections,
@@ -83,6 +85,21 @@ export async function getActiveProductBySlug(
     : [];
 
   return { ...product, variants, collections: cols };
+}
+
+/** Published content blocks for a product's body — cached. */
+export async function getPublishedProductBlocks(productId: string): Promise<BlockNode[]> {
+  "use cache";
+  cacheLife("max");
+  cacheTag("products", "storefront");
+  const set = await db.query.blockSets.findFirst({
+    where: and(
+      eq(blockSets.ownerType, "product"),
+      eq(blockSets.ownerId, productId),
+      eq(blockSets.variant, "published"),
+    ),
+  });
+  return (set?.blocks ?? []) as BlockNode[];
 }
 
 /** Visible collections for the filter pills — cached. */

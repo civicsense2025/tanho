@@ -5,7 +5,7 @@ import { products } from "@/modules/commerce/schema";
 import { productSchema } from "@/modules/commerce/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -34,7 +34,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return fail(parsed.error.issues[0]?.message ?? "Invalid product", 400);
     }
     await db.update(products).set({ ...parsed.data, updatedAt: Date.now() }).where(eq(products.id, id));
-    updateTag("products");
+    revalidateTag("products", "max");
     await writeAudit({ userId: user.id, action: "product.update", ownerType: "product", ownerId: id });
     return ok();
   });
@@ -45,7 +45,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const user = await requireApiUser("owner");
     const { id } = await params;
     await db.delete(products).where(eq(products.id, id));
-    updateTag("products");
+    revalidateTag("products", "max");
     await writeAudit({ userId: user.id, action: "product.delete", ownerType: "product", ownerId: id });
     return ok();
   });

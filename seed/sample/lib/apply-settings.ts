@@ -2,14 +2,14 @@ import { eq } from "drizzle-orm";
 import { settings } from "../../../src/modules/settings/schema";
 import { theme } from "../../../src/modules/theme/schema";
 import { menus } from "../../../src/modules/menus/schema";
+import { blockSets } from "../../../src/modules/pages/schema";
 import { generalSettingsSchema } from "../../../src/modules/settings/validation";
 import { seoSettingsSchema } from "../../../src/modules/seo/validation";
 import { themeInputSchema } from "../../../src/modules/theme/validation";
 import { menuItemsSchema } from "../../../src/modules/menus/validation";
-import {
-  footerConfigSchema,
-  headerConfigSchema,
-} from "../../../src/modules/chrome/validation";
+import { validateBlockTree } from "../../../src/modules/pages/blocks-io";
+import { CHROME_OWNER_ID, CHROME_OWNER_TYPES } from "../../../src/modules/chrome/owners";
+import { defaultChromeTree } from "../../../src/modules/chrome/templates";
 import { createId } from "@paralleldrive/cuid2";
 import { log, type SeedDb } from "../../lib";
 import type { SamplePack } from "./types";
@@ -95,13 +95,21 @@ export async function applySettings(db: SeedDb, pack: SamplePack): Promise<void>
     mainMenuId = row!.id;
   }
 
-  // Header + footer wired to the Main menu.
-  await put(db, "header", headerConfigSchema.parse({ menuId: mainMenuId }));
-  await put(
-    db,
-    "footer",
-    footerConfigSchema.parse({ columns: [{ title: "Explore", menuId: mainMenuId }] }),
-  );
+  // Header + footer BLOCK TREES (Phase 3 clean cutover) wired to the Main menu —
+  // the nicest default template for each owner, upserted in draft + published.
+  for (const ownerType of CHROME_OWNER_TYPES) {
+    const v = validateBlockTree(defaultChromeTree(ownerType, mainMenuId));
+    if (!v.ok) throw new Error(`[seed] sample ${ownerType} tree invalid: ${v.error}`);
+    for (const variant of ["draft", "published"] as const) {
+      await db
+        .insert(blockSets)
+        .values({ ownerType, ownerId: CHROME_OWNER_ID, variant, blocks: v.blocks, savedAt: Date.now() })
+        .onConflictDoUpdate({
+          target: [blockSets.ownerType, blockSets.ownerId, blockSets.variant],
+          set: { blocks: v.blocks, savedAt: Date.now() },
+        });
+    }
+  }
 
   log(`sample settings applied for "${pack.meta.brand}"`);
 }

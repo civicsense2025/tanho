@@ -69,6 +69,22 @@ describe("resolveGenericData — allowlist defense in depth", () => {
     );
   });
 
+  it("returns the filtered column list (not the raw binding's) so a Render can't re-introduce a stripped column", async () => {
+    mockGetConnection.mockResolvedValueOnce(baseConnection);
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: "1", name: "Widget" }], truncated: false });
+    const result = await resolveGenericData({
+      dataSource: {
+        connectionId: "conn1",
+        table: "products",
+        columns: ["id", "name", "secret_internal_note"],
+        limit: 10,
+      },
+    });
+    expect(result).not.toBeNull();
+    expect(result?.columns).toEqual(["id", "name"]);
+    expect(result?.columns).not.toContain("secret_internal_note");
+  });
+
   it("returns null (never throws) when every requested column is disallowed", async () => {
     mockGetConnection.mockResolvedValueOnce(baseConnection);
     const result = await resolveGenericData({

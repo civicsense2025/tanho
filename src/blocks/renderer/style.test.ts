@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { resolveStyleLayer, styleToCss, hasStyle } from "./style";
+import { resolveStyleLayer, styleToCss, hasStyle, styleDecls, serializeDecls } from "./style";
 import { headingDef } from "../heading/def";
 import { sectionDef } from "../section/def";
-import { isStyledBlock, styleContent, type BlockStyle } from "../common";
+import {
+  isStyledBlock,
+  styleContent,
+  OPACITIES,
+  TRANSFORMS,
+  FILTERS,
+  type BlockStyle,
+} from "../common";
 import { z } from "zod";
 
 // The style layer's load-bearing invariants: mobile-first merge (base < tablet <
@@ -91,6 +98,46 @@ describe("styleToCss (tokens-only mapping)", () => {
     expect(css.borderWidth).toBe("var(--border-width)");
     expect(css.borderStyle).toBe("solid");
     expect(css.borderColor).toBe("var(--border)");
+  });
+
+  it("effects: maps opacity/transform/transition/filter to their exact preset values", () => {
+    // Numeric-eval, not shape-only: assert the concrete mapped strings so a wrong
+    // preset (or a dropped unit) is caught — the fluid-clamp lesson.
+    const css = styleToCss({
+      opacity: "50",
+      transform: "scale-up",
+      transition: "base",
+      filter: "blur",
+    });
+    expect(css.opacity).toBe("0.5");
+    expect(css.transform).toBe("scale(1.05)");
+    expect(css.transition).toBe("all 200ms ease");
+    expect(css.filter).toBe("blur(6px)");
+  });
+
+  it("effects: opacity '0' is emitted (the falsy-string trap)", () => {
+    // "0" → "0" is falsy; the mapping must guard on the KEY, not the value.
+    expect(styleToCss({ opacity: "0" }).opacity).toBe("0");
+    expect(styleToCss({ opacity: "100" }).opacity).toBe("1");
+    // hasStyle must also see it as a real style.
+    expect(hasStyle({ opacity: "0" })).toBe(true);
+  });
+
+  it("effects: every preset value survives the public-page SAFE_DECL_RE serializer", () => {
+    // Presets carry literal units (px/deg/ms) by design; they must still pass the
+    // safe-value gate that runs before landing in a <style> on the public page.
+    for (const opacity of OPACITIES) {
+      const decls = styleDecls({ opacity });
+      expect(serializeDecls(decls)).toBe(`opacity:${decls.opacity}`);
+    }
+    for (const transform of TRANSFORMS.filter((t) => t !== "none")) {
+      const decls = styleDecls({ transform });
+      expect(serializeDecls(decls)).toContain("transform:");
+    }
+    for (const filter of FILTERS.filter((f) => f !== "none")) {
+      const decls = styleDecls({ filter });
+      expect(serializeDecls(decls)).toContain("filter:");
+    }
   });
 });
 

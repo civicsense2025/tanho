@@ -1,0 +1,100 @@
+/* Table of contents — a nested anchor list generated from the page's heading
+   outline. CSS-first: works fully with no JS (plain jump links). The optional
+   scroll-spy active state is applied by the shared client island toggling
+   aria-current on the matching link; these rules just style that state. */
+
+.nav {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+/* Sticky variant: pin below a sticky header (--header-height, 0 when none). */
+.sticky {
+  position: sticky;
+  top: calc(var(--header-height, 0px) + var(--space-4));
+  align-self: start;
+  max-height: calc(100vh - var(--header-height, 0px) - var(--space-8));
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  /* --text-muted (not --text-faint): at this 2xs size, faint (#8d8b88) fails
+     WCAG AA contrast (~2.9:1) — the label conveys meaning, so it must be
+     legible. Muted (#64625f) clears AA (~5.6:1) while staying quiet. */
+  color: var(--text-muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Numbered / bulleted variants restore a marker inside the link text column. */
+.listNumbered {
+  list-style: decimal;
+  padding-left: var(--space-5);
+}
+.listBulleted {
+  list-style: disc;
+  padding-left: var(--space-5);
+}
+.listNumbered .item,
+.listBulleted .item {
+  display: list-item;
+}
+
+.item {
+  /* Indent by heading depth relative to the shallowest included level. */
+  padding-left: calc(var(--toc-depth, 0) * var(--space-4));
+}
+
+.link {
+  display: block;
+  padding: 2px 0;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.link:hover {
+  color: var(--text);
+}
+
+/* Scroll-spy active state (aria-current="location" set by the island). The
+   :target fallback highlights the anchored heading's link with no JS at all. */
+.link[aria-current="location"],
+.link:target {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+
+/* Collapsible variant: a native <details> wrapper, no JS. */
+.details > summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.details > summary::-webkit-details-marker {
+  display: none;
+}
+.details > summary::after {
+  content: " ▾";
+  color: var(--text-faint);
+  transition: transform var(--dur) var(--ease);
+  display: inline-block;
+}
+.details[open] > summary::after {
+  transform: rotate(180deg);
+}

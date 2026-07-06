@@ -1,0 +1,75 @@
+/* Reading-progress bar. CSS-first: on browsers that support scroll-driven
+   animations the fill is driven entirely by `animation-timeline: scroll()` —
+   zero JS. Where that's unsupported, the shared island sets `--reading-progress`
+   (0–1) on scroll and the fallback rule below uses it. With neither (no JS,
+   old browser) the bar simply stays empty — never broken, just inert. */
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: transparent;
+  pointer-events: none;
+}
+.top {
+  top: 0;
+}
+.underHeader {
+  top: var(--header-height, 0px);
+}
+.bottom {
+  bottom: 0;
+}
+
+.thin {
+  height: 3px;
+}
+.medium {
+  height: 5px;
+}
+.thick {
+  height: 8px;
+}
+
+.fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: 0 50%;
+  /* Fallback path: the island writes --reading-progress (0–1). Default 0. */
+  transform: scaleX(var(--reading-progress, 0));
+}
+.accent {
+  background: var(--accent);
+}
+.accent-2 {
+  background: var(--accent-2);
+}
+.ink {
+  background: var(--solid);
+}
+
+/* Native scroll-driven animation — no JS. The keyframes scale the fill from 0
+   to full across the document scroll. Guarded by @supports so only capable
+   browsers use it; others fall through to the --reading-progress path. */
+@supports (animation-timeline: scroll()) {
+  .fill {
+    transform: scaleX(0);
+    animation: reading-progress-grow linear;
+    animation-timeline: scroll(root block);
+  }
+  @keyframes reading-progress-grow {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

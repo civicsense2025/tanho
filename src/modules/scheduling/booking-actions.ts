@@ -186,7 +186,12 @@ export async function createBooking(input: unknown): Promise<CreateBookingResult
   } catch (err) {
     const errCode =
       typeof err === "object" && err !== null && "code" in err ? (err as { code?: string }).code : undefined;
-    if (errCode === "SQLITE_CONSTRAINT") {
+    // startsWith, not ===: the local (embedded) client normalizes to the
+    // base code "SQLITE_CONSTRAINT", but a remote libSQL/Turso connection
+    // (the Hrana protocol) reports the more specific extended code (e.g.
+    // "SQLITE_CONSTRAINT_UNIQUE") directly in this same `code` field with
+    // no normalization — an exact match would miss every remote deploy.
+    if (errCode?.startsWith("SQLITE_CONSTRAINT")) {
       return { ok: false, error: "That time is no longer available. Please pick another." };
     }
     throw err;

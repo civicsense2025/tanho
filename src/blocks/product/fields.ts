@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 const hrefSchema = z
   .string()
@@ -14,6 +14,8 @@ const hrefSchema = z
 export const productSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   name: z.string().max(160).default(""),
   priceLabel: z.string().max(60).default(""),
   was: z.string().max(60).default(""),

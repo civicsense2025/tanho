@@ -41,3 +41,13 @@ One guide per entity under [entities/](entities/), each ending with a
 Task-oriented guides under [recipes/](recipes/): add a block, add a content
 type, rename an entity, restyle the brand, swap the database, connect Stripe,
 migrate content in.
+
+Migrating from another platform? Start with
+[migrate URLs and redirects](recipes/migrate-urls-and-redirects.md), then the
+per-platform guide:
+[WordPress](recipes/migrate-from-wordpress.md) ·
+[Ghost](recipes/migrate-from-ghost.md) ·
+[Squarespace](recipes/migrate-from-squarespace.md) ·
+[Shopify](recipes/migrate-from-shopify.md) ·
+[Webflow](recipes/migrate-from-webflow.md) ·
+[Wix](recipes/migrate-from-wix.md).

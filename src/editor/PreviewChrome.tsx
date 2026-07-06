@@ -1,46 +1,39 @@
 "use client";
 
-import type { ReactNode } from "react";
-import type { Device } from "@/blocks/types";
+import type { CSSProperties, ReactNode } from "react";
+import Link from "next/link";
+import type { BlockNode, Device } from "@/blocks/types";
+import { PreviewBlocks } from "./PreviewBlocks";
+import { headerHeightVar } from "@/blocks/chrome-constants";
 import { DEVICES } from "./DeviceToggle";
 import styles from "./preview-chrome.module.css";
 
 /**
- * Browser-chrome frame around the canvas — the design's PreviewChrome. A fake
- * address bar (site + route), a draft ribbon when the page is a draft, and a
- * device-width content column. Keeps the WYSIWYG canvas reading as "this is
- * your live page" without leaving the editor.
+ * Real-display frame around the canvas: the REAL published site header above
+ * the page canvas and footer below it, rendered read-only via PreviewBlocks so
+ * the author always sees their true chrome while editing (not a mock). A slim
+ * draft ribbon is the only overlay. `--header-height` is published on the frame
+ * (via headerHeightVar) so in-canvas anchor offsets match production.
  */
 export function PreviewChrome({
-  route,
   status,
   device,
   draftRibbon = true,
+  headerBlocks = [],
+  footerBlocks = [],
   children,
 }: {
-  route: string;
   status: "draft" | "published";
   device: Device;
   draftRibbon?: boolean;
+  headerBlocks?: BlockNode[];
+  footerBlocks?: BlockNode[];
   children: ReactNode;
 }) {
   const w = DEVICES[device].w;
+  const frameVars = { ["--header-height" as never]: headerHeightVar(headerBlocks) } as CSSProperties;
   return (
-    <div className={styles.frame}>
-      <div className={styles.bar}>
-        <div className={styles.dots}>
-          <span style={{ background: "var(--maroon-soft, var(--border-strong))" }} />
-          <span style={{ background: "var(--olive-soft, var(--border-strong))" }} />
-          <span style={{ background: "var(--border-strong)" }} />
-        </div>
-        <div className={styles.urlWrap}>
-          <span className={styles.url}>
-            {status === "published" ? "🌐" : "📄"} yoursite<span className={styles.urlRoute}>{route}</span>
-          </span>
-        </div>
-        <span className={styles.deviceLabel}>{DEVICES[device].label}</span>
-      </div>
-
+    <div className={styles.frame} style={frameVars}>
       {draftRibbon && status === "draft" ? (
         <div className={styles.ribbon}>
           <span className={styles.ribbonDot} />
@@ -49,12 +42,49 @@ export function PreviewChrome({
       ) : null}
 
       <div className={styles.body}>
-        <div
-          className={styles.column}
-          style={{ maxWidth: w ? `${w}px` : "100%" }}
-        >
+        {/* Real published header — read-only; deep-link to its editor. */}
+        {headerBlocks.length > 0 ? (
+          <ChromeBand blocks={headerBlocks} label="header" device={device} />
+        ) : null}
+
+        <div className={styles.column} style={{ maxWidth: w ? `${w}px` : "100%" }}>
           {children}
         </div>
+
+        {footerBlocks.length > 0 ? (
+          <ChromeBand blocks={footerBlocks} label="footer" device={device} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A read-only band of chrome (header or footer) inside the builder preview.
+ * Renders the real blocks via PreviewBlocks and overlays a small "Edit"
+ * deep-link to the chrome editor; pointer events on the chrome itself are
+ * disabled so clicks don't fight the page canvas.
+ */
+function ChromeBand({
+  blocks,
+  label,
+  device,
+}: {
+  blocks: BlockNode[];
+  label: "header" | "footer";
+  device: Device;
+}) {
+  return (
+    <div className={styles.chromeBand} data-chrome-band={label}>
+      <Link
+        href={`/admin/nav/${label}`}
+        className={styles.chromeEdit}
+        onClick={(e) => e.stopPropagation()}
+      >
+        Edit {label}
+      </Link>
+      <div className={styles.chromeInert} aria-hidden="true">
+        <PreviewBlocks blocks={blocks} device={device} />
       </div>
     </div>
   );

@@ -5,9 +5,15 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
+import { rebuildMediaUsage } from "@/modules/media/usage";
+import { indexProduct, removeProductFromIndex } from "@/modules/search/index-document";
+import { publishOwnerBlocks } from "@/modules/blocks/actions";
+import { getEditorChromePreview } from "@/modules/chrome/queries";
+import type { BlockNode } from "@/blocks/types";
 import { productCollections, productVariants, products } from "./schema";
 import { productSchema, variantSchema } from "./validation";
 import { syncProductToStripe } from "./sync";
+import { getProductForEdit, type ProductRow } from "./queries";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -84,6 +90,7 @@ export async function deleteProduct(id: string): Promise<Result> {
   await db.delete(productVariants).where(eq(productVariants.productId, id));
   await db.delete(productCollections).where(eq(productCollections.productId, id));
   await db.delete(products).where(eq(products.id, id));
+  await removeProductFromIndex(id);
   await writeAudit({
     userId: user.id,
     action: "product.delete",
@@ -185,6 +192,44 @@ export async function setProductCollections(
     ownerId: productId,
     meta: { count: clean.length },
   });
+  invalidate();
+  return { ok: true };
+}
+
+/**
+ * Content-editor load, callable from the client — `getProductForEdit` lives
+ * in the plain (non-"use server") queries module, so the product edit
+ * screen (which opens the block canvas without a page navigation) needs
+ * this thin auth-checked wrapper to fetch it on demand.
+ */
+export async function loadProductForContentEdit(
+  id: string,
+): Promise<
+  Result<{
+    product: ProductRow;
+    blocks: BlockNode[];
+    publishedBlocks: BlockNode[];
+    headerBlocks: BlockNode[];
+    footerBlocks: BlockNode[];
+  }>
+> {
+  await requireUser();
+  const [hit, chrome] = await Promise.all([getProductForEdit(id), getEditorChromePreview()]);
+  if (!hit) return { ok: false, error: "Product not found" };
+  return { ok: true, data: { ...hit, ...chrome } };
+}
+
+/** Publish a product's content blocks: copy draft → published (mirrors pages/entries). */
+export async function publishProductBlocks(id: string): Promise<Result> {
+  const user = await requireUser();
+  const existing = await db.query.products.findFirst({ where: eq(products.id, id) });
+  if (!existing) return { ok: false, error: "Product not found" };
+  const published = await publishOwnerBlocks("product", id);
+  if (!published.ok) return published;
+
+  await rebuildMediaUsage("product", id, `/shop/${existing.slug}`, published.blocks);
+  await indexProduct({ id, slug: existing.slug, name: existing.name, blocks: published.blocks });
+  await writeAudit({ userId: user.id, action: "product.blocks.publish", ownerType: "product", ownerId: id });
   invalidate();
   return { ok: true };
 }

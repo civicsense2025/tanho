@@ -1,0 +1,60 @@
+/* Jump-to-top — a fixed anchor to #top. CSS-first: it's a plain <a href="#top">
+   that always works. The shared island toggles [data-visible] past the scroll
+   threshold to fade it in; with no JS it stays visible (still fully functional,
+   just not auto-hidden). */
+
+.btn {
+  position: fixed;
+  bottom: var(--space-6);
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+  font-size: var(--text-body);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease),
+    color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.left {
+  left: var(--space-6);
+}
+.right {
+  right: var(--space-6);
+}
+
+/* When the enhancement island is active it marks the document root with
+   [data-blocks-enhanced]; only then does the button start hidden and reveal on
+   [data-visible]. With no JS the marker is absent and the button stays fully
+   visible (still functional). Keying off the ROOT (not a per-element attr the
+   island mutates) avoids a hydration mismatch on the button itself. */
+:global(:root[data-blocks-enhanced]) .btn {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+:global(:root[data-blocks-enhanced]) .btn[data-visible] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.glyph {
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: opacity var(--dur) var(--ease);
+  }
+}

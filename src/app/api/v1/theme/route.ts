@@ -4,7 +4,7 @@ import { getTheme } from "@/modules/theme/queries";
 import { themeInputSchema } from "@/modules/theme/validation";
 import { theme } from "@/modules/theme/schema";
 import { db } from "@/lib/db/client";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -39,7 +39,7 @@ export async function PATCH(req: Request): Promise<Response> {
         target: theme.id,
         set: { ...parsed.data, updatedAt: Date.now() },
       });
-    updateTag("theme");
+    revalidateTag("theme", "max");
     await writeAudit({ userId: user.id, action: "theme.save", ownerType: "theme", ownerId: "theme" });
     return ok();
   });

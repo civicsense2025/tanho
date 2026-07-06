@@ -6,13 +6,7 @@ import type { FlatRow } from "./item-ops";
 import { Input } from "@/components/forms/Input";
 import { Select } from "@/components/forms/Select";
 import { Button } from "@/components/core/Button";
-
-const meta: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "140px 1fr 90px 1fr",
-  gap: "var(--space-2)",
-  padding: "var(--space-2) 0 var(--space-3)",
-};
+import styles from "./menu-item-row.module.css";
 
 /** One row of the menu builder: label + href, ops, expandable extras. */
 export function MenuItemRow({
@@ -35,7 +29,7 @@ export function MenuItemRow({
 
   return (
     <div style={{ paddingLeft: depth * 26, borderBottom: "1px solid var(--border)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-2) 0" }}>
+      <div className={styles.main}>
         <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? "▾" : "▸"}
         </Button>
@@ -62,7 +56,7 @@ export function MenuItemRow({
         </span>
       </div>
       {open ? (
-        <div style={meta}>
+        <div className={styles.meta}>
           <Select
             value={item.dropdownStyle ?? ""}
             aria-label="Dropdown style"

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>The Example Atom Feed</title>
+  <link href="https://atom.example.com/" rel="alternate"/>
+  <link href="https://atom.example.com/atom.xml" rel="self"/>
+  <id>https://atom.example.com/</id>
+  <updated>2024-03-20T10:00:00Z</updated>
+  <entry>
+    <title>Hello Atom</title>
+    <link href="https://atom.example.com/feed/self/hello" rel="self"/>
+    <link href="https://atom.example.com/posts/hello-atom" rel="alternate" type="text/html"/>
+    <id>tag:atom.example.com,2024:/posts/hello-atom</id>
+    <published>2024-03-18T10:00:00Z</published>
+    <updated>2024-03-18T10:00:00Z</updated>
+    <content type="html"><![CDATA[<p>An Atom entry with a figure.</p><figure><img src="https://atom.example.com/img/a.jpg" alt="Atom image"/></figure>]]></content>
+  </entry>
+  <entry>
+    <title>Second Atom Entry</title>
+    <link href="https://atom.example.com/posts/second-entry" rel="alternate"/>
+    <id>tag:atom.example.com,2024:/posts/second-entry</id>
+    <updated>2024-03-20T10:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>This entry carries only a summary.</p>]]></summary>
+  </entry>
+</feed>

@@ -5,6 +5,7 @@ import { Input } from "@/components/forms/Input";
 import { Select } from "@/components/forms/Select";
 import type { PageLayoutSettings } from "@/blocks/layout";
 import type { PageDraft, PageOption, PatchPage } from "./types";
+import shell from "../editor-shell.module.css";
 
 const TEMPLATES = ["blank", "landing", "article", "shop", "docs"] as const;
 const GUTTER = ["none", "narrow", "normal", "wide"] as const;
@@ -32,7 +33,7 @@ export function PageMeta({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+      <div className={shell.pairGrid}>
         <Field label="Status">
           <Select
             value={page.status}
@@ -82,7 +83,7 @@ export function PageMeta({
         </Field>
       ) : null}
 
-      <div className="layout-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+      <div className={shell.pairGrid}>
         <Field label="Max width">
           <Select value={page.layout.maxWidth ?? "normal"} onChange={(e) => patchLayout({ maxWidth: e.target.value as PageLayoutSettings["maxWidth"] })}>
             {MAX_WIDTH.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -105,7 +106,7 @@ export function PageMeta({
         </Field>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "var(--space-3)" }}>
+      <div className={shell.tripleGrid}>
         <Field label="Tags" hint="Comma-separated">
           <Input
             value={page.tags.join(", ")}

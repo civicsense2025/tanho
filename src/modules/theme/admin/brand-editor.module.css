@@ -1,0 +1,27 @@
+/* Two-column editor + live-preview layout. Stacks to a single column below
+   640px — preview moves after the editor fields and the sidebar loses its
+   sticky positioning (nothing to stick against once it's not a side rail). */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+  gap: var(--space-8);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: var(--space-6);
+  align-self: start;
+}
+
+@media (max-width: 640px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .preview {
+    position: static;
+  }
+}

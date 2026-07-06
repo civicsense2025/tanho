@@ -11,7 +11,7 @@ export const media = sqliteTable("media", {
   id: text("id").primaryKey().$defaultFn(createId),
   storageKey: text("storage_key").notNull().unique(),
   name: text("name").notNull(),
-  kind: text("kind", { enum: ["image", "video", "doc"] }).notNull(),
+  kind: text("kind", { enum: ["image", "video", "doc", "font"] }).notNull(),
   mime: text("mime").notNull(),
   size: integer("size").notNull(),
   w: integer("w"),

@@ -125,6 +125,7 @@ export function AccountMenu({ name, email, role }: { name: string; email: string
           <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
           <MenuLink href="/admin/settings" onClick={() => setOpen(false)}>Site settings</MenuLink>
           <MenuLink href="/admin/settings/general" onClick={() => setOpen(false)}>Account &amp; profile</MenuLink>
+          <MenuLink href="/admin/marketplace/browse" onClick={() => setOpen(false)}>Marketplace</MenuLink>
           <form action={logoutAction}>
             <button type="submit" style={menuItemStyle("var(--danger)")}>Log out</button>
           </form>

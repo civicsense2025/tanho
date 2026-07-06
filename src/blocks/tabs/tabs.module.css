@@ -1,0 +1,86 @@
+/* Tabs. No-JS fallback: every panel is visible, each preceded by its label as a
+   heading (content is never hidden without JS). When the island boots
+   (html[data-blocks-enhanced]) it switches to a real tablist: the tab strip shows,
+   inactive panels hide, and clicking/keyboard selects. */
+.tabs {
+  display: flex;
+  gap: var(--space-4);
+}
+.tabs[data-orientation="horizontal"] {
+  flex-direction: column;
+}
+.tabs[data-orientation="vertical"] {
+  flex-direction: row;
+}
+
+/* the tab strip is hidden until JS enhances (no-JS uses the inline labels instead) */
+.tablist {
+  display: none;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+html[data-blocks-enhanced] .tablist {
+  display: flex;
+}
+.tabs[data-orientation="vertical"] .tablist {
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+
+.tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+}
+.tab:hover {
+  color: var(--text);
+}
+.tab[aria-selected="true"] {
+  color: var(--text);
+}
+.tabs[data-variant="underline"] .tab[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  border-radius: 0;
+}
+.tabs[data-variant="pill"] .tab[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panels {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* the per-panel label heading: shown only in the no-JS fallback */
+.panelLabel {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  margin: var(--space-4) 0 var(--space-2);
+}
+html[data-blocks-enhanced] .panelLabel {
+  display: none;
+}
+
+.panel {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text);
+  white-space: pre-wrap;
+}
+/* once enhanced, hide inactive panels */
+html[data-blocks-enhanced] .panel[hidden] {
+  display: none;
+}

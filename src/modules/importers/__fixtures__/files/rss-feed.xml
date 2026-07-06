@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>The Example Feed</title>
+  <link>https://feed.example.com</link>
+  <description>Latest posts from The Example Feed</description>
+  <language>en-us</language>
+  <atom:link href="https://feed.example.com/rss.xml" rel="self" type="application/rss+xml"/>
+  <item>
+    <title>A Post With a Picture</title>
+    <link>https://feed.example.com/2024/03/a-post-with-a-picture/</link>
+    <dc:creator><![CDATA[Jane Feed]]></dc:creator>
+    <pubDate>Wed, 06 Mar 2024 10:00:00 +0000</pubDate>
+    <guid isPermaLink="true">https://feed.example.com/2024/03/a-post-with-a-picture/</guid>
+    <description><![CDATA[A short excerpt shown in readers.]]></description>
+    <content:encoded><![CDATA[<p>Full body text of the first post.</p><figure><img src="https://feed.example.com/img/photo.jpg" alt="A photo"/><figcaption>A caption.</figcaption></figure><p>Closing paragraph.</p>]]></content:encoded>
+  </item>
+  <item>
+    <title>An Excerpt-Only Post</title>
+    <link>https://feed.example.com/2024/03/excerpt-only/</link>
+    <pubDate>Wed, 13 Mar 2024 10:00:00 +0000</pubDate>
+    <guid isPermaLink="true">https://feed.example.com/2024/03/excerpt-only/</guid>
+    <description><![CDATA[<p>This feed only publishes summaries, so this is the whole body.</p>]]></description>
+  </item>
+  <item>
+    <!-- Deliberately malformed: no title, no content → must be skipped as an issue. -->
+    <link>https://feed.example.com/2024/03/empty/</link>
+    <guid isPermaLink="true">https://feed.example.com/2024/03/empty/</guid>
+  </item>
+</channel>
+</rss>

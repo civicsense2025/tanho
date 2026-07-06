@@ -1,14 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/core/Button";
 import { markStepComplete, setOnboardingDifficulty, completeOnboarding } from "../actions";
 import { ONBOARDING_STEPS } from "../steps";
-import type { WizardInitialData } from "../types";
+import type { StepSaveFn, WizardInitialData } from "../types";
 import type { OnboardingState } from "../validation";
 import { DifficultyPicker } from "./DifficultyPicker";
 import styles from "./WizardShell.module.css";
+
+/** First step whose own `isComplete` isn't yet satisfied — where a resumed
+ *  wizard should land, instead of always restarting at step 0. Steps before
+ *  the first incomplete one are presumed already handled (identity/brand
+ *  are always "complete" by design; only data-source has a real gate, per
+ *  steps.ts's isComplete definitions). */
+function firstIncompleteStepIndex(state: OnboardingState): number {
+  const idx = ONBOARDING_STEPS.findIndex((s) => !s.isComplete(state));
+  return idx === -1 ? ONBOARDING_STEPS.length - 1 : idx;
+}
 
 /**
  * The setup-wizard shell. Adapts quiz/public/WizardStyle.tsx's ownership
@@ -28,11 +38,25 @@ export function WizardShell({
 }) {
   const router = useRouter();
   const [state, setState] = useState(initialState);
-  const [step, setStep] = useState(0);
+  // The shell's own live copy of the seed data, patched whenever a step's
+  // registered save reports what it saved — so ReviewStep (and any other
+  // later step) reads what's actually in the DB right now, not the
+  // page-load snapshot from before this wizard session's edits.
+  const [data, setData] = useState(initialData);
+  const [step, setStep] = useState(() => firstIncompleteStepIndex(initialState));
   const [difficultyChosen, setDifficultyChosen] = useState(
     initialState.completedSteps.length > 0 || initialState.dismissedAt !== null,
   );
   const [pending, startTransition] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // The current step's registered save function (if any) — reset per step
+  // via the `key`-driven remount below, so a stale step's save fn can never
+  // fire for the step now on screen.
+  const saveFnRef = useRef<StepSaveFn | null>(null);
+  const registerSave = (fn: StepSaveFn) => {
+    saveFnRef.current = fn;
+  };
 
   const steps = ONBOARDING_STEPS;
   const isLast = step === steps.length - 1;
@@ -51,9 +75,26 @@ export function WizardShell({
    * wasn't finished, but the owner can revisit it later from Settings; an
    * unfinished data-source step is still safe to skip since an empty
    * allowlist already fails closed).
+   *
+   * Before advancing, forces the current step's registered save (if any) —
+   * IdentityStep/BrandStep wrap GeneralForm/BrandEditor, which have their
+   * OWN separate on-screen Save button; without this, clicking the
+   * wizard's Next never triggers that save and the edit is silently lost.
+   * A failed save blocks advancement so the error stays visible.
    */
   const goNext = (markComplete: boolean) =>
     startTransition(async () => {
+      setSaveError(null);
+      if (markComplete && saveFnRef.current) {
+        const result = await saveFnRef.current();
+        if (result === false) {
+          setSaveError("Could not save this step. Please try again.");
+          return;
+        }
+        if (result && result !== true) {
+          setData((d) => ({ ...d, ...result }));
+        }
+      }
       if (markComplete) {
         await markStepComplete(current.id);
         setState((s) => ({
@@ -68,6 +109,7 @@ export function WizardShell({
         router.push("/admin");
         router.refresh();
       } else {
+        saveFnRef.current = null;
         setStep((s) => s + 1);
       }
     });
@@ -89,14 +131,28 @@ export function WizardShell({
         <h2 className={styles.title}>{current.title}</h2>
         <p className={styles.blurb}>{current.blurb}</p>
         <current.Render
+          key={current.id}
           state={state}
-          initial={initialData}
+          initial={data}
           difficulty={state.difficulty}
           onStepComplete={() => goNext(true)}
+          registerSave={registerSave}
         />
       </div>
+      {saveError ? (
+        <p className={styles.blurb} style={{ color: "var(--danger)" }}>
+          {saveError}
+        </p>
+      ) : null}
       <div className={styles.controls}>
-        <Button variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            saveFnRef.current = null;
+            setStep((s) => Math.max(0, s - 1));
+          }}
+          disabled={step === 0}
+        >
           ← Back
         </Button>
         <span className={styles.spacer} />

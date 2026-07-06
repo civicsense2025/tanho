@@ -58,6 +58,17 @@ export function ensureBlockRegistrySeeded(): Promise<void> {
   return ensurePromise;
 }
 
+/**
+ * Clears the once-per-process guard so the NEXT `ensureBlockRegistrySeeded()`
+ * call re-runs the upsert instead of returning the already-resolved promise
+ * from the first seed. Only the error path reset this before — a
+ * successfully-resolved `ensurePromise` never gets cleared on its own, so
+ * without calling this, a "refresh" after a successful seed was a no-op.
+ */
+export function resetBlockRegistrySeedGuard(): void {
+  ensurePromise = null;
+}
+
 export type RegistryEntry = BlockRegistryRow;
 
 /**

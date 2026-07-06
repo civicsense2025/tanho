@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, styleContent, trackEventSchema, trackParamsSchema } from "../common";
+import { commonContent, styleContent, trackEventSchema, trackParamsSchema, advancedStyleContent, motionContent } from "../common";
 
 const hrefSchema = z
   .string()
@@ -24,6 +24,8 @@ export const pricingTierSchema = z.object({
 export const pricingSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   tiers: z.array(pricingTierSchema).max(6).default([]),
 });
 

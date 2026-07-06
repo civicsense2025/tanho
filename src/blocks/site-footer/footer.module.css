@@ -1,0 +1,73 @@
+/* site-footer — the <footer> wrapper + child-cell layout. Tokens only. The
+   `dark` variant uses SEMANTIC tokens (paper-on-ink), replacing the old
+   footer.module.css hardcoded hex (#14130f / #f0ede4 / #2c2920) so it
+   theme-tracks (theming.md: tokens only). */
+.footer {
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.dark {
+  background: var(--ink-0);
+  color: var(--paper-0);
+  border-top-color: color-mix(in srgb, var(--paper-0) 16%, var(--ink-0));
+}
+
+/* main cell row */
+.main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-6);
+  max-width: var(--width-content);
+  margin: 0 auto;
+  width: 100%;
+}
+/* columns: each direct child cell flexes to fill the row. */
+.columns > * {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+/* the first cell (brand/logo) gets more room. */
+.columns > :first-child {
+  flex: 1.4 1 220px;
+}
+.centered {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-5);
+}
+.split {
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* bottom copyright bar */
+.bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  max-width: var(--width-content);
+  margin: 0 auto;
+  width: 100%;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+.copy {
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, currentColor 62%, transparent);
+}
+
+@media (max-width: 720px) {
+  .main {
+    padding: var(--space-8) var(--space-5);
+    gap: var(--space-6);
+  }
+  .split {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

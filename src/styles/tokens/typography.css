@@ -16,10 +16,14 @@
   --weight-regular: 400;
   --weight-medium: 500;
 
-  /* Type scale (rem, 16px base) */
-  --text-display: 2.25rem;  /* 36px — hero name */
-  --text-h1: 1.875rem;      /* 30px — page title */
-  --text-h2: 1.25rem;       /* 20px — section / prose h2 */
+  /* Type scale (rem, 16px base). display/h1/h2 fluid-scale between the mobile
+     canvas width (390px) and the desktop breakpoint (1024px) — see
+     modules/theme/scales.ts#fluidHeadingSize, whose per-tenant-derived output
+     always overrides these at runtime; kept identical here (bs=1, mul=1) so
+     this static default matches the injected value pixel-for-pixel. */
+  --text-display: clamp(1.845rem, 1.596rem + 1.022vw, 2.25rem);  /* 36px desktop — hero name */
+  --text-h1: clamp(1.537rem, 1.329rem + 0.853vw, 1.875rem);      /* 30px desktop — page title */
+  --text-h2: clamp(1.025rem, 0.887rem + 0.568vw, 1.25rem);       /* 20px desktop — section / prose h2 */
   --text-lg: 1.125rem;      /* 18px — lead paragraph / tagline */
   --text-body: 1rem;        /* 16px — body */
   --text-sm: 0.875rem;      /* 14px — secondary */

@@ -5,7 +5,7 @@ import { eventTypes } from "@/modules/scheduling/schema";
 import { eventTypeSchema } from "@/modules/scheduling/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -40,7 +40,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (clash) return fail("That slug is already in use", 409);
     }
     await db.update(eventTypes).set(parsed.data).where(eq(eventTypes.id, id));
-    updateTag("pages");
+    revalidateTag("pages", "max");
     await writeAudit({ userId: user.id, action: "scheduling.eventType.update", ownerType: "event_type", ownerId: id });
     return ok();
   });
@@ -51,7 +51,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const user = await requireApiUser("owner");
     const { id } = await params;
     await db.delete(eventTypes).where(eq(eventTypes.id, id));
-    updateTag("pages");
+    revalidateTag("pages", "max");
     await writeAudit({ userId: user.id, action: "scheduling.eventType.delete", ownerType: "event_type", ownerId: id });
     return ok();
   });

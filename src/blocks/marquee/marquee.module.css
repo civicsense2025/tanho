@@ -1,0 +1,45 @@
+/* A continuously scrolling ticker. Two identical copies of the track sit side by
+   side; translating the pair by -50% loops seamlessly. Pure CSS, GPU-composited.
+   Respects reduced-motion by pausing the animation. */
+.viewport {
+  overflow: hidden;
+  width: 100%;
+  /* fade the edges so items enter/exit softly */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.track {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding-right: var(--space-6);
+  white-space: nowrap;
+  will-change: transform;
+  animation: marquee-scroll var(--marquee-duration, 24s) linear infinite;
+  animation-direction: var(--marquee-direction, normal);
+}
+
+.viewport[data-pause="1"]:hover .track {
+  animation-play-state: paused;
+}
+
+.item {
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none;
+  }
+}

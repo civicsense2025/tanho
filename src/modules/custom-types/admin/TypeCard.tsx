@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveCustomType, deleteCustomType } from "../actions";
 import type { CustomTypeRow } from "../schema";
@@ -61,6 +62,12 @@ export function TypeCard({ type }: { type: CustomTypeRow }) {
         <strong style={{ fontSize: "var(--text-sm)" }}>{type.name}</strong>
         <span className={styles.slug}>custom:{type.slug}</span>
         <span style={{ flex: 1 }} />
+        <Link
+          href={`/admin/content/${encodeURIComponent(`custom:${type.slug}`)}`}
+          className={styles.cardLink}
+        >
+          Manage entries →
+        </Link>
         <Toggle value={enabled} onChange={setEnabled} on="Enabled" off="Disabled" />
       </div>
 

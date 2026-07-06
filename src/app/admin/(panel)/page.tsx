@@ -10,6 +10,8 @@ import { DashboardTabs } from "@/modules/pages/admin/DashboardTabs";
 import { getOnboardingState } from "@/modules/onboarding/queries";
 import { onboardingChecklistItems } from "@/modules/onboarding/setup-checklist-items";
 import { SetupChecklist } from "@/modules/commerce/admin/SetupChecklist";
+import { contentToPurchaseCorrelations } from "@/modules/analytics/correlation";
+import { CorrelationCard } from "@/modules/analytics/admin/CorrelationCard";
 
 function greeting(now: Date): string {
   const h = now.getHours();
@@ -41,12 +43,13 @@ async function AdminDashboardPageInner() {
     redirect("/admin/onboarding");
   }
 
-  const [allPages, projects, guides, resources, upcoming] = await Promise.all([
+  const [allPages, projects, guides, resources, upcoming, correlations] = await Promise.all([
     listPages(),
     listEntries("project"),
     listEntries("guide"),
     listEntries("resource"),
     listBookings("upcoming"),
+    contentToPurchaseCorrelations(),
   ]);
 
   const pages = allPages.filter((p) => p.kind !== "post");
@@ -119,6 +122,8 @@ async function AdminDashboardPageInner() {
           <SetupChecklist items={onboardingChecklistItems(onboarding)} />
         </Link>
       ) : null}
+
+      <CorrelationCard rows={correlations} />
 
       <DashboardTabs
         pages={pages}

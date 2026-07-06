@@ -108,11 +108,22 @@ export type SampleEventType = {
   locations: string[];
 };
 
+/** A reusable saved block (global symbol) a pack defines and its pages reference
+ *  via `symbol(id)`. Seeded into the `symbols` table on apply, with the pack-local
+ *  `id` used verbatim so page trees resolve it. */
+export type SampleSymbol = {
+  id: string;
+  name: string;
+  blocks: Block[];
+};
+
 export type SamplePack = {
   meta: SamplePackMeta;
   theme: SampleTheme;
   /** Header/footer nav. Every href must be a seeded route (validated on apply). */
   menu: SampleMenuItem[];
+  /** Reusable saved blocks the pages reference via symbol(id). Seeded first. */
+  symbols?: SampleSymbol[];
   pages: SamplePage[];
   entries?: SampleEntry[];
   shop?: {

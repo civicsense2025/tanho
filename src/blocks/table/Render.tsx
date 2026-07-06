@@ -7,7 +7,12 @@ function tableData(
   content: TableContent & { _resolved?: GenericDataResolved },
 ): { columns: string[]; rows: string[][] } {
   if (content.dataSource && content._resolved) {
-    const columns = content.dataSource.columns;
+    // Use the resolver's actually-queried columns, NOT the editor-saved
+    // binding — the allowlist may have stripped columns the editor
+    // requested, and content.dataSource.columns still lists all of them.
+    // Using the raw binding here would render a real header for a column
+    // that was never queried, showing a blank cell instead of omitting it.
+    const columns = content._resolved.columns;
     const rows = content._resolved.rows.map((row) => columns.map((c) => formatCell(row[c])));
     return { columns, rows };
   }

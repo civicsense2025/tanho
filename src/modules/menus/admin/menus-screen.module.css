@@ -1,0 +1,15 @@
+/* Menu list sidebar + the selected menu's item builder. Stacks below 640px —
+   the list moves above the editor instead of squeezing into a 210px rail. */
+
+.layout {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

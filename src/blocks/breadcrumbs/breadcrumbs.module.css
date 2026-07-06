@@ -1,0 +1,54 @@
+/* Breadcrumb trail — a semantic <nav><ol> of ancestor links. Wraps on narrow
+   screens; the separator is a decorative ::before on each crumb after the
+   first, set via the --sep custom property. */
+
+.nav {
+  font-size: var(--text-sm);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  min-width: 0;
+}
+.crumb + .crumb::before {
+  content: var(--sep, "›");
+  color: var(--text-faint);
+  /* Separator is decorative — hide from the a11y tree via speak:none isn't
+     reliable, so it's purely visual; the <ol> order conveys structure. */
+}
+
+.link {
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 16rem;
+}
+.link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.current {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 20rem;
+}

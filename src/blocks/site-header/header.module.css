@@ -1,0 +1,151 @@
+/* site-header — the sticky bar wrapper + child layout. Tokens only. z-index 40
+   matches blocks/chrome-constants.ts. Publishes --header-height (set inline on
+   the element) so heading/section scroll-margins and the under-header
+   reading-progress bar align. */
+.bar {
+  position: relative;
+  z-index: 40;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.sticky {
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  border-bottom-color: transparent;
+  z-index: 40;
+}
+
+/* Utility strip above the main row (two-tier). Ported unchanged from the old
+   config-driven chrome's .tier — already token-only. */
+.tier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px var(--space-6);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+
+/* Main row: a grouped flexbox. Children sit inline; nav-menu's own CSS handles
+   the desktop/mobile split. */
+.main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: 60px;
+  padding: 0 var(--space-6);
+}
+
+/* spread: logo left, everything else pushed right (default). */
+.spread > :first-child {
+  margin-right: auto;
+}
+
+/* center: all children centered. */
+.center {
+  justify-content: center;
+}
+
+/* split: first child left, last child right, middle truly centered. */
+.split > :first-child {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: flex-start;
+}
+.split > :last-child {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* stack: logo row on top, remaining children centered below. */
+.stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+.stack > :first-child {
+  display: flex;
+  justify-content: center;
+}
+.stackRest {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+/* sidebar: a full-height left column (the public shell wraps it in a
+   side-by-side flex row — see app/(public)/layout.tsx). The column itself
+   never scrolls-to-stick like the horizontal bar; it's already always in
+   view for the height of the page. */
+.sidebarBar {
+  height: 100%;
+  border-bottom: none;
+  border-right: 1px solid var(--border);
+}
+.sidebar {
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+  width: 240px;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+}
+.sidebar > :first-child {
+  display: flex;
+  justify-content: flex-start;
+}
+
+@media (max-width: 720px) {
+  .main {
+    min-height: 54px;
+    padding: 0 var(--space-5);
+  }
+  /* On mobile the bar collapses to logo + burger; spread keeps them apart. */
+  .center,
+  .split,
+  .stack {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .stackRest {
+    justify-content: flex-end;
+  }
+  /* The sidebar column collapses to a normal top bar on mobile — a
+     full-height side column has no room on a narrow viewport. */
+  .sidebarBar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    height: auto;
+  }
+  .sidebar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: auto;
+    height: auto;
+    min-height: 54px;
+    padding: 0 var(--space-5);
+  }
+  .sidebar > :first-child {
+    justify-content: flex-start;
+  }
+}

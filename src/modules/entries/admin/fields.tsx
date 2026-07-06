@@ -18,6 +18,19 @@ export type FieldDescriptor = {
   /** Value/label pairs for `select` controls. */
   options?: [value: string, label: string][];
   hint?: string;
+  /**
+   * Overrides seedData's kind-based default (below) for a NEW entry.
+   * Needed when a field's real Zod schema wouldn't accept the generic
+   * kind-based guess — e.g. custom-types/admin/descriptors.ts maps several
+   * unsupported FieldKinds (date, url, email, color, json, repeater) onto
+   * this module's plain "text" kind for display, but their real schema
+   * (custom-types/builder.ts's schemaForField) rejects an empty string even
+   * when the field is optional (`.optional()` only permits the key being
+   * ABSENT, not present-with-any-value) — `undefined` here tells seedData
+   * to omit the key entirely instead of seeding a value that fails
+   * validation on first save.
+   */
+  seedValue?: unknown;
 };
 
 /**

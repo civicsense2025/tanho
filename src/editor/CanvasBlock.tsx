@@ -5,8 +5,11 @@ import { blockDef } from "@/blocks/registry";
 import { UnsupportedBlock } from "@/blocks/UnsupportedBlock";
 import { isContainer, kidsOf } from "@/blocks/tree";
 import type { BlockNode, Device } from "@/blocks/types";
+import type { BlockStyle, BlockLayout } from "@/blocks/common";
 import { useEditor } from "./store";
 import { BetweenMenuButton } from "./BetweenInsert";
+import type { OnAddBlock } from "./BlockPicker";
+import { resolveBlockPreviewWrapper } from "./blockPreviewStyle";
 import styles from "./canvas.module.css";
 
 /**
@@ -17,6 +20,16 @@ import styles from "./canvas.module.css";
 function withResolved(parsed: unknown, raw: Record<string, unknown>) {
   if (raw._resolved === undefined) return parsed;
   return { ...(parsed as Record<string, unknown>), _resolved: raw._resolved };
+}
+
+/** Apply the display-only preview transform (template editor) if one is set. */
+function applyPreview(
+  content: unknown,
+  type: string,
+  transform?: (c: Record<string, unknown>, type: string) => Record<string, unknown>,
+): unknown {
+  if (!transform || content === null || typeof content !== "object") return content;
+  return transform(content as Record<string, unknown>, type);
 }
 
 /** Drag/drop context PageEditor threads down so every nested block shares it. */
@@ -30,7 +43,23 @@ export type DragCtx = {
   setHover: (id: string | null) => void;
   startDrag: (id: string) => (e: PointerEvent) => void;
   dragCandidate: (id: string) => (e: PointerEvent) => void;
-  onInsert: (parentId: string | null, index: number, type: string) => void;
+  onInsert: (
+    parentId: string | null,
+    index: number,
+    type: string,
+    patch?: Record<string, unknown>,
+  ) => void;
+  /**
+   * DISPLAY-ONLY content transform, applied to each block's parsed content just
+   * before its Render — never to the stored/saved tree. The content-type
+   * template editor sets this to fill `{{field}}` tokens (and resolve `field`
+   * blocks) from a sample row so the canvas previews real data (e.g. "Blue
+   * Widget"), while the store (and thus the Inspector + what saves) keeps the
+   * raw tokens/field keys. `type` is the block's type so the transform can
+   * treat a `field` block differently. Undefined for every other editor → no
+   * change.
+   */
+  previewContent?: (content: Record<string, unknown>, type: string) => Record<string, unknown>;
 };
 
 /** Selectable, draggable canvas block — renders the real block inline + chrome. */
@@ -52,9 +81,46 @@ export function CanvasBlock({
   const remove = useEditor((s) => s.remove);
   const duplicate = useEditor((s) => s.duplicate);
   const wrap = useEditor((s) => s.wrapInSection);
-  if (!def) return <UnsupportedBlock type={block.type} />;
-
   const selected = selection.has(block.id);
+
+  if (!def) {
+    // Still registers with the drag/select system and offers at least a
+    // Remove button — an earlier version returned this bare, which meant an
+    // unsupported block (an imported pack the install doesn't have, or a
+    // disabled plugin) had no way to be removed from the canvas and never
+    // participated in drag hit-testing, unlike BlockCard.tsx's equivalent
+    // handling in the stacked layout.
+    return (
+      <div
+        ref={(node) => ctx.registerEl(block.id, node)}
+        data-selected={selected || undefined}
+        className={styles.canvasBlock}
+        onClick={(e: MouseEvent) => {
+          e.stopPropagation();
+          select(block.id, e.metaKey || e.ctrlKey ? "toggle" : e.shiftKey ? "range" : "single");
+        }}
+        onMouseOver={(e) => {
+          e.stopPropagation();
+          ctx.setHover(block.id);
+        }}
+      >
+        {selected ? <span className={styles.blockTag}>Unsupported ({block.type})</span> : null}
+        {selected || ctx.hoverId === block.id ? (
+          <span
+            className={styles.blockTools}
+            data-pb-toolbar="1"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button type="button" className={styles.toolBtn} disabled={index === 0} onClick={() => move(block.id, -1)} title="Move up">↑</button>
+            <button type="button" className={styles.toolBtn} disabled={index === total - 1} onClick={() => move(block.id, 1)} title="Move down">↓</button>
+            <button type="button" className={styles.toolBtn} onClick={() => remove(block.id)} title="Remove">🗑</button>
+          </span>
+        ) : null}
+        <UnsupportedBlock type={block.type} />
+      </div>
+    );
+  }
   const hovered = ctx.hoverId === block.id;
   const locked = !!def.bound;
   const parsed = def.schema.safeParse(block.content);
@@ -112,7 +178,29 @@ export function CanvasBlock({
         // block's Render draws it (falling back to its own "· Live …"
         // placeholder only when a freshly-added block hasn't been resolved yet).
         // The block schema strips `_resolved` on parse, so re-attach it here.
-        def.Render({ content: withResolved(parsed.data, block.content), ctx: renderCtx })
+        // `previewContent` (template editor only) then fills {{field}} tokens
+        // from a sample row for DISPLAY — the stored/edited tree is untouched.
+        //
+        // The style/layout wrapper below mirrors BlockRenderer's data-block
+        // wrapper (padding/colour/border inline, flex/grid via a scoped
+        // <style>) resolved for ctx.device — WITHOUT this, Style/Layout panel
+        // edits produce no visible change on the canvas. Nested INSIDE the
+        // editor's own selection/drag chrome div (styles.canvasBlock) rather
+        // than merged onto it, so an author's background/opacity never
+        // collides with the editor's own selection-highlight styling.
+        (() => {
+          const content = applyPreview(withResolved(parsed.data, block.content), block.type, ctx.previewContent) as {
+            style?: BlockStyle;
+            layout?: BlockLayout;
+          };
+          const wrap = resolveBlockPreviewWrapper(block.id, content, ctx.device);
+          return (
+            <div data-block={block.type} className={wrap.className} style={wrap.style}>
+              {wrap.layoutCss ? <style data-block-style="">{wrap.layoutCss}</style> : null}
+              {def.Render({ content, ctx: renderCtx })}
+            </div>
+          );
+        })()
       )}
     </div>
   );
@@ -164,7 +252,7 @@ export function CanvasChildren({
         <div key={b.id} style={{ position: "relative", minWidth: 0 }}>
           {ctx.drop && ctx.dragId && ctx.drop.parentId === parentId && ctx.drop.index === i ? <DropLine /> : null}
           <CanvasBlock block={b} index={i} total={blocks.length} ctx={ctx} />
-          <InsertMenu onInsert={(type) => ctx.onInsert(parentId, i + 1, type)} />
+          <InsertMenu onInsert={(type, patch) => ctx.onInsert(parentId, i + 1, type, patch)} />
         </div>
       ))}
       {ctx.drop && ctx.dragId && ctx.drop.parentId === parentId && ctx.drop.index >= blocks.length ? <DropLine /> : null}
@@ -173,7 +261,7 @@ export function CanvasChildren({
 }
 
 /** Between-block quick insert — a centered ＋ that opens the block menu. */
-function InsertMenu({ onInsert }: { onInsert: (type: string) => void }) {
+function InsertMenu({ onInsert }: { onInsert: OnAddBlock }) {
   return (
     <div className={styles.insertRow}>
       <BetweenMenuButton onInsert={onInsert} />

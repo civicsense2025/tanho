@@ -8,7 +8,35 @@ import type { BlockNode } from "./types";
  * are first-class. Pure functions: shared by editor UI and server actions.
  */
 
-export const CONTAINER_TYPES = ["section", "container", "row", "columns"] as const;
+export const CONTAINER_TYPES = [
+  "section",
+  "container",
+  "row",
+  "columns",
+  // The collection block's `content.blocks` is its per-record item template — a
+  // real child tree, so the tree walker/editor treat it as a container.
+  "collection",
+  // phase3-chrome-blocks: header/footer are nestable chrome containers.
+  "site-header",
+  "site-footer",
+] as const;
+
+// phase3-chrome-blocks: the sub-blocks a site-header / site-footer may hold.
+// Kept as one set so the nesting rule below (and any future picker scoping)
+// reads from a single source. Contiguous for an easy merge.
+const CHROME_CONTAINERS = ["site-header", "site-footer"] as const;
+const CHROME_CHILD_TYPES = [
+  "logo",
+  "nav-menu",
+  "cta-button",
+  "footer-column",
+  "social-links",
+  "announcement",
+] as const;
+const isChromeContainer = (t: string | null): boolean =>
+  t != null && (CHROME_CONTAINERS as readonly string[]).includes(t);
+const isChromeChild = (t: string): boolean =>
+  (CHROME_CHILD_TYPES as readonly string[]).includes(t);
 
 export const isContainer = (b: BlockNode | null | undefined): boolean =>
   !!b && (CONTAINER_TYPES as readonly string[]).includes(b.type) &&
@@ -17,8 +45,45 @@ export const isContainer = (b: BlockNode | null | undefined): boolean =>
 export const kidsOf = (b: BlockNode): BlockNode[] =>
   (b.content as { blocks?: BlockNode[] }).blocks ?? [];
 
-/** Nesting rules: which child types a parent accepts (null = page root). */
+const LAYOUT_CONTAINERS = ["section", "container", "row", "columns"] as const;
+const isLayoutContainer = (t: string | null): boolean =>
+  t != null && (LAYOUT_CONTAINERS as readonly string[]).includes(t);
+
+/** Nesting rules: which child types a parent accepts (null = tree root). */
 export function canNest(parentType: string | null, childType: string): boolean {
+  // ─── chrome nesting (site-header/site-footer are now full content areas) ────
+  // A chrome container accepts ANY block that isn't itself a chrome container —
+  // the chrome sub-blocks (logo/nav-menu/…) AND ordinary content/media/layout
+  // blocks — so a header/footer can be composed as freely as a page.
+  if (isChromeContainer(parentType)) return !isChromeContainer(childType);
+
+  // Chrome SUB-blocks (logo/nav-menu/cta-button/footer-column/social-links) need
+  // chrome/menu context, so they may only live inside a chrome container or a
+  // LAYOUT container (which, in a chrome tree, groups them) — never at the page
+  // root. `announcement` additionally sits at the chrome tree root (a top strip
+  // beside site-header — how templates.ts + the seed compose it).
+  //
+  // NOTE: canNest only gates the DnD / wrap / group paths (useCanvasDrag, store
+  // move ops). The picker's `insert` does NOT consult canNest, and the page
+  // editor's picker is not category-scoped, so a chrome sub-block can still be
+  // *added* to a page via the picker today (a pre-existing gap, not enforced
+  // here). Harmless at render — a stray chrome block only draws its own schema-
+  // validated content — but scope the page picker or gate insert() to close it.
+  if (isChromeChild(childType)) {
+    if (childType === "announcement" && parentType == null) return true;
+    return isChromeContainer(parentType) || isLayoutContainer(parentType);
+  }
+
+  // Chrome containers only ever sit at a tree root (their chrome:* owner) —
+  // never nested in a page layout block or in each other.
+  if (isChromeContainer(childType)) return parentType == null;
+
+  // A collection template can hold ordinary blocks but NOT another collection
+  // (nesting repeaters multiplies render fan-out) nor a section (a band inside a
+  // card is nonsensical). Guard both directions.
+  if (childType === "collection" && parentType === "collection") return false;
+  if (parentType === "collection") return childType !== "section";
+
   if (parentType == null) return true;
   if (parentType === "section") return childType !== "section";
   if (parentType === "container") return true;

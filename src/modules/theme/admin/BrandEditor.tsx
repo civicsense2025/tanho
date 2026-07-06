@@ -1,16 +1,29 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import Link from "next/link";
+import { forwardRef, useImperativeHandle, useState, useTransition } from "react";
 import { saveTheme } from "../actions";
 import type { ThemeInput } from "../validation";
 import { Section, Row } from "@/components/admin/Section";
 import { Input } from "@/components/forms/Input";
 import { Select } from "@/components/forms/Select";
 import { Button } from "@/components/core/Button";
+import { MediaIdPicker } from "@/modules/media/admin/MediaIdPicker";
 import { PALETTE_PRESETS } from "./palette-presets";
 import { ThemePreview } from "./ThemePreview";
 import { ContrastPanel } from "./ContrastPanel";
 import { ThemeActionsBar } from "./ThemeActionsBar";
+import styles from "./brand-editor.module.css";
+
+/** Imperative handle so a host (e.g. the onboarding wizard) can force a save
+ *  before navigating away, instead of relying on this form's own Save button
+ *  being clicked first. Resolves to the saved data on success (so the host
+ *  can update its own copy instead of holding a stale pre-save snapshot),
+ *  or null on failure. */
+export type BrandEditorHandle = { save: () => Promise<ThemeInput | null> };
+
+/** A custom/Google font family the owner has added (for the Font select). */
+export type BrandFontFamily = { id: string; name: string };
 
 const FONTS = [
   ["geist", "Geist (default)"],
@@ -20,13 +33,24 @@ const FONTS = [
   ["humanist", "Humanist"],
 ] as const;
 
+/** Sentinel select value for "use a built-in preset" (no custom family). */
+const PRESET_PREFIX = "preset:";
+const FAMILY_PREFIX = "family:";
+
 /**
  * The Brand editor — the white-label theming surface. Four base colors +
  * type/spacing scalars drive the whole site's CSS vars (deriveTokens). A live
  * preview and WCAG panel update as you edit; Save writes the singleton theme
  * row. Save-as-theme / import / export live in the ThemeActionsBar.
  */
-export function BrandEditor({ initial }: { initial: ThemeInput }) {
+export const BrandEditor = forwardRef<
+  BrandEditorHandle,
+  {
+    initial: ThemeInput;
+    fontFamilies?: BrandFontFamily[];
+    faviconPreviewUrl?: string | null;
+  }
+>(function BrandEditor({ initial, fontFamilies = [], faviconPreviewUrl = null }, ref) {
   const [t, setT] = useState<ThemeInput>(initial);
   const [dirty, setDirty] = useState(false);
   const [mode, setMode] = useState<"light" | "dark">("light");
@@ -44,21 +68,37 @@ export function BrandEditor({ initial }: { initial: ThemeInput }) {
     setFlash(null);
   };
 
+  /** Shared by the on-screen Save button and the imperative handle below —
+   *  both need the actual save outcome, not just a fire-and-forget. */
+  const doSave = async (): Promise<boolean> => {
+    const res = await saveTheme(t);
+    if (res.error) {
+      setFlash(res.error);
+      return false;
+    }
+    setDirty(false);
+    setFlash("Saved ✓");
+    setTimeout(() => setFlash(null), 1600);
+    return true;
+  };
+
   const save = () =>
-    startTransition(async () => {
-      const res = await saveTheme(t);
-      if (res.error) setFlash(res.error);
-      else {
-        setDirty(false);
-        setFlash("Saved ✓");
-        setTimeout(() => setFlash(null), 1600);
-      }
+    startTransition(() => {
+      void doSave();
     });
+
+  useImperativeHandle(ref, () => ({
+    save: async () => {
+      if (!dirty) return t;
+      const ok = await doSave();
+      return ok ? t : null;
+    },
+  }));
 
   const bases = { accent: t.accent, accent2: t.accent2, ink: t.ink, paper: t.paper };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,360px)", gap: "var(--space-8)" }}>
+    <div className={styles.layout}>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-8)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <span style={{ flex: 1 }} />
@@ -118,11 +158,37 @@ export function BrandEditor({ initial }: { initial: ThemeInput }) {
 
         <Section title="Typography">
           <Row label="Font">
-            <Select value={t.font} onChange={(e) => set("font", e.target.value as ThemeInput["font"])}>
-              {FONTS.map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
+            <Select
+              value={t.fontFamilyId ? `${FAMILY_PREFIX}${t.fontFamilyId}` : `${PRESET_PREFIX}${t.font}`}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v.startsWith(FAMILY_PREFIX)) {
+                  set("fontFamilyId", v.slice(FAMILY_PREFIX.length));
+                } else {
+                  setT((p) => ({ ...p, fontFamilyId: null, font: v.slice(PRESET_PREFIX.length) as ThemeInput["font"] }));
+                  setDirty(true);
+                  setFlash(null);
+                }
+              }}
+            >
+              {fontFamilies.length > 0 ? (
+                <optgroup label="Your fonts">
+                  {fontFamilies.map((f) => (
+                    <option key={f.id} value={`${FAMILY_PREFIX}${f.id}`}>{f.name}</option>
+                  ))}
+                </optgroup>
+              ) : null}
+              <optgroup label="Built-in">
+                {FONTS.map(([v, l]) => (
+                  <option key={v} value={`${PRESET_PREFIX}${v}`}>{l}</option>
+                ))}
+              </optgroup>
             </Select>
+          </Row>
+          <Row label="">
+            <Link href="/admin/settings/fonts" style={{ fontSize: "var(--text-xs)", color: "var(--accent)" }}>
+              Manage fonts (upload or add Google Fonts) →
+            </Link>
           </Row>
           <Row label={`Base size — ${t.baseSize}px`}>
             <input type="range" min={14} max={20} step={1} value={t.baseSize} onChange={(e) => set("baseSize", Number(e.target.value))} />
@@ -155,10 +221,20 @@ export function BrandEditor({ initial }: { initial: ThemeInput }) {
           </Row>
         </Section>
 
+        <Section title="Favicon" desc="The small icon shown in browser tabs. PNG, WebP, or SVG (sanitized on upload).">
+          <Row label="Favicon">
+            <MediaIdPicker
+              value={t.faviconMediaId}
+              previewUrl={faviconPreviewUrl}
+              onChange={(next) => set("faviconMediaId", next?.id ?? null)}
+            />
+          </Row>
+        </Section>
+
         <ThemeActionsBar current={t} />
       </div>
 
-      <aside style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", position: "sticky", top: "var(--space-6)", alignSelf: "start" }}>
+      <aside className={styles.preview}>
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
           {(["light", "dark"] as const).map((m) => (
             <Button key={m} variant={mode === m ? "accent" : "outline"} size="sm" onClick={() => setMode(m)}>
@@ -173,4 +249,4 @@ export function BrandEditor({ initial }: { initial: ThemeInput }) {
       </aside>
     </div>
   );
-}
+});

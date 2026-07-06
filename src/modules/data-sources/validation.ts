@@ -13,7 +13,10 @@ const identifierSchema = z
 /** One table an owner has explicitly exposed for querying, and its allowlisted columns. */
 export const dataSourceAllowlistEntrySchema = z.object({
   table: identifierSchema,
-  columns: z.array(identifierSchema).min(1).max(50),
+  columns: z
+    .array(identifierSchema)
+    .min(1, "Pick at least one column to allow for this table, or remove the table")
+    .max(50),
 });
 export type DataSourceAllowlistEntry = z.infer<typeof dataSourceAllowlistEntrySchema>;
 
@@ -37,6 +40,19 @@ function assertNoDisabledTls(raw: string, ctx: z.RefinementCtx) {
   }
 }
 
+/**
+ * Sync shape + TLS validation only — deliberately does NOT include the
+ * async host-blocklist check (see `assertHostNotBlocked` in
+ * `validation.server.ts`). Used directly by `connection-string.ts`, which
+ * runs client-side to pre-fill form fields from a pasted string; a sync
+ * schema is required there (Zod throws if an async refine is hit via
+ * `.safeParse()`), and a DNS lookup wouldn't be meaningful or trustworthy
+ * from the browser anyway. The real enforcement is server-side:
+ * `dataSourceConfigSchema` (validation.server.ts) wraps this with the async
+ * check, and every server action parses through THAT — kept in a separate
+ * server-only file because it imports ssrf-guard.ts's `node:dns/promises`,
+ * which can't be bundled into the client chunk this file is also part of.
+ */
 export const postgresConfigSchema = z.object({
   provider: z.literal("postgres"),
   host: z.string().min(1).max(255),
@@ -78,28 +94,19 @@ export const supabaseConfigSchema = z.object({
 });
 export type SupabaseConfig = z.infer<typeof supabaseConfigSchema>;
 
-/** Discriminated union — the shape stored (encrypted) in `configEncrypted`. */
-export const dataSourceConfigSchema = z.discriminatedUnion("provider", [
-  postgresConfigSchema,
-  supabaseConfigSchema,
-]);
-export type DataSourceConfig = z.infer<typeof dataSourceConfigSchema>;
-
-export const createConnectionSchema = z.object({
-  name: z.string().min(1).max(120),
-  config: dataSourceConfigSchema,
-});
-export type CreateConnectionInput = z.infer<typeof createConnectionSchema>;
-
-export const updateConnectionSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1).max(120).optional(),
-  config: dataSourceConfigSchema.optional(),
-  allowlist: z.array(dataSourceAllowlistEntrySchema).max(50).optional(),
-});
-export type UpdateConnectionInput = z.infer<typeof updateConnectionSchema>;
+/**
+ * Discriminated union of the two provider shapes, sync-only (no host
+ * blocklist check — see `dataSourceConfigSchema` in `validation.server.ts`
+ * for the version every server action actually parses input through). This
+ * type is exported for client code (e.g. `CreateConnectionForm.tsx`) that
+ * needs to describe the shape without pulling in the server-only DNS check.
+ */
+export type DataSourceConfig = PostgresConfig | SupabaseConfig;
 
 const filterOpSchema = z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "in", "contains"]);
+type FilterOp = z.infer<typeof filterOpSchema>;
+
+const SCALAR_OPS: ReadonlySet<FilterOp> = new Set(["eq", "neq", "gt", "gte", "lt", "lte", "contains"]);
 
 const filterValueSchema = z.union([
   z.string().max(500),
@@ -118,11 +125,26 @@ export const dataSourceBindingSchema = z.object({
   columns: z.array(identifierSchema).min(1).max(50),
   filters: z
     .array(
-      z.object({
-        column: identifierSchema,
-        op: filterOpSchema,
-        value: filterValueSchema,
-      }),
+      z
+        .object({
+          column: identifierSchema,
+          op: filterOpSchema,
+          value: filterValueSchema,
+        })
+        .superRefine((f, ctx) => {
+          // Scalar ops (eq/neq/gt/gte/lt/lte/contains) build a single SQL
+          // placeholder from `value` (query-builder.ts's buildFilterClause);
+          // an array there gets bound as-is to the pg driver, which is a
+          // confusing failure mode, not a clean error. "in" is the only op
+          // that expects (and query-builder.ts explicitly branches for) an
+          // array — reject the mismatch here instead.
+          const isArray = Array.isArray(f.value);
+          if (f.op === "in" && !isArray) {
+            ctx.addIssue({ code: "custom", path: ["value"], message: `"in" requires an array value` });
+          } else if (SCALAR_OPS.has(f.op) && isArray) {
+            ctx.addIssue({ code: "custom", path: ["value"], message: `"${f.op}" requires a scalar value, not an array` });
+          }
+        }),
     )
     .max(10)
     .optional(),

@@ -9,6 +9,7 @@ import { blockSets } from "@/modules/pages/schema";
 import { entries } from "@/modules/entries/schema";
 import { treeReferencedTypes, validatePackTree } from "@/modules/pages/blocks-io";
 import { slugSchema } from "@/modules/pages/validation";
+import { slugify } from "@/lib/slug";
 import {
   exportBlockPackJson,
   importPackJson,
@@ -23,13 +24,6 @@ const invalidate = () => {
   updateTag("entries:block_pack");
   updateTag("block-packs");
 };
-
-const slugify = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
 
 const OWNER_TYPE = "entry:block_pack";
 

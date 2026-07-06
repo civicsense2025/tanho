@@ -10,7 +10,7 @@ import {
   type PackUrlType,
 } from "@/modules/marketplace/public";
 import { getPublishedEntry } from "@/modules/entries/queries";
-import { getGeneralSettings } from "@/modules/settings/queries";
+import { buildPageMetadata } from "@/modules/seo";
 
 type Params = { type: string; slug: string };
 
@@ -30,12 +30,14 @@ export async function generateMetadata({
   if (!s.enabled || s.visibility !== "public") return {};
   const entry = await getPublishedEntry(PACK_TYPE_BY_URL[urlType], slug);
   if (!entry) return {};
-  const general = await getGeneralSettings();
-  return {
-    title: `${entry.title} · ${s.name || "Marketplace"} · ${general.name}`,
-    description: (entry.data as { description?: string })?.description || undefined,
-    robots: general.indexable ? undefined : { index: false, follow: false },
-  };
+  // Fold the marketplace name into the title token; the `page` template adds
+  // the site name and buildPageMetadata supplies OG/twitter/canonical/robots.
+  return buildPageMetadata({
+    contentType: "page",
+    title: `${entry.title} · ${s.name || "Marketplace"}`,
+    excerpt: (entry.data as { description?: string })?.description || undefined,
+    path: `/marketplace/${type}/${slug}`,
+  });
 }
 
 /**

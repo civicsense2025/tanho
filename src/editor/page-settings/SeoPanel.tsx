@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Field } from "@/components/forms/Field";
 import { Input } from "@/components/forms/Input";
 import { Textarea } from "@/components/forms/Textarea";
+import { MediaIdPicker } from "@/modules/media/admin/MediaIdPicker";
 import type { PageDraft, PatchPage } from "./types";
 import styles from "./page-settings.module.css";
 
@@ -50,6 +51,12 @@ export function SeoPanel({
               rows={3}
               onChange={(e) => patchPage({ seoDescription: e.target.value })}
               placeholder="A short summary for search + social cards."
+            />
+          </Field>
+          <Field label="Share image" hint="Open Graph / Twitter card — falls back to the site default, then a generated card">
+            <MediaIdPicker
+              value={page.ogImageMediaId}
+              onChange={(next) => patchPage({ ogImageMediaId: next?.id ?? null })}
             />
           </Field>
           <Field label="Canonical URL" hint="Optional — point duplicates at the original">

@@ -8,17 +8,19 @@ import {
   type PackMeta,
 } from "@/modules/marketplace/public";
 import { listPublishedEntries } from "@/modules/entries/queries";
-import { getGeneralSettings } from "@/modules/settings/queries";
+import { buildPageMetadata } from "@/modules/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getMarketplaceSettings();
   if (!s.enabled || s.visibility !== "public") return {};
-  const general = await getGeneralSettings();
-  return {
-    title: `${s.name || "Marketplace"} · ${general.name}`,
-    description: s.description || undefined,
-    robots: general.indexable ? undefined : { index: false, follow: false },
-  };
+  // The `page` template renders `{title} · {site}`, so pass just the
+  // marketplace name; buildPageMetadata adds OG/twitter/canonical/robots.
+  return buildPageMetadata({
+    contentType: "page",
+    title: s.name || "Marketplace",
+    excerpt: s.description || undefined,
+    path: "/marketplace",
+  });
 }
 
 /**

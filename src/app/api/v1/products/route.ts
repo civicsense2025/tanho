@@ -4,7 +4,7 @@ import { listProducts } from "@/modules/commerce/queries";
 import { products } from "@/modules/commerce/schema";
 import { productSchema } from "@/modules/commerce/validation";
 import { db } from "@/lib/db/client";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -34,7 +34,7 @@ export async function POST(req: Request): Promise<Response> {
       .insert(products)
       .values({ ...parsed.data, updatedAt: Date.now() })
       .returning({ id: products.id });
-    updateTag("products");
+    revalidateTag("products", "max");
     await writeAudit({ userId: user.id, action: "product.create", ownerType: "product", ownerId: row.id });
     return ok({ id: row.id }, 201);
   });

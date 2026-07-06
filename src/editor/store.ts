@@ -13,6 +13,19 @@ import {
   newBlockId,
 } from "@/blocks/tree";
 import type { BlockNode, Device } from "@/blocks/types";
+import { createSymbol, inlineSymbol } from "@/modules/blocks/symbol-actions";
+import type { SymbolOverride } from "@/blocks/symbol/fields";
+
+/** One editable field of the content type being templated. */
+export type ContentTypeField = { key: string; label: string; kind: string };
+
+/** Content-type context surfaced to the editor when templating a content type. */
+export type ContentTypeContext = {
+  /** The type's slug (e.g. "products") — matches a block's `suggestedFor`. */
+  slug: string;
+  /** The type's fields — for field-pickers, per-field suggestions, token helper. */
+  fields: ContentTypeField[];
+};
 
 type EditorState = {
   blocks: BlockNode[];
@@ -30,11 +43,17 @@ type EditorState = {
    *  pickers filter to this; null = show all compiled defs (backward compat for
    *  callers that don't wire the registry through). Set once by PageEditor. */
   enabledTypes: Set<string> | null;
+  /** The content-type being templated, when the editor is a content-type
+   *  template editor — its fields drive the picker's per-field suggestions, the
+   *  `field` block's field-picker, and the text blocks' "insert field" helper.
+   *  null in every other editor (pages/entries/chrome). */
+  contentTypeContext: ContentTypeContext | null;
 
   init(blocks: BlockNode[], onChange: (blocks: BlockNode[]) => void, key?: string | null): void;
   apply(fn: (bs: BlockNode[]) => BlockNode[]): void;
   setDevice(device: Device): void;
   setEnabledTypes(types: Set<string> | null): void;
+  setContentTypeContext(ctx: ContentTypeContext | null): void;
 
   select(id: string, mode?: "single" | "toggle" | "range"): void;
   clearSelection(): void;
@@ -51,6 +70,15 @@ type EditorState = {
   bulkDelete(): void;
   bulkDuplicate(): void;
   bulkWrapInSection(): void;
+
+  /** Save the current selection (same-parent siblings) as a reusable symbol and
+   *  replace it in place with one linked instance. Returns the new symbol id, or
+   *  null if the selection can't be saved (empty / cross-parent). */
+  saveSelectionAsSymbol(name: string): Promise<string | null>;
+  /** Insert a symbol instance at the current selection (or end of root). */
+  insertSymbol(symbolId: string, label?: string): void;
+  /** Replace a symbol instance with its resolved tree (fresh ids) — unlink it. */
+  detachSymbol(id: string): Promise<void>;
 };
 
 export const useEditor = create<EditorState>((set, get) => ({
@@ -61,6 +89,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   readyFor: null,
   device: "desktop",
   enabledTypes: null,
+  contentTypeContext: null,
 
   init(blocks, onChange, key = null) {
     set({ blocks, onChange, selection: new Set(), lastSelected: null, readyFor: key });
@@ -74,6 +103,7 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   setDevice: (device) => set({ device }),
   setEnabledTypes: (enabledTypes) => set({ enabledTypes }),
+  setContentTypeContext: (contentTypeContext) => set({ contentTypeContext }),
 
   select(id, mode = "single") {
     const { selection, lastSelected, blocks } = get();
@@ -202,5 +232,77 @@ export const useEditor = create<EditorState>((set, get) => ({
       return treeInsert(acc, parentId, insertAt, wrapper);
     });
     set({ selection: new Set([wrapper.id]), lastSelected: wrapper.id });
+  },
+
+  /** Save the selection as a symbol, then replace it with one linked instance.
+   *  Same same-parent-siblings guard as bulkWrapInSection. The saved definition
+   *  keeps the members' ids (stable override targeting); the instance gets a
+   *  fresh id, as does every future insertion of this symbol. */
+  async saveSelectionAsSymbol(name) {
+    const { selection, blocks } = get();
+    const ids = [...selection];
+    if (!ids.length) return null;
+    const locs = ids
+      .map((id) => ({ id, loc: treeLocate(blocks, id) }))
+      .filter((x): x is { id: string; loc: NonNullable<ReturnType<typeof treeLocate>> } => !!x.loc);
+    const parentId = locs[0]?.loc.parentId ?? null;
+    if (!locs.every((x) => x.loc.parentId === parentId)) return null;
+    const members = ids.map((id) => treeFind(blocks, id)!).filter(Boolean);
+    if (!members.length) return null;
+
+    const created = await createSymbol(name, members);
+    if (!created.ok || !created.data) return null;
+    const symbolId = created.data.id;
+
+    const insertAt = Math.min(...locs.map((x) => x.loc.index));
+    const instance: BlockNode = {
+      id: newBlockId(),
+      type: "symbol",
+      content: { symbolId, overrides: [], _label: name.trim() || "Saved block" },
+    };
+    get().apply((bs) => {
+      let acc = bs;
+      for (const id of ids) acc = treeRemove(acc, id).blocks;
+      return treeInsert(acc, parentId, insertAt, instance);
+    });
+    set({ selection: new Set([instance.id]), lastSelected: instance.id });
+    return symbolId;
+  },
+
+  insertSymbol(symbolId, label) {
+    const instance: BlockNode = {
+      id: newBlockId(),
+      type: "symbol",
+      content: { symbolId, overrides: [], ...(label ? { _label: label } : {}) },
+    };
+    const sel = [...get().selection];
+    const loc = sel.length ? treeLocate(get().blocks, sel[0]!) : null;
+    get().apply((bs) =>
+      loc
+        ? treeInsert(bs, loc.parentId, loc.index + 1, instance)
+        : treeInsert(bs, null, get().blocks.length, instance),
+    );
+    set({ selection: new Set([instance.id]), lastSelected: instance.id });
+  },
+
+  async detachSymbol(id) {
+    const node = treeFind(get().blocks, id);
+    const loc = treeLocate(get().blocks, id);
+    if (!node || !loc || node.type !== "symbol") return;
+    const content = node.content as { symbolId?: string; overrides?: SymbolOverride[] };
+    if (!content.symbolId) return;
+    const res = await inlineSymbol(content.symbolId, content.overrides);
+    if (!res.ok || !res.data) return;
+    const inlined = res.data.blocks;
+    get().apply((bs) => {
+      const { blocks: without } = treeRemove(bs, id);
+      // Splice the inlined blocks at the instance's former position, order-preserving.
+      let acc = without;
+      inlined.forEach((b, i) => {
+        acc = treeInsert(acc, loc.parentId, loc.index + i, b);
+      });
+      return acc;
+    });
+    set({ selection: new Set(inlined.map((b) => b.id)) });
   },
 }));

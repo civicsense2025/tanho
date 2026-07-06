@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { payments } from "@/adapters/payments";
@@ -7,6 +8,7 @@ import { getViewer } from "@/modules/people/viewer";
 import { orderItems, orders } from "@/modules/commerce/schema";
 import { generateOrderCode } from "@/modules/commerce/order-code";
 import { readDonationsSettings } from "./donations-settings";
+import { allowDonationCheckout } from "./rate-limit";
 
 const requestSchema = z.object({ email: z.email().optional() });
 
@@ -24,6 +26,12 @@ function appUrl(): string {
  * starts at 0 and is reconciled by the webhook once the amount is known.
  */
 export async function startDonationCheckout(input: unknown): Promise<StartDonationResult> {
+  const hdrs = await headers();
+  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+  if (!(await allowDonationCheckout(ip))) {
+    return { ok: false, error: "Too many attempts. Please try again in a few minutes." };
+  }
+
   const parsed = requestSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid request" };
 

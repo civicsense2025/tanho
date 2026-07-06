@@ -5,8 +5,13 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
+import { rebuildMediaUsage } from "@/modules/media/usage";
+import { publishOwnerBlocks } from "@/modules/blocks/actions";
+import { getEditorChromePreview } from "@/modules/chrome/queries";
+import type { BlockNode } from "@/blocks/types";
 import { collections, productCollections } from "./schema";
 import { collectionSchema } from "./validation";
+import { getCollectionForEdit, type CollectionRow } from "./queries";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -119,6 +124,45 @@ export async function removeProductFromCollection(
     ownerId: collectionId,
     meta: { productId },
   });
+  invalidate();
+  return { ok: true };
+}
+
+/**
+ * Content-editor load, callable from the client — `getCollectionForEdit`
+ * lives in the plain (non-"use server") queries module, so the collection
+ * edit sheet (which opens the block canvas without a page navigation) needs
+ * this thin auth-checked wrapper to fetch it on demand.
+ */
+export async function loadCollectionForContentEdit(
+  id: string,
+): Promise<
+  Result<{
+    collection: CollectionRow;
+    blocks: BlockNode[];
+    publishedBlocks: BlockNode[];
+    headerBlocks: BlockNode[];
+    footerBlocks: BlockNode[];
+  }>
+> {
+  await requireUser();
+  const [hit, chrome] = await Promise.all([getCollectionForEdit(id), getEditorChromePreview()]);
+  if (!hit) return { ok: false, error: "Collection not found" };
+  return { ok: true, data: { ...hit, ...chrome } };
+}
+
+/** Publish a collection's content blocks: copy draft → published (mirrors pages/entries). */
+export async function publishCollectionBlocks(id: string): Promise<Result> {
+  const user = await requireUser();
+  const existing = await db.query.collections.findFirst({ where: eq(collections.id, id) });
+  if (!existing) return { ok: false, error: "Collection not found" };
+  const published = await publishOwnerBlocks("collection", id);
+  if (!published.ok) return published;
+
+  // Collections have no dedicated detail route (see storefront-queries.ts) —
+  // "" is an honest label, same as an entry kind with no resolvable route.
+  await rebuildMediaUsage("collection", id, "", published.blocks);
+  await writeAudit({ userId: user.id, action: "collection.blocks.publish", ownerType: "collection", ownerId: id });
   invalidate();
   return { ok: true };
 }

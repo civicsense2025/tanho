@@ -4,7 +4,7 @@ import { readSettingRow } from "@/modules/settings/queries";
 import { settings } from "@/modules/settings/schema";
 import { settingsSchemas } from "@/modules/settings/validation";
 import { db } from "@/lib/db/client";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -39,7 +39,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ namesp
         target: settings.namespace,
         set: { data: parsed.data, updatedAt: Date.now() },
       });
-    updateTag(`settings:${namespace}`);
+    revalidateTag(`settings:${namespace}`, "max");
     await writeAudit({ userId: user.id, action: "settings.save", ownerType: "settings", ownerId: namespace });
     return ok();
   });

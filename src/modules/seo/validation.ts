@@ -25,6 +25,30 @@ const DEFAULT_TEMPLATES: Record<SeoContentType, SeoTemplate> = {
 };
 
 /**
+ * A search-engine verification token. Providers issue an opaque alphanumeric
+ * string (dashes/underscores allowed); anything else is rejected so a value
+ * echoed into a `<meta content>` can't carry markup or quotes.
+ */
+const verificationToken = z
+  .string()
+  .max(200)
+  .regex(/^[A-Za-z0-9_-]*$/, "Only letters, numbers, - and _")
+  .default("");
+
+/** Site verification codes, mapped into <meta> tags by the root layout. */
+const verificationSchema = z.object({
+  google: verificationToken,
+  bing: verificationToken,
+  pinterest: verificationToken,
+  yandex: verificationToken,
+});
+
+export type SeoVerification = z.infer<typeof verificationSchema>;
+
+/** All-empty verification set — the default before any code is entered. */
+const VERIFICATION_DEFAULT: SeoVerification = verificationSchema.parse({});
+
+/**
  * The `seo` settings namespace. `siteUrl` is the canonical origin used for
  * absolute URLs in the sitemap and JSON-LD; empty falls back to APP_URL.
  */
@@ -39,6 +63,14 @@ export const seoSettingsSchema = z.object({
   templates: z
     .record(z.enum(SEO_CONTENT_TYPES), templateSchema)
     .default(DEFAULT_TEMPLATES),
+  /** Search-engine ownership verification tokens (Search Console, Bing, etc.). */
+  verification: verificationSchema.default(VERIFICATION_DEFAULT),
+  /** Public social/profile URLs — surfaced as Organization `sameAs`. Restricted
+   *  to http(s) so a javascript:/data: URL can never reach the rendered output. */
+  socialProfiles: z
+    .array(z.string().url().max(400).refine((u) => /^https?:\/\//i.test(u), "Must be an http(s) URL"))
+    .max(20)
+    .default([]),
 });
 
 export type SeoSettings = z.infer<typeof seoSettingsSchema>;

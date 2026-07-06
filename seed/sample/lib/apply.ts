@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { people, personActivity } from "../../../src/modules/people/schema";
 import { eventTypes } from "../../../src/modules/scheduling/schema";
+import { symbols } from "../../../src/modules/blocks/schema";
 import { log, type SeedDb } from "../../lib";
 import { upsertPage } from "../../demo/demo-page-helpers";
 import { upsertEntry } from "../../demo/demo-entry-helper";
@@ -25,6 +26,20 @@ export async function applySamplePack(db: SeedDb, pack: SamplePack): Promise<voi
 
   // Fail fast if any nav link would 404 — a sample must be internally consistent.
   validateNav(pack);
+
+  // Reusable saved blocks (global symbols) FIRST — pages reference them by id via
+  // symbol(id), so they must exist before the page trees are rendered/edited.
+  // Idempotent: upsert by the pack-local id so re-seeding cleanly overwrites.
+  for (const s of pack.symbols ?? []) {
+    await db
+      .insert(symbols)
+      .values({ id: s.id, name: s.name, category: "content", icon: "component", blockTree: s.blocks })
+      .onConflictDoUpdate({
+        target: symbols.id,
+        set: { name: s.name, blockTree: s.blocks, updatedAt: Date.now() },
+      });
+  }
+  if (pack.symbols?.length) log(`  ✓ ${pack.symbols.length} saved block(s)`);
 
   // Pages + posts. Two passes so a post can parent under a page by slug.
   const pageIdBySlug = new Map<string, string>();

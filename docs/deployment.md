@@ -25,6 +25,11 @@ DATABASE_URL=file:/var/lib/oys/site.db node_modules/.bin/next start -p 3000
 Put a reverse proxy (Caddy/nginx) in front for TLS. Local-disk uploads work
 as-is; back up the database file and the uploads directory together.
 
+Once your domain's DNS points here, use Settings → Domain in the admin panel
+to check the record and see its status. That screen only checks DNS — it
+doesn't provision certificates or configure the proxy; TLS is still your
+reverse proxy's job (see the hardening checklist below).
+
 ## Stripe webhooks
 
 Point a webhook endpoint at `https://<your-domain>/api/webhooks/stripe` with

@@ -1,7 +1,45 @@
 import { blockDef } from "@/blocks/registry";
 import { isContainer, kidsOf } from "@/blocks/tree";
+import { sanitizeCss, sanitizeAdvancedDecls } from "@/lib/css-sanitizer";
 import type { BlockNode } from "@/blocks/types";
+import type { Gate } from "@/modules/entitlements/gate";
 import { blockTreeSchema, MAX_TREE_BYTES, type BlockNodeInput } from "./validation";
+
+/**
+ * Store-time sanitisation of the raw-CSS escape hatch: layout blocks may carry a
+ * free-form `customCss` string. We persist ONLY the sanitised form (AST-rebuilt,
+ * property/selector/url allow-listed, page-root scoped — see lib/css-sanitizer),
+ * so a malicious string never survives in the DB. It is re-sanitised again on render
+ * (BlockRenderer) as defence in depth, mirroring the tree's save+render double-check.
+ * Mutates the parsed content in place (it's the fresh zod-parsed copy).
+ */
+function sanitizeCustomCss(content: Record<string, unknown>): void {
+  if (typeof content.customCss === "string" && content.customCss !== "") {
+    content.customCss = sanitizeCss(content.customCss);
+  }
+}
+
+/**
+ * Store-time sanitisation of the raw-value `advancedStyle` bucket (the px/hex escape
+ * hatch that complements the token style layer). Each breakpoint's `{prop: value}` map
+ * is cleaned via `sanitizeAdvancedDecls` (same ALLOWED_PROPS + isSafeValue gates as
+ * customCss) so only safe pairs persist; re-cleaned again on render (BlockRenderer).
+ * Mutates in place; drops an emptied layer/bucket so it doesn't linger as `{}`.
+ */
+function sanitizeAdvancedStyle(content: Record<string, unknown>): void {
+  const adv = content.advancedStyle;
+  if (!adv || typeof adv !== "object") return;
+  const next: Record<string, Record<string, string>> = {};
+  for (const bp of ["base", "tablet", "desktop"] as const) {
+    const layer = (adv as Record<string, unknown>)[bp];
+    if (layer && typeof layer === "object") {
+      const clean = sanitizeAdvancedDecls(layer);
+      if (Object.keys(clean).length) next[bp] = clean;
+    }
+  }
+  if (Object.keys(next).length) content.advancedStyle = next;
+  else delete content.advancedStyle;
+}
 
 /**
  * Validates a whole incoming block tree: shape via zod, then each node's
@@ -30,6 +68,8 @@ export function validateBlockTree(input: unknown):
         return `Invalid ${node.type} block: ${c.error.issues[0]?.message ?? "bad content"}`;
       }
       const content = c.data as Record<string, unknown>;
+      sanitizeCustomCss(content);
+      sanitizeAdvancedStyle(content);
       const asNode: BlockNode = { id: node.id, type: node.type, content };
       if (isContainer(asNode)) {
         const kids = normalize(kidsOf(asNode) as BlockNodeInput[]);
@@ -52,6 +92,35 @@ export function treeHasPaywall(blocks: BlockNode[]): boolean {
     if (isContainer(b) && treeHasPaywall(kidsOf(b))) return true;
   }
   return false;
+}
+
+/**
+ * The Gate a reader needs to pass to read past the FIRST paywall anywhere in
+ * the tree, or null if the tree has none — a UI-only signal (the search
+ * results page's "members only" badge, mirroring postlist/resolve.ts's
+ * existing `locked: r.hasPaywall` lock glyph), NOT a second enforcement
+ * layer. Real enforcement stays exactly where it already is: the page
+ * render's own walker (BlockRenderer) and, for search specifically,
+ * indexBlockTree's own visibleBlocksFor(null, ...) walk, which already
+ * limits indexed BODY TEXT to what an anonymous viewer can see regardless of
+ * what this function reports. Depth-first, first-found order (matches
+ * treeHasPaywall's own "any paywall anywhere" trigger) — a page with several
+ * paywalls at different tiers is reported by its outermost/first one, since
+ * that is the gate that determines whether the reader sees anything beyond
+ * the teaser at all.
+ */
+export function resolveTreeGate(blocks: BlockNode[]): Gate | null {
+  for (const b of blocks) {
+    if (b.type === "paywall") {
+      const tier = typeof (b.content as { tier?: unknown }).tier === "string" ? (b.content as { tier: string }).tier : "";
+      return { kind: "membership", tier };
+    }
+    if (isContainer(b)) {
+      const nested = resolveTreeGate(kidsOf(b));
+      if (nested) return nested;
+    }
+  }
+  return null;
 }
 
 /**
@@ -102,6 +171,8 @@ export function validatePackTree(input: unknown):
         continue;
       }
       const content = c.data as Record<string, unknown>;
+      sanitizeCustomCss(content);
+      sanitizeAdvancedStyle(content);
       const asNode: BlockNode = { id: node.id, type: node.type, content };
       if (isContainer(asNode)) {
         const kids = normalize(kidsOf(asNode) as BlockNodeInput[]);

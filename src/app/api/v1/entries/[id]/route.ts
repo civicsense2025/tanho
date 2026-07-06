@@ -5,14 +5,15 @@ import { entries } from "@/modules/entries/schema";
 import { entryDetailsSchema } from "@/modules/entries/validation";
 import { blockSets } from "@/modules/pages/schema";
 import { getEntitySchema } from "@/entities/registry-async";
+import { removeEntryFromIndex } from "@/modules/search/index-document";
 import { db } from "@/lib/db/client";
 import { and, eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 const invalidate = (type: string) => {
-  updateTag("entries");
-  updateTag(`entries:${type}`);
+  revalidateTag("entries", "max");
+  revalidateTag(`entries:${type}`, "max");
 };
 
 /** GET /api/v1/entries/:id — one entry with draft/published blocks. Editor+. */
@@ -78,6 +79,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       .delete(blockSets)
       .where(and(eq(blockSets.ownerType, `entry:${existing.type}`), eq(blockSets.ownerId, id)));
     await db.delete(entries).where(eq(entries.id, id));
+    await removeEntryFromIndex(id);
     await writeAudit({ userId: user.id, action: "entry.delete", ownerType: `entry:${existing.type}`, ownerId: id });
     invalidate(existing.type);
     return ok();

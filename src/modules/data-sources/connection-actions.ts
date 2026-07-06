@@ -14,9 +14,11 @@ import { dataSourceConnections } from "./schema";
 import {
   createConnectionSchema,
   updateConnectionSchema,
+  dataSourceConfigSchema,
   type CreateConnectionInput,
   type UpdateConnectionInput,
-} from "./validation";
+} from "./validation.server";
+import type { DataSourceConfig } from "./validation";
 
 export type ConnectionActionState =
   | { ok: true; id: string }
@@ -47,7 +49,7 @@ export async function createConnection(input: CreateConnectionInput): Promise<Co
     return { ok: false, error: "Too many attempts. Try again in a minute." };
   }
 
-  const parsed = createConnectionSchema.safeParse(input);
+  const parsed = await createConnectionSchema.safeParseAsync(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid connection" };
   }
@@ -81,7 +83,7 @@ export async function updateConnection(input: UpdateConnectionInput): Promise<Co
     return { ok: false, error: "Too many attempts. Try again in a minute." };
   }
 
-  const parsed = updateConnectionSchema.safeParse(input);
+  const parsed = await updateConnectionSchema.safeParseAsync(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid connection" };
   }
@@ -168,6 +170,34 @@ export async function testConnection(id: string): Promise<TestConnectionState> {
       .set({ status: "error", updatedAt: Date.now() })
       .where(eq(dataSourceConnections.id, id));
     return redactedFailure("testConnection", err);
+  }
+}
+
+/**
+ * Test-connect an unsaved config, straight from the create form — same
+ * adapter + SSRF host-blocklist + rate-limit + redaction guarantees as
+ * `testConnection`, but keyed on the caller (no row exists yet to key on).
+ * Never persists anything; purely a "does this actually connect" probe for
+ * the live status checker on the create-connection form.
+ */
+export async function testConnectionConfig(config: DataSourceConfig): Promise<TestConnectionState> {
+  const user = await requireUser("owner");
+  if (!(await allowDataSourceMutation(user.id))) {
+    return { ok: false, error: "Too many attempts. Try again in a minute." };
+  }
+
+  const parsed = await dataSourceConfigSchema.safeParseAsync(config);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid connection" };
+  }
+
+  try {
+    const adapter = getDataSourceAdapter({ provider: parsed.data.provider, config: parsed.data });
+    const result = await adapter.testConnection();
+    if (!result.ok) return { ok: false, error: "Connection failed. Check the host, credentials, and network access." };
+    return { ok: true };
+  } catch (err) {
+    return redactedFailure("testConnectionConfig", err);
   }
 }
 

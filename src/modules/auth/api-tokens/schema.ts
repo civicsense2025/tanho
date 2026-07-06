@@ -28,3 +28,16 @@ export const apiTokens = sqliteTable("api_tokens", {
     .notNull()
     .$defaultFn(() => Date.now()),
 });
+
+/**
+ * DB-backed sliding-window limiter for bearer-token auth attempts against
+ * requireApiUser() — same shape as auth/rate-limit.ts's loginAttempts and
+ * data-sources/schema.ts's dataSourceQueryAttempts, deliberately a separate
+ * table rather than a shared one (see those files' comments on why: it's
+ * the established per-module convention here, not an oversight).
+ */
+export const apiTokenAttempts = sqliteTable("api_token_attempts", {
+  key: text("key").primaryKey(),
+  windowStart: integer("window_start").notNull(),
+  count: integer("count").notNull().default(0),
+});

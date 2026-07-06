@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# Swift Package Manager build cache (leaks in from sibling app-swift tooling)
+.build/
+
 # production
 /build
 
@@ -42,6 +45,12 @@ next-env.d.ts
 
 # local database
 data/
+dev.db
+dev.db-*
+
+# Postgres-flavored schema mirror, regenerated on every dev/build by
+# scripts/generate-pg-schema-mirror.ts — never hand-edited, never committed.
+/src/lib/db/schema-pg/
 
 # site backups + export bundles (never commit a site's data)
 backups/
@@ -49,3 +58,9 @@ backups/
 
 # Local release dry-run output (scripts/build-release.ts --dry-run)
 dist-release/
+
+# Playwright e2e ephemeral output
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

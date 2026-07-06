@@ -1,6 +1,12 @@
 import type { EntryRow } from "../schema";
 import { getPublishedEntryBlocks, listPublishedEntries } from "../queries";
 import { RenderBlocks } from "@/blocks/renderer/BlockRenderer";
+import { CUSTOM_SCOPE_CLASS } from "@/lib/css-sanitizer";
+import { visibleBlocksFor } from "@/blocks/paywall/gate";
+import { buildOutline } from "@/modules/pages/outline";
+import { entryPageCtx } from "./entry-page-ctx";
+import { article } from "@/modules/seo/jsonld";
+import { JsonLd } from "@/modules/seo/JsonLdScript";
 import type { GuideData } from "@/entities/schemas/guide";
 import type { ResourceData } from "@/entities/schemas/resource";
 import { GuideMeta } from "./GuideMeta";
@@ -10,6 +16,27 @@ import styles from "./entries-public.module.css";
 export async function GuideDetail({ entry, hub }: { entry: EntryRow; hub: EntryRow }) {
   const data = entry.data as GuideData;
   const blocks = await getPublishedEntryBlocks("guide", entry.id);
+  // Thread the same page-level block context the page route provides, so
+  // structural blocks (TOC, breadcrumbs) work inside guide bodies too. Fetch it
+  // once (settings reads are cached): it supplies the canonical URL + site
+  // identity for the JSON-LD and, when a breadcrumbs block exists, the trail.
+  const visible = visibleBlocksFor(null, blocks);
+  const { byBlockId: anchors, headings: outline, types } = buildOutline(visible);
+  const pageCtx = await entryPageCtx("guide", entry, [
+    { title: hub.title, route: `/guides/${hub.slug}` },
+  ]);
+  // Activate the dormant article() builder: a guide is long-form how-to
+  // content → schema.org Article. summary falls back to the tagline.
+  const jsonLd = pageCtx
+    ? article(
+        {
+          title: entry.title,
+          summary: data.summary || data.tagline || undefined,
+          url: pageCtx.route,
+        },
+        { siteName: pageCtx.siteName, siteUrl: pageCtx.siteUrl },
+      )
+    : undefined;
 
   // Resolve cited resources to PUBLIC + published rows only. A non-public
   // resource must never surface here, even if referenced by slug.
@@ -22,7 +49,7 @@ export async function GuideDetail({ entry, hub }: { entry: EntryRow; hub: EntryR
       : [];
 
   return (
-    <article>
+    <article className={CUSTOM_SCOPE_CLASS}>
       <header className={styles.header}>
         <a className={styles.backLink} href={`/guides/${hub.slug}`}>
           <span aria-hidden className={styles.glyph}>
@@ -67,7 +94,12 @@ export async function GuideDetail({ entry, hub }: { entry: EntryRow; hub: EntryR
         </section>
       ) : null}
 
-      <RenderBlocks blocks={blocks} />
+      <RenderBlocks
+        blocks={blocks}
+        anchors={anchors}
+        outline={outline}
+        page={types.has("breadcrumbs") ? pageCtx : undefined}
+      />
 
       {furtherReading.length > 0 ? (
         <section className={styles.section}>

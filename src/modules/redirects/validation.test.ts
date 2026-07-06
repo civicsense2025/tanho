@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSameOriginPath, redirectInputSchema } from "./validation";
+import { isSameOriginPath, redirectInputSchema, normalizePath, isIdentityRedirect } from "./validation";
 
 describe("isSameOriginPath", () => {
   it("accepts a root-relative path", () => {
@@ -59,5 +59,30 @@ describe("redirectInputSchema", () => {
       code: 307,
     });
     expect(res.success).toBe(false);
+  });
+
+  it("rejects an identity mapping — new URL already equals the old (no redirect needed)", () => {
+    const res = redirectInputSchema.safeParse({ fromPath: "/same/", toPath: "/same", code: 301 });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error.issues[0]?.message).toMatch(/same URL/i);
+  });
+});
+
+describe("normalizePath", () => {
+  it("strips query + hash, trailing slash, dupe slashes, and lowercases", () => {
+    expect(normalizePath("/A//B/?x=1#y")).toBe("/a/b");
+    expect(normalizePath("/")).toBe("/"); // root keeps its slash
+  });
+});
+
+describe("isIdentityRedirect", () => {
+  it("catches identity differing only by slash / case / query", () => {
+    expect(isIdentityRedirect("/about", "/about")).toBe(true);
+    expect(isIdentityRedirect("/About/", "/about")).toBe(true);
+    expect(isIdentityRedirect("/p?ref=x", "/p")).toBe(true);
+  });
+  it("is false for genuinely different paths", () => {
+    expect(isIdentityRedirect("/old", "/new")).toBe(false);
+    expect(isIdentityRedirect("/a/b", "/a/c")).toBe(false);
   });
 });

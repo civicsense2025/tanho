@@ -1,6 +1,12 @@
 import type { EntryRow } from "../schema";
 import { getPublishedEntryBlocks } from "../queries";
 import { RenderBlocks } from "@/blocks/renderer/BlockRenderer";
+import { CUSTOM_SCOPE_CLASS } from "@/lib/css-sanitizer";
+import { visibleBlocksFor } from "@/blocks/paywall/gate";
+import { buildOutline } from "@/modules/pages/outline";
+import { entryPageCtx } from "./entry-page-ctx";
+import { creativeWork } from "@/modules/seo/jsonld";
+import { JsonLd } from "@/modules/seo/JsonLdScript";
 import type { ProjectData } from "@/entities/schemas/project";
 import styles from "./entries-public.module.css";
 
@@ -9,9 +15,34 @@ export async function ProjectDetail({ entry }: { entry: EntryRow }) {
   const data = entry.data as ProjectData;
   const blocks = await getPublishedEntryBlocks("project", entry.id);
   const hasLinks = Boolean(data.live_url) || Boolean(data.github_url);
+  // Same page-level block context the page route threads: anchor ids, TOC
+  // outline, and (only when a breadcrumbs block exists) a breadcrumb trail —
+  // so structural blocks work inside entry bodies instead of vanishing.
+  const visible = visibleBlocksFor(null, blocks);
+  const { byBlockId: anchors, headings: outline, types } = buildOutline(visible);
+  // Fetch the page context once (settings reads are cached): it supplies both
+  // the entity's canonical URL + site identity for the JSON-LD and the
+  // breadcrumb trail. Only pass it to RenderBlocks when a breadcrumbs block
+  // exists, matching the page route's behaviour.
+  const pageCtx = await entryPageCtx("project", entry);
+  // Activate the dormant creativeWork() builder: a project advertises as
+  // schema.org CreativeWork.
+  const jsonLd = pageCtx
+    ? creativeWork(
+        {
+          title: entry.title,
+          tagline: data.tagline || undefined,
+          year: data.year || undefined,
+          url: pageCtx.route,
+          tags: data.tags,
+        },
+        { siteName: pageCtx.siteName, siteUrl: pageCtx.siteUrl },
+      )
+    : undefined;
 
   return (
-    <article>
+    <article className={CUSTOM_SCOPE_CLASS}>
+      {jsonLd ? <JsonLd schema={jsonLd} /> : null}
       <header className={styles.header}>
         <h1 className={styles.title}>{entry.title}</h1>
         {data.tagline ? <p className={styles.tagline}>{data.tagline}</p> : null}
@@ -47,7 +78,12 @@ export async function ProjectDetail({ entry }: { entry: EntryRow }) {
           </div>
         ) : null}
       </header>
-      <RenderBlocks blocks={blocks} />
+      <RenderBlocks
+        blocks={blocks}
+        anchors={anchors}
+        outline={outline}
+        page={types.has("breadcrumbs") ? pageCtx : undefined}
+      />
     </article>
   );
 }

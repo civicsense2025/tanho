@@ -1,0 +1,63 @@
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+}
+
+.list > .row:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.titleLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+
+.lock {
+  color: var(--accent);
+}
+
+.type {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.snippet {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+}
+
+/* Matched terms highlight in the site's theme accent (both the fts5 <mark>
+ * and postgres ts_headline <mark> wrappers land here). A faint tint of the
+ * same accent backs it so the highlight reads clearly on any theme's surface
+ * without hardcoding a colour — every value is a semantic theme token. */
+.snippet mark {
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-xs);
+  padding: 0 0.15em;
+}
+
+.empty {
+  color: var(--text-muted);
+  padding: var(--space-6) 0;
+}

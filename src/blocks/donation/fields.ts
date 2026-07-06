@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, styleContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 /**
  * A static CTA card linking to the one site-wide /donate page — mirrors
@@ -10,6 +10,8 @@ import { commonContent, styleContent } from "../common";
 export const donationSchema = z.object({
   ...commonContent,
   ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   heading: z.string().max(160).default("Support our work"),
   body: z.string().max(600).default(""),
   cta: z.string().max(60).default("Donate"),

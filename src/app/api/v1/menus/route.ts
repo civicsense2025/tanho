@@ -4,7 +4,7 @@ import { listMenus } from "@/modules/menus/queries";
 import { menus } from "@/modules/menus/schema";
 import { MAX_MENU_BYTES, menuSchema } from "@/modules/menus/validation";
 import { db } from "@/lib/db/client";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 /**
@@ -32,7 +32,7 @@ export async function POST(req: Request): Promise<Response> {
       .insert(menus)
       .values({ ...parsed.data, updatedAt: Date.now() })
       .returning({ id: menus.id });
-    updateTag("menus");
+    revalidateTag("menus", "max");
     await writeAudit({ userId: user.id, action: "menu.create", ownerType: "menu", ownerId: row.id });
     return ok({ id: row.id }, 201);
   });

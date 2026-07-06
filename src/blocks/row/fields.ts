@@ -1,8 +1,11 @@
 import { z } from "zod";
-import { childBlocksSchema, commonContent } from "../common";
+import { childBlocksSchema, commonContent, layoutStyleContent, customCssContent, motionContent } from "../common";
 
 export const rowSchema = z.object({
   ...commonContent,
+  ...layoutStyleContent,
+  ...customCssContent,
+  ...motionContent,
   cols: z.number().int().min(2).max(4).default(2),
   gap: z.enum(["sm", "md", "lg"]).default("md"),
   align: z.enum(["start", "center", "stretch"]).default("stretch"),

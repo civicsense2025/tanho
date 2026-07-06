@@ -136,10 +136,14 @@
   height: 100%;
 }
 .inspectorTabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 .tabBar {
+  flex: 1;
   display: flex;
   gap: 2px;
   padding: 2px;
@@ -264,16 +268,163 @@
   color: var(--text-muted);
 }
 
-/* ---- responsive: stack inspector under canvas on narrow screens ---- */
+/* ---- mobile-only sheet affordances (hidden ≥821px) ---- */
+/* The X that closes the inspector sheet; the top-bar Page button that opens it;
+   these are inert on desktop where the inspector is a permanent rail. */
+.sheetClose,
+.pageSheetBtn {
+  display: none;
+}
+/* Visual styling for the sheet-close X (the media query only flips it visible). */
+.sheetClose {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+.sheetClose:hover {
+  background: var(--surface-hover);
+}
+/* Visual styling for the mobile top-bar Page trigger. */
+.pageSheetBtn {
+  height: 30px;
+  padding: 0 var(--space-3);
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+.pageSheetBtn:hover {
+  background: var(--surface-hover);
+}
+/* Dimmed backdrop behind the sheet — only ever visible on mobile (below). */
+.sheetBackdrop {
+  display: none;
+}
+
+/* ---- responsive: inspector becomes a right-side slide-in sheet ---- */
+/* On narrow screens the inspector no longer steals vertical space (the old
+   max-height:50vh bottom panel). It overlays the canvas as a sheet driven by
+   data-open, so tapping a block slides settings in from the right and the
+   canvas stays full-height underneath. Desktop is untouched — these rules only
+   apply under the breakpoint. */
 @media (max-width: 820px) {
-  .canvasWrap {
-    flex-direction: column;
-  }
   .inspector {
-    width: 100%;
-    height: auto;
-    max-height: 50vh;
-    border-left: none;
-    border-top: 1px solid var(--border);
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 88%;
+    max-width: 420px;
+    height: 100%;
+    border-left: 1px solid var(--border);
+    border-top: none;
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    transition: transform var(--dur) var(--ease);
+    z-index: 60; /* above .shell (40) and the backdrop (55) */
+  }
+  .inspector[data-open="true"] {
+    transform: translateX(0);
+  }
+
+  .sheetBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur) var(--ease);
+    z-index: 55;
+  }
+  .sheetBackdrop[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Show the sheet's close X and the top-bar Page trigger only on mobile. */
+  .sheetClose {
+    display: inline-flex;
+  }
+  .pageSheetBtn {
+    display: inline-flex;
+  }
+  /* The device-vs-layout ▤/▦ toggle is hidden on mobile: the stacked mode is
+     cramped on a phone, so mobile is canvas-mode only. */
+  .layoutToggle {
+    display: none;
+  }
+}
+
+/* Respect reduced-motion: no slide, the sheet just appears. */
+@media (max-width: 820px) and (prefers-reduced-motion: reduce) {
+  .inspector,
+  .sheetBackdrop {
+    transition: none;
+  }
+}
+
+/* ---- shared responsive form grids (single column on mobile) ---- */
+/* One place so the ~half-dozen settings grids stop drifting; inline styles
+   can't hold @media, so multi-column settings rows use these instead. */
+.pairGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.tripleGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-3);
+}
+.controlGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+@media (max-width: 820px) {
+  .pairGrid,
+  .tripleGrid,
+  .controlGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- stacked (list) mode: block list + live preview column ---- */
+.stackedGrid {
+  display: grid;
+  grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.05fr);
+  gap: var(--space-6);
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-10);
+  align-items: start;
+}
+.stackedPreview {
+  position: sticky;
+  top: var(--space-4);
+}
+
+@media (max-width: 820px) {
+  .stackedGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stackedPreview {
+    position: static;
   }
 }

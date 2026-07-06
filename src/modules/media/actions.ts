@@ -7,57 +7,42 @@ import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { storage } from "@/adapters/storage";
 import { media, mediaUsage } from "./schema";
+import { storeMediaBytes, type MediaRow } from "./store";
 import { matchesSignature } from "./signature";
-import { MAX_UPLOAD_BYTES, MIME_TO_EXT, mediaPatchSchema, sanitizeFilename } from "./validation";
+import { sanitizeSvg } from "./svg-sanitize";
+import { MAX_UPLOAD_BYTES, MIME_TO_EXT, mediaPatchSchema } from "./validation";
+import {
+  listPublicAssets,
+  publicAssetExists,
+  safePublicName,
+  writePublicAsset,
+} from "./public-assets";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
-export type MediaRow = typeof media.$inferSelect;
-
-const kindOf = (mime: string): "image" | "video" | "doc" =>
-  mime.startsWith("image/") ? "image" : mime.startsWith("video/") ? "video" : "doc";
-
 /**
- * Upload one file. The storage key is server-generated (`${cuid2}.${ext}`
- * with the extension from the MIME allowlist) — the user's filename is
- * sanitized and kept for display only. Declared MIME must pass the
- * magic-byte signature check before anything touches disk.
+ * Upload one file. Validation, magic-byte sniffing, SVG sanitization, storage,
+ * and the media row all live in storeMediaBytes (shared with the fonts flow);
+ * this action resolves the user, extracts the file, and writes the audit entry.
  */
 export async function uploadMedia(formData: FormData): Promise<Result<MediaRow>> {
   const user = await requireUser();
 
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "No file provided" };
-  if (file.size === 0) return { ok: false, error: "File is empty" };
-  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, error: "File is larger than 15MB" };
-  const ext = MIME_TO_EXT[file.type];
-  if (!ext) return { ok: false, error: "Unsupported file type" };
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  if (!matchesSignature(file.type, bytes)) {
-    return { ok: false, error: "File content does not match its type" };
-  }
+  const stored = await storeMediaBytes(bytes, file.type, file.name);
+  if (!stored.ok) return stored;
 
-  const key = `${createId()}.${ext}`;
-  await storage.put(key, bytes, file.type);
-  const [row] = await db
-    .insert(media)
-    .values({
-      storageKey: key,
-      name: sanitizeFilename(file.name),
-      kind: kindOf(file.type),
-      mime: file.type,
-      size: file.size,
-    })
-    .returning();
   await writeAudit({
     userId: user.id,
     action: "media.upload",
     ownerType: "media",
-    ownerId: row.id,
-    meta: { key, mime: file.type, size: file.size },
+    ownerId: stored.row.id,
+    meta: { key: stored.row.storageKey, mime: stored.row.mime, size: stored.row.size },
   });
-  return { ok: true, data: row };
+  return { ok: true, data: stored.row };
 }
 
 /** Patch editable metadata (alt, tags, credit, source, sourceUrl, license). */
@@ -111,4 +96,93 @@ export async function listImageMediaAction(): Promise<Result<PickerItem[]>> {
       url: storage.publicUrl(r.storageKey),
     })),
   };
+}
+
+/** Read action for the fonts manager — font-kind assets, newest first. */
+export async function listFontMediaAction(): Promise<Result<PickerItem[]>> {
+  await requireUser();
+  const rows = await db.query.media.findMany({
+    where: eq(media.kind, "font"),
+    orderBy: [desc(media.createdAt)],
+  });
+  return {
+    ok: true,
+    data: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      alt: r.alt,
+      url: storage.publicUrl(r.storageKey),
+    })),
+  };
+}
+
+/**
+ * Read action for the picker's "Public" tab — link-worthy files under the app's
+ * `/public` folder (a self-hoster's own static assets), served at their own URL
+ * (`/logo.svg`), no DB. Admin-only (reveals folder structure). Shaped like
+ * PickerItem so the picker renders both sources uniformly.
+ */
+export async function listPublicAssetsAction(): Promise<Result<PickerItem[]>> {
+  await requireUser();
+  const assets = await listPublicAssets();
+  return {
+    ok: true,
+    data: assets.map((a) => ({ id: a.url, name: a.name, alt: "", url: a.url })),
+  };
+}
+
+/**
+ * Upload a file directly INTO `/public` (vs the DB-tracked media store). Same
+ * fail-closed gauntlet as storeMediaBytes — auth, size cap, MIME allowlist,
+ * magic-byte signature, and SVG sanitization (an SVG written to /public is
+ * DOMPurify-sanitized first, exactly like a stored upload) — then a safe
+ * filename whose extension comes from the MIME map (never the user's), confined
+ * to the public root. Refuses to overwrite; on a name clash, suffixes a unique
+ * token. Returns the served static URL (`/name.ext`).
+ */
+export async function uploadToPublicAction(formData: FormData): Promise<Result<{ url: string }>> {
+  const user = await requireUser();
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { ok: false, error: "No file provided" };
+  if (file.size === 0) return { ok: false, error: "File is empty" };
+  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, error: "File is larger than 15MB" };
+  const ext = MIME_TO_EXT[file.type];
+  if (!ext) return { ok: false, error: "Unsupported file type" };
+
+  let bytes = new Uint8Array(await file.arrayBuffer());
+  if (!matchesSignature(file.type, bytes)) {
+    return { ok: false, error: "File content does not match its type" };
+  }
+  // SVG going to /public is sanitized identically to a stored SVG upload —
+  // scripts/foreignObject/external refs stripped before it ever touches disk.
+  if (file.type === "image/svg+xml") {
+    const clean = sanitizeSvg(new TextDecoder("utf-8", { fatal: false }).decode(bytes));
+    if (!clean) return { ok: false, error: "SVG could not be safely sanitized" };
+    bytes = new TextEncoder().encode(clean);
+  }
+
+  // Build the suffixed name from the already-sanitised stem + trusted ext
+  // directly (NOT by re-running safePublicName, whose extension-strip would eat
+  // the token on a dotted name). Loop so the retry name is genuinely free.
+  let name = safePublicName(file.name, ext);
+  const stem = name.replace(new RegExp(`\\.${ext}$`), "");
+  for (let tries = 0; (await publicAssetExists(name)) && tries < 5; tries++) {
+    name = `${stem}-${createId().slice(0, 6)}.${ext}`;
+  }
+
+  let url: string;
+  try {
+    url = await writePublicAsset(name, bytes);
+  } catch {
+    return { ok: false, error: "Could not write the file" };
+  }
+  await writeAudit({
+    userId: user.id,
+    action: "media.upload.public",
+    ownerType: "media",
+    ownerId: name,
+    meta: { name, mime: file.type, size: file.size },
+  });
+  return { ok: true, data: { url } };
 }

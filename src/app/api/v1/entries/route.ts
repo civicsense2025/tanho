@@ -6,12 +6,12 @@ import { entryDetailsSchema } from "@/modules/entries/validation";
 import { getEntitySchema } from "@/entities/registry-async";
 import { db } from "@/lib/db/client";
 import { and, eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { handle, ok, fail, parseBody } from "@/lib/api/v1";
 
 const invalidate = (type: string) => {
-  updateTag("entries");
-  updateTag(`entries:${type}`);
+  revalidateTag("entries", "max");
+  revalidateTag(`entries:${type}`, "max");
 };
 
 /**

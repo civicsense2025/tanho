@@ -1,0 +1,5 @@
+id,email,name,note,subscribed_to_emails,complimentary_plan,stripe_customer_id,created_at,deleted_at
+m1,supporter@example.com,Grace Hopper,"VIP, early backer",true,true,cus_ABC123,2024-01-15T10:00:00.000Z,
+m2,reader@example.com,Katherine Johnson,,true,false,,2024-02-01T12:30:00.000Z,
+m3,quiet@example.com,Dorothy Vaughan,unsubscribed at their request,false,false,,2024-02-10T08:00:00.000Z,
+m4,gone@example.com,Removed Member,,false,false,,2024-01-20T09:00:00.000Z,2024-03-01T00:00:00.000Z

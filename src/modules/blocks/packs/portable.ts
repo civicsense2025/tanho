@@ -22,6 +22,53 @@ export const PACK_FORMAT = "oys-pack@1" as const;
 
 export type PackKind = "block-pack" | "design-pack";
 
+/** A symbol definition inlined into a pack. `id` is the ORIGINAL id at export;
+ *  on import it's replaced with a fresh id and the trees' `symbolId`s remapped. */
+export type PortableSymbol = {
+  id: string;
+  name: string;
+  category?: string;
+  icon?: string;
+  blockTree: BlockNodeInput[];
+};
+
+/** Collect every `symbolId` referenced by a `symbol` node anywhere in a tree
+ *  (recursing container children). Pure — no DB. */
+export function collectSymbolIds(blocks: BlockNodeInput[]): string[] {
+  const ids = new Set<string>();
+  const walk = (nodes: BlockNodeInput[]) => {
+    for (const n of nodes) {
+      if (n.type === "symbol") {
+        const sid = (n.content as { symbolId?: unknown }).symbolId;
+        if (typeof sid === "string" && sid) ids.add(sid);
+      }
+      const kids = (n.content as { blocks?: unknown }).blocks;
+      if (Array.isArray(kids)) walk(kids as BlockNodeInput[]);
+    }
+  };
+  walk(blocks);
+  return [...ids];
+}
+
+/** Rewrite every `symbol` node's `content.symbolId` through `idMap` (old→new).
+ *  Pure; returns a new tree, leaves unmapped ids untouched (they'll dangle →
+ *  placeholder, the same graceful-degradation contract as a missing type). */
+export function remapSymbolIds(blocks: BlockNodeInput[], idMap: Record<string, string>): BlockNodeInput[] {
+  const walk = (nodes: BlockNodeInput[]): BlockNodeInput[] =>
+    nodes.map((n) => {
+      const content: Record<string, unknown> = { ...n.content };
+      if (n.type === "symbol") {
+        const sid = content.symbolId;
+        if (typeof sid === "string" && idMap[sid]) content.symbolId = idMap[sid];
+      }
+      if (Array.isArray(content.blocks)) {
+        content.blocks = walk(content.blocks as BlockNodeInput[]);
+      }
+      return { ...n, content };
+    });
+  return walk(blocks);
+}
+
 export type PortablePack = {
   format: typeof PACK_FORMAT;
   kind: PackKind;
@@ -36,6 +83,11 @@ export type PortablePack = {
   pages?: Array<{ name: string; blockTree: BlockNodeInput[] }>;
   /** Design-pack: the theme scalars. Block-pack: omitted. */
   theme?: ThemeInput;
+  /** Symbol definitions referenced by any tree in this pack (by `symbolId`),
+   *  inlined so the pack is self-contained. Collected at export from the DB;
+   *  re-created with fresh ids on import (and every `content.symbolId` in the
+   *  pack's trees is remapped to match). Absent when a pack references no symbols. */
+  symbols?: PortableSymbol[];
   /** Every block type referenced anywhere in the pack (declared dependency). */
   requiredBlockTypes: string[];
   /** Types in the pack that need configuration on import (e.g. paywall, form,
@@ -57,6 +109,8 @@ export type PackImportResult =
     blocks?: BlockNodeInput[];
     pages?: Array<{ name: string; blockTree: BlockNodeInput[] }>;
     theme?: ThemeInput;
+    /** Inlined symbol defs to recreate (with fresh ids) before installing trees. */
+    symbols?: PortableSymbol[];
     requiredBlockTypes: string[];
     /** Types the exporter flagged as needing configuration on import. */
     requiresConfigTypes?: string[];
@@ -159,7 +213,7 @@ export function importPackJson(raw: unknown): PackImportResult {
     const excludedTypes = Array.isArray(obj.excludedTypes)
       ? (obj.excludedTypes as unknown[]).filter((x): x is string => typeof x === "string")
       : [];
-    return { ok: true, name, kind, blocks: parsed.data, requiredBlockTypes: required, requiresConfigTypes, excludedTypes };
+    return { ok: true, name, kind, blocks: parsed.data, symbols: parseSymbols(obj.symbols), requiredBlockTypes: required, requiresConfigTypes, excludedTypes };
   }
 
   // design-pack
@@ -185,5 +239,25 @@ export function importPackJson(raw: unknown): PackImportResult {
   const excludedTypes = Array.isArray(obj.excludedTypes)
     ? (obj.excludedTypes as unknown[]).filter((x): x is string => typeof x === "string")
     : [];
-  return { ok: true, name, kind, theme: themeParse.data, pages, requiredBlockTypes: required, requiresConfigTypes, excludedTypes };
+  return { ok: true, name, kind, theme: themeParse.data, pages, symbols: parseSymbols(obj.symbols), requiredBlockTypes: required, requiresConfigTypes, excludedTypes };
+}
+
+/** Shape-validate the pack's inlined symbol defs (lenient — each `blockTree` is
+ *  re-validated at install). Ignores anything malformed. */
+function parseSymbols(raw: unknown): PortableSymbol[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PortableSymbol[] = [];
+  for (const s of raw as Array<Record<string, unknown>>) {
+    if (typeof s?.id !== "string" || !Array.isArray(s?.blockTree)) continue;
+    const parsed = blockTreeSchema.safeParse(s.blockTree);
+    if (!parsed.success) continue;
+    out.push({
+      id: s.id,
+      name: typeof s.name === "string" ? s.name.slice(0, 120) : "Saved block",
+      category: typeof s.category === "string" ? s.category : undefined,
+      icon: typeof s.icon === "string" ? s.icon : undefined,
+      blockTree: parsed.data,
+    });
+  }
+  return out;
 }

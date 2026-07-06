@@ -7,7 +7,7 @@ export const embedDef: BlockDef<typeof embedSchema> = {
   category: "media",
   label: "Embed",
   icon: "embed",
-  blurb: "YouTube, Figma or Maps iframe",
+  blurb: "YouTube, Vimeo, Spotify, SoundCloud, Twitter/X, Figma or Maps",
   schema: embedSchema,
   make: makeEmbed,
   Render: RenderEmbed,

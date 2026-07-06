@@ -1,0 +1,133 @@
+/* A before/after image comparison. The "after" image is the base; the "before"
+   image sits on top, clipped to --ba-pos (a percentage). A native range input is the
+   accessible control (keyboard + touch); the island mirrors its value onto --ba-pos.
+   No-JS fallback: the range's default value still positions the clip via the inline
+   custom property, so a static split is shown. */
+.wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  --ba-pos: 50%;
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.before {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wrap[data-axis="horizontal"] .before {
+  clip-path: inset(0 calc(100% - var(--ba-pos)) 0 0);
+}
+.wrap[data-axis="vertical"] .before {
+  clip-path: inset(0 0 calc(100% - var(--ba-pos)) 0);
+}
+
+/* the divider line + handle follow --ba-pos */
+.divider {
+  position: absolute;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+  pointer-events: none;
+}
+.wrap[data-axis="horizontal"] .divider {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  left: var(--ba-pos);
+  transform: translateX(-1px);
+}
+.wrap[data-axis="vertical"] .divider {
+  left: 0;
+  right: 0;
+  height: 2px;
+  top: var(--ba-pos);
+  transform: translateY(-1px);
+}
+
+.handle {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow-sm);
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+.wrap[data-axis="horizontal"] .handle {
+  top: 50%;
+  left: var(--ba-pos);
+  transform: translate(-50%, -50%);
+}
+.wrap[data-axis="vertical"] .handle {
+  left: 50%;
+  top: var(--ba-pos);
+  transform: translate(-50%, -50%);
+}
+
+/* the range input overlays the whole area, invisible but operable */
+.range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+.wrap[data-axis="vertical"] .range {
+  cursor: ns-resize;
+  writing-mode: vertical-lr;
+}
+
+.label {
+  position: absolute;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--solid) 60%, transparent);
+  color: var(--text-on-accent);
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  pointer-events: none;
+}
+.labelBefore {
+  top: var(--space-2);
+  left: var(--space-2);
+}
+.labelAfter {
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+.placeholder {
+  aspect-ratio: 16 / 9;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--surface),
+    var(--surface) 10px,
+    var(--surface-hover) 10px,
+    var(--surface-hover) 20px
+  );
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+}

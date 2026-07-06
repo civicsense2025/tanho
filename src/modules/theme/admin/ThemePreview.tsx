@@ -1,39 +1,17 @@
 "use client";
 
-import { deriveTokens, type ThemeBases } from "../derive";
-import { colorVars, declarations } from "../css-vars";
-import { typeVars, spaceVars } from "../scales";
+import { themeScopeStyle } from "../scope-style";
 import type { ThemeInput } from "../validation";
 
 /**
  * Live theme preview — a representative slice of UI (heading, text, buttons,
  * a card, an accent chip) rendered inside a scope whose CSS vars come from the
- * IN-EDITOR theme, not the saved one. Uses the exact same derive/colorVars/
- * typeVars/spaceVars pipeline as the real ThemeStyle, so what you see is what
- * ships. `mode` flips light/dark.
+ * IN-EDITOR theme, not the saved one. Uses the same derive pipeline as the
+ * real ThemeStyle (via themeScopeStyle), so what you see is what ships.
+ * `mode` flips light/dark.
  */
 export function ThemePreview({ theme, mode }: { theme: ThemeInput; mode: "light" | "dark" }) {
-  const bases: ThemeBases = {
-    accent: theme.accent,
-    accent2: theme.accent2,
-    ink: theme.ink,
-    paper: theme.paper,
-  };
-  const vars = {
-    ...colorVars(deriveTokens(bases, mode)),
-    ...typeVars({ font: theme.font, baseSize: theme.baseSize, headingScale: theme.headingScale, leading: theme.leading }),
-    ...spaceVars({ density: theme.density, radius: theme.radius, shadow: theme.shadow }),
-  };
-  // Inline the derived vars onto the scope wrapper via a style attribute.
-  const style = Object.fromEntries(
-    declarations(vars)
-      .split(";")
-      .filter(Boolean)
-      .map((d) => {
-        const [k, v] = d.split(":");
-        return [k, v];
-      }),
-  ) as React.CSSProperties;
+  const style = themeScopeStyle(theme, mode);
 
   return (
     <div

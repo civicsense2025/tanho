@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { categories, pickerDefs } from "@/blocks/registry";
 import { Button } from "@/components/core/Button";
 import { useEditor } from "./store";
+import { listSymbols } from "@/modules/blocks/symbol-actions";
 import styles from "./editor.module.css";
+
+type SymbolSummary = { id: string; name: string; category: string; icon: string };
 
 /** Simple category-grouped block picker (row/menu/panel/palette in Phase 4). */
 export function AddBlockMenu({
@@ -15,6 +18,7 @@ export function AddBlockMenu({
   label?: string;
 }) {
   const enabledTypes = useEditor((s) => s.enabledTypes);
+  const insertSymbol = useEditor((s) => s.insertSymbol);
   const groups = useMemo(
     () =>
       categories.map((cat) => ({
@@ -24,7 +28,16 @@ export function AddBlockMenu({
     [enabledTypes],
   );
   const [open, setOpen] = useState(false);
+  const [symbols, setSymbols] = useState<SymbolSummary[]>([]);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Load the user's saved blocks when the menu first opens (data-driven, not a
+  // compiled-def category — every entry is a `symbol` instance with a distinct id).
+  useEffect(() => {
+    if (open && symbols.length === 0) {
+      listSymbols().then(setSymbols).catch(() => {});
+    }
+  }, [open, symbols.length]);
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -41,6 +54,25 @@ export function AddBlockMenu({
       </Button>
       {open ? (
         <div className={styles.pickerMenu}>
+          {symbols.length > 0 ? (
+            <div>
+              <div className={styles.pickerCat}>Saved blocks</div>
+              {symbols.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={styles.pickerItem}
+                  onClick={() => {
+                    insertSymbol(s.id, s.name);
+                    setOpen(false);
+                  }}
+                >
+                  <span className={styles.pickerItemLabel}>◈ {s.name}</span>
+                  <span className={styles.pickerItemBlurb}>Reusable saved block</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
           {groups.map(({ cat, items }) => {
             if (!items.length) return null;
             return (

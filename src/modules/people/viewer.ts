@@ -27,7 +27,7 @@ export async function getViewer(): Promise<Viewer | null> {
   if (!token) return null;
 
   const id = hashSessionToken(token);
-  const row = await db
+  const [row] = await db
     .select({
       expiresAt: sessions.expiresAt,
       personId: people.id,
@@ -37,8 +37,7 @@ export async function getViewer(): Promise<Viewer | null> {
     })
     .from(sessions)
     .innerJoin(people, eq(sessions.personId, people.id))
-    .where(and(eq(sessions.id, id), eq(sessions.kind, "person")))
-    .get();
+    .where(and(eq(sessions.id, id), eq(sessions.kind, "person")));
 
   if (!row || row.status === "unsubscribed" || row.expiresAt < Date.now()) return null;
 

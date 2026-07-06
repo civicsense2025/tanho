@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 /**
  * The form block embeds a published form by id. It's a BOUND block: resolve()
@@ -8,6 +8,9 @@ import { commonContent } from "../common";
  */
 export const formBlockSchema = z.object({
   ...commonContent,
+  ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   /** The form to embed. Empty = placeholder. */
   formId: z.string().max(60).default(""),
 });

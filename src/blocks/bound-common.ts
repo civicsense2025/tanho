@@ -9,6 +9,20 @@ export function initialsOf(name: string): string {
   return (first + last).toUpperCase();
 }
 
+/** The one quiet dashed-outline editor-placeholder style — shared by bound
+ *  blocks (via `boundPlaceholder`) and page-context blocks (TOC, breadcrumbs)
+ *  so every "this block resolves later" state looks identical. */
+export const EDITOR_PLACEHOLDER_STYLE = {
+  border: "1px dashed var(--border)",
+  borderRadius: "var(--radius-md)",
+  padding: "var(--space-6)",
+  color: "var(--text-faint)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--text-2xs)",
+  textTransform: "uppercase" as const,
+  letterSpacing: "var(--tracking-wide)",
+} as const;
+
 /**
  * Editor placeholder for a bound block. resolve() is server-only, so the admin
  * canvas can only draw the real block design when its data was pre-resolved on
@@ -23,17 +37,5 @@ export function initialsOf(name: string): string {
 export function boundPlaceholder(ctx: RenderCtx, label: string, resolved?: unknown) {
   if (ctx.mode !== "editor") return null;
   if (resolved !== undefined) return null;
-  return {
-    style: {
-      border: "1px dashed var(--border)",
-      borderRadius: "var(--radius-md)",
-      padding: "var(--space-6)",
-      color: "var(--text-faint)",
-      fontFamily: "var(--font-mono)",
-      fontSize: "var(--text-2xs)",
-      textTransform: "uppercase" as const,
-      letterSpacing: "var(--tracking-wide)",
-    },
-    label,
-  };
+  return { style: EDITOR_PLACEHOLDER_STYLE, label };
 }

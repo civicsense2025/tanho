@@ -1,0 +1,109 @@
+/* Default (no owner template) styling for content-type public pages.
+   Presentation only; CSS-var vocabulary mirrored from the blocks house style. */
+
+/* ---- Page container (centres content + applies the site gutter, matching
+   the standard public pages e.g. policies/[slug]) --------------------- */
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--gutter);
+}
+
+/* ---- Shared header / title ------------------------------------------- */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.title {
+  margin: 0 0 var(--space-6);
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--text-display);
+}
+
+/* ---- Detail default: field list -------------------------------------- */
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: var(--space-4);
+  align-items: baseline;
+  padding: var(--space-4) 0;
+  border-top: var(--border-width) solid var(--line-0);
+}
+
+.fieldLabel {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+
+.fieldValue {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--text);
+}
+
+/* ---- Index default: card grid ---------------------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.cardTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.cardSubtitle {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-muted);
+}
+
+.empty {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Section, Row } from "@/components/admin/Section";
 import { Input } from "@/components/forms/Input";
+import { Select } from "@/components/forms/Select";
 import { Button } from "@/components/core/Button";
 import { Seg } from "@/components/admin/Seg";
 import { formatMoney } from "@/modules/commerce/format-money";
@@ -106,17 +107,17 @@ export function PackProductsScreen({
         {available.length > 0 ? (
           <>
             <Row label="Pack">
-              <select
+              <Select
                 value={selPack}
                 onChange={(e) => setSelPack(e.target.value)}
-                style={selectStyle}
+                style={{ maxWidth: 400 }}
               >
                 {available.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.type === "block_pack" ? "Block pack" : "Design pack"} — {o.title}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Row>
             <Row label="Price (USD)">
               <Input
@@ -204,16 +205,6 @@ export function PackProductsScreen({
     </div>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  fontSize: "var(--text-sm)",
-  padding: "var(--space-2) var(--space-3)",
-  border: "1px solid var(--border)",
-  borderRadius: "var(--radius-sm)",
-  background: "var(--surface)",
-  color: "var(--text)",
-  maxWidth: 400,
-};
 
 const btnStyle: React.CSSProperties = {
   fontSize: "var(--text-xs)",

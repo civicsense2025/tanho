@@ -5,6 +5,7 @@
  * One type per integration surface; implementations live under
  * src/adapters/<surface>/.
  */
+import type { Gate } from "@/modules/entitlements/gate";
 
 export type StorageAdapter = {
   put(key: string, data: Uint8Array, contentType: string): Promise<void>;
@@ -190,4 +191,66 @@ export type DataSourceAdapter = {
   /** Introspection for the admin allowlist editor only — never called at render time. */
   listTables(): Promise<TableDesc[]>;
   query(spec: QuerySpec): Promise<DataSourceQueryResult>;
+};
+
+/**
+ * Full-text search over first-party content (pages, entries, products) — the
+ * PRIMARY database's own search capability, not an external data source. Two
+ * real implementations exist because the primary DB itself is an adapter (see
+ * docs/architecture/adapters.md "Primary database is an adapter too"):
+ * `fts5` for SQLite/libSQL (the default dialect, plus Turso), `postgres` for
+ * Postgres/Supabase (the `scripts/swap-db-dialect.ts` target). The factory in
+ * src/adapters/search/index.ts infers which one to construct from
+ * `DATABASE_URL`'s scheme — same "read an existing signal" precedent
+ * src/adapters/payments/index.ts already uses for STRIPE_SECRET_KEY, so
+ * swapping the primary DB to Postgres needs no separate search config.
+ *
+ * A `SearchDocument`'s `gate` is a snapshot resolved at index time (the same
+ * "precompute at publish, cheap-read at request" pattern as
+ * pages.hasPaywall/treeHasPaywall — see docs/architecture/paywall.md) — it is
+ * NOT trusted as the final word. Query-time code MUST re-resolve each hit's
+ * stored gate against the real viewer (resolveEntitlement in
+ * src/modules/entitlements/gate.ts) before returning it, exactly like a page
+ * render re-checks viewerPassesPaywall rather than trusting a cached flag.
+ * Never skip the re-check to save a query — a stale or forged index row must
+ * never leak gated content.
+ */
+export type SearchDocumentType = "page" | "entry" | "product" | "content";
+
+export type SearchDocument = {
+  /** Stable identity: `${type}:${id}` — lets re-indexing upsert instead of duplicate. */
+  id: string;
+  type: SearchDocumentType;
+  /** Foreign key into the owning table (pages.id / entries.id / products.id). */
+  sourceId: string;
+  title: string;
+  /** Plain text extracted from the block tree (see indexBlockTree) or entity fields — never raw HTML/markdown. */
+  body: string;
+  path: string;
+  /** Resolved at index time; re-checked against the real viewer at query time, never trusted alone. */
+  gate: Gate | null;
+  updatedAt: number;
+};
+
+export type SearchHit = {
+  document: SearchDocument;
+  /** Higher is more relevant; not comparable across dialects (FTS5 bm25 vs. ts_rank_cd use different scales). */
+  score: number;
+  /** Plain-text fragment with the match in context, for the results list. */
+  snippet: string;
+};
+
+export type SearchAdapter = {
+  /** True once the backing schema (FTS5 virtual table / tsvector column) exists — checked once at startup, not per-request. */
+  isConfigured(): Promise<boolean>;
+  /** Insert-or-replace by `document.id`. Indexing hooks call this per changed row, not a full reindex. */
+  index(document: SearchDocument): Promise<void>;
+  /** Remove by id — called when a page/entry/product is deleted or unpublished. */
+  remove(id: string): Promise<void>;
+  /**
+   * Raw search, gate UNCHECKED — callers MUST re-resolve `hit.document.gate`
+   * against the real viewer before returning any hit to a client. `limit` is
+   * a request; every implementation clamps to its own hard max regardless.
+   */
+  search(query: string, opts?: { types?: SearchDocumentType[]; limit?: number }): Promise<SearchHit[]>;
 };

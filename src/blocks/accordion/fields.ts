@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent } from "../common";
+import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
 export const accordionItemSchema = z.object({
   q: z.string().max(300).default(""),
@@ -8,6 +8,9 @@ export const accordionItemSchema = z.object({
 
 export const accordionSchema = z.object({
   ...commonContent,
+  ...styleContent,
+  ...advancedStyleContent,
+  ...motionContent,
   items: z.array(accordionItemSchema).max(50).default([]),
 });
 

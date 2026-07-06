@@ -14,6 +14,8 @@ const keyFor = (email: string, ip: string) =>
  * Returns false when the caller must be refused.
  */
 export async function allowLoginAttempt(email: string, ip: string): Promise<boolean> {
+  if (process.env.NODE_ENV === "development") return true;
+
   const key = keyFor(email, ip);
   const now = Date.now();
   const row = await db.query.loginAttempts.findFirst({

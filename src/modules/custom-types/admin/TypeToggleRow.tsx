@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toggleContentType } from "../content-types-actions";
 
@@ -19,6 +20,7 @@ export function TypeToggleRow({
   disabled,
   canDisable,
   first,
+  manageHref,
 }: {
   typeKey: string;
   label: string;
@@ -28,6 +30,8 @@ export function TypeToggleRow({
   disabled: boolean;
   canDisable: boolean;
   first: boolean;
+  /** Where this type's records are managed (records live off this page). */
+  manageHref: string;
 }) {
   const router = useRouter();
   const [off, setOff] = useState(disabled);
@@ -93,6 +97,25 @@ export function TypeToggleRow({
         </div>
         <div style={{ fontSize: "var(--text-xs)", color: "var(--text-faint)" }}>{fields}</div>
       </div>
+      <Link
+        href={manageHref}
+        style={{
+          fontFamily: "var(--font-label)",
+          fontSize: "var(--text-2xs)",
+          textTransform: "uppercase",
+          letterSpacing: "var(--tracking-wide)",
+          color: "var(--text-muted)",
+          textDecoration: "none",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-pill)",
+          padding: "2px 10px",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}
+        title={`Manage ${label.toLowerCase()}`}
+      >
+        Manage →
+      </Link>
       <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--text-muted)", textAlign: "right", whiteSpace: "nowrap" }}>
         {total} total{live > 0 ? ` · ${live} live` : ""}
       </span>
