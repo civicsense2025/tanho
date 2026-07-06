@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-export type NavItem = { label: string; href?: string; locked?: boolean };
+export type NavItem = {
+  label: string;
+  href?: string;
+  locked?: boolean;
+  /** Start a new group before this item — a hairline plus an optional small
+   *  uppercase heading — so a long bucket can separate distinct kinds of link
+   *  (e.g. content you author vs. reusable packs). */
+  group?: string;
+};
 
 /**
  * Secondary admin nav bucket — a text label that opens a dropdown of nested
@@ -64,8 +72,13 @@ export function NavBucket({
               padding: "var(--space-2)",
             }}
           >
-            {items.map((it) => (
-              <BucketItem key={it.label} item={it} onNavigate={() => setOpen(false)} />
+            {items.map((it, i) => (
+              <div key={it.label}>
+                {/* A `group` on any item after the first starts a new section:
+                    a hairline plus an optional small uppercase heading. */}
+                {it.group && i > 0 ? <GroupHeading label={it.group} /> : null}
+                <BucketItem item={it} onNavigate={() => setOpen(false)} />
+              </div>
             ))}
           </div>
         </div>
@@ -101,6 +114,29 @@ function BucketItem({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
     <Link href={item.href} onClick={onNavigate} style={{ ...style, textDecoration: "none" }} className="admin-bucket-item">
       {inner}
     </Link>
+  );
+}
+
+/** A section divider inside a bucket dropdown: a hairline, then a small
+ *  uppercase heading (omit the label for a bare rule). */
+function GroupHeading({ label }: { label: string }) {
+  return (
+    <div style={{ marginTop: "var(--space-2)", paddingTop: "var(--space-2)", borderTop: "1px solid var(--border)" }}>
+      {label ? (
+        <div
+          style={{
+            padding: "2px 10px 4px",
+            fontFamily: "var(--font-label)",
+            fontSize: 9,
+            textTransform: "uppercase",
+            letterSpacing: "var(--tracking-wide)",
+            color: "var(--text-faint)",
+          }}
+        >
+          {label}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -90,11 +90,12 @@ export function AdminTopBar({
           { label: "Content types", href: "/admin/content/types" },
           { label: "Forms", href: "/admin/content/forms" },
           { label: "Media library", href: "/admin/media" },
-          { label: "Block packs", href: "/admin/block-packs" },
-          { label: "Design packs", href: "/admin/design-packs" },
           { label: "Tags", href: "/admin/content/tags" },
           { label: "Redirects", href: "/admin/content/redirects" },
           { label: "Import content", href: "/admin/content/import" },
+          // Reusable design assets — separated from the content you author above.
+          { label: "Block packs", href: "/admin/block-packs", group: "Reusable" },
+          { label: "Design packs", href: "/admin/design-packs" },
         ]} />
         <NavBucket label="People" items={[
           { label: "All people", href: "/admin/people" },
