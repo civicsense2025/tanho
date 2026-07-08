@@ -17,6 +17,7 @@ const SETTINGS: Array<{ label: string; href: string; desc: string }> = [
   { label: "Data sources", href: "/admin/settings/data-sources", desc: "External database connections for live blocks" },
   { label: "API tokens", href: "/admin/settings/api-tokens", desc: "Bearer tokens for the Swift app and other external clients" },
   { label: "Marketplace", href: "/admin/settings/marketplace", desc: "Enable and configure your pack marketplace" },
+  { label: "Updates", href: "/admin/settings/updates", desc: "Template version, license activation, and update commands" },
 ];
 
 export const metadata = { title: "Settings" };
