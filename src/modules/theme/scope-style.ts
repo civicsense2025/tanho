@@ -11,7 +11,11 @@ import type { CSSProperties } from "react";
  * (a preview card, a demo page) renders with the exact tokens that would
  * ship. Isomorphic (no client/server directive) — safe in a Server Component.
  */
-export function themeScopeStyle(theme: ThemeInput, mode: "light" | "dark"): CSSProperties {
+export function themeScopeStyle(
+  theme: ThemeInput,
+  mode: "light" | "dark",
+  customStack?: string | null,
+): CSSProperties {
   const bases: ThemeBases = {
     accent: theme.accent,
     accent2: theme.accent2,
@@ -20,7 +24,13 @@ export function themeScopeStyle(theme: ThemeInput, mode: "light" | "dark"): CSSP
   };
   const vars = {
     ...colorVars(deriveTokens(bases, mode)),
-    ...typeVars({ font: theme.font, baseSize: theme.baseSize, headingScale: theme.headingScale, leading: theme.leading }),
+    ...typeVars({
+      font: theme.font,
+      baseSize: theme.baseSize,
+      headingScale: theme.headingScale,
+      leading: theme.leading,
+      customStack,
+    }),
     ...spaceVars({ density: theme.density, radius: theme.radius, shadow: theme.shadow }),
   };
   return Object.fromEntries(

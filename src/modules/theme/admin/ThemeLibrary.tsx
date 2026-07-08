@@ -44,7 +44,7 @@ export function ThemeLibrary({ importedNames }: { importedNames: string[] }) {
 
   const add = (entry: LibraryEntry) =>
     start(async () => {
-      const res = await importTheme({ format: "oys-theme@1", name: entry.name, theme: entry.theme }, "library");
+      const res = await importTheme({ format: "lamina-theme@1", name: entry.name, theme: entry.theme }, "library");
       if (!res.ok) alert(res.error);
       else router.refresh();
     });

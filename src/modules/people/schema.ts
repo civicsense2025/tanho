@@ -39,7 +39,7 @@ export const personActivity = sqliteTable("person_activity", {
   id: text("id").primaryKey().$defaultFn(createId),
   personId: text("person_id").notNull(),
   type: text("type", {
-    enum: ["view", "form", "order", "subscribe", "login", "note"],
+    enum: ["view", "form", "order", "subscribe", "login", "note", "review"],
   }).notNull(),
   label: text("label").notNull(),
   meta: text("meta", { mode: "json" }).$type<Record<string, unknown>>(),

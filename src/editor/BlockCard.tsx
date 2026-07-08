@@ -6,8 +6,6 @@ import { isContainer, kidsOf } from "@/blocks/tree";
 import { UnsupportedBlock } from "@/blocks/UnsupportedBlock";
 import type { BlockNode } from "@/blocks/types";
 import { ValueField } from "./ValueField";
-import { EmbedUrlField } from "./EmbedUrlField";
-import type { EmbedProvider } from "@/modules/embeds/resolve";
 import styles from "./editor.module.css";
 
 /** One block's editing card in the stacked layout. */
@@ -74,23 +72,14 @@ export function BlockCard({
       </div>
       {open ? (
         <div className={styles.cardBody}>
-          {def.type === "embed" ? (
-            <EmbedUrlField
-              provider={block.content.provider as EmbedProvider}
-              url={block.content.url as string}
-              onChange={({ provider, url }) => onPatch({ ...block.content, provider, url })}
+          {Object.entries(block.content).map(([k, v]) => (
+            <ValueField
+              key={k}
+              name={k}
+              value={v}
+              onChange={(nv) => onPatch({ ...block.content, [k]: nv })}
             />
-          ) : null}
-          {Object.entries(block.content)
-            .filter(([k]) => !(def.type === "embed" && (k === "provider" || k === "url")))
-            .map(([k, v]) => (
-              <ValueField
-                key={k}
-                name={k}
-                value={v}
-                onChange={(nv) => onPatch({ ...block.content, [k]: nv })}
-              />
-            ))}
+          ))}
           {container ? (
             <p className={styles.cardNote}>
               Nested blocks are edited on the canvas (arrives with the canvas

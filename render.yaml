@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: lamina-platform
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        value: file:/opt/render/project/src/data/site.db
+      - key: APP_URL
+        sync: false
+        placeholder: "https://your-site.onrender.com"
+      - key: APP_ENCRYPTION_KEY
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: lamina-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1

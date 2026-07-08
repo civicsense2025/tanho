@@ -10,16 +10,6 @@ import type { OnboardingState } from "../validation";
 import { DifficultyPicker } from "./DifficultyPicker";
 import styles from "./WizardShell.module.css";
 
-/** First step whose own `isComplete` isn't yet satisfied — where a resumed
- *  wizard should land, instead of always restarting at step 0. Steps before
- *  the first incomplete one are presumed already handled (identity/brand
- *  are always "complete" by design; only data-source has a real gate, per
- *  steps.ts's isComplete definitions). */
-function firstIncompleteStepIndex(state: OnboardingState): number {
-  const idx = ONBOARDING_STEPS.findIndex((s) => !s.isComplete(state));
-  return idx === -1 ? ONBOARDING_STEPS.length - 1 : idx;
-}
-
 /**
  * The setup-wizard shell. Adapts quiz/public/WizardStyle.tsx's ownership
  * model (parent owns `step`, renders progress + Back/Next, delegates the
@@ -43,10 +33,8 @@ export function WizardShell({
   // later step) reads what's actually in the DB right now, not the
   // page-load snapshot from before this wizard session's edits.
   const [data, setData] = useState(initialData);
-  const [step, setStep] = useState(() => firstIncompleteStepIndex(initialState));
-  const [difficultyChosen, setDifficultyChosen] = useState(
-    initialState.completedSteps.length > 0 || initialState.dismissedAt !== null,
-  );
+  const [step, setStep] = useState(0);
+  const [difficultyChosen, setDifficultyChosen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -72,9 +60,7 @@ export function WizardShell({
   /**
    * Advances past the current step. `markComplete` records it as done in
    * onboarding state — pass false for "Skip for now" (the step's own work
-   * wasn't finished, but the owner can revisit it later from Settings; an
-   * unfinished data-source step is still safe to skip since an empty
-   * allowlist already fails closed).
+   * wasn't finished, but the owner can revisit it later from Settings).
    *
    * Before advancing, forces the current step's registered save (if any) —
    * IdentityStep/BrandStep wrap GeneralForm/BrandEditor, which have their

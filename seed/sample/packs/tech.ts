@@ -22,7 +22,7 @@ export const techPack: SamplePack = {
     accent2: "#0ca678", // teal
     ink: "#14161a",
     paper: "#ffffff",
-    radius: "soft",
+    radius: "round",
     shadow: "subtle",
   },
   menu: [

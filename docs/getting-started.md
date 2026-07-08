@@ -16,7 +16,7 @@ database before the first migration, not after.
 
 ```bash
 git clone <your-fork-or-repo-url>
-cd oys-platform
+cd lamina-platform
 npm install
 cp .env.example .env
 npm run db:migrate     # creates data/dev.db and applies migrations

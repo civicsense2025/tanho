@@ -110,12 +110,12 @@ const RETURN_PATHS: Record<GoogleProvider, string> = {
 };
 
 /** The native app's custom-scheme callback that ASWebAuthenticationSession waits for. */
-const APP_CALLBACK_SCHEME = "oys://oauth-callback";
+const APP_CALLBACK_SCHEME = "lamina://oauth-callback";
 
 /**
  * Redirect after the callback. A WEB flow returns to the relevant admin page;
  * an APP flow (started via the native ASWebAuthenticationSession) returns to the
- * `oys://` scheme, which the app intercepts to close the auth session. No tokens
+ * `lamina://` scheme, which the app intercepts to close the auth session. No tokens
  * are ever put in the redirect — only a success/error flag.
  */
 function oauthRedirect(

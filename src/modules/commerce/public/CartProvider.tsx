@@ -37,7 +37,7 @@ type CartApi = {
   setOpen: (open: boolean) => void;
 };
 
-const STORAGE_KEY = "oys.cart.v1";
+const STORAGE_KEY = "lamina.cart.v1";
 const EMPTY: CartLine[] = [];
 
 /** Stable identity for a line (product + optional variant). */

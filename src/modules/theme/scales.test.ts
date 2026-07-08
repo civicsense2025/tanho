@@ -101,3 +101,64 @@ describe("typeVars — fluid heading sizes", () => {
     expect(at900).toBeLessThan(1.875 * 16);
   });
 });
+
+describe("typeVars — font stack emission", () => {
+  it("emits --font-sans from the built-in preset when no customStack is set", () => {
+    const vars = typeVars(BASE_INPUT);
+    expect(vars["--font-sans"]).toBe('var(--font-geist-sans), system-ui, sans-serif');
+  });
+
+  it("emits --font-sans from customStack when provided, overriding the preset", () => {
+    const vars = typeVars({ ...BASE_INPUT, customStack: '"Inter", ui-sans-serif, system-ui, sans-serif' });
+    expect(vars["--font-sans"]).toContain('"Inter"');
+    expect(vars["--font-sans"]).not.toContain("geist");
+  });
+
+  it("always emits --font-mono regardless of customStack", () => {
+    const withoutCustom = typeVars(BASE_INPUT);
+    const withCustom = typeVars({ ...BASE_INPUT, customStack: '"Inter", sans-serif' });
+    expect(withoutCustom["--font-mono"]).toContain("--font-geist-mono");
+    expect(withCustom["--font-mono"]).toContain("--font-geist-mono");
+  });
+});
+
+describe("buildThemeCss — font var emission (single source of truth)", () => {
+  it("always emits --font-sans in :root, defaulting to the Geist stack", async () => {
+    const { buildThemeCss } = await import("./ThemeStyle");
+    const { THEME_DEFAULTS } = await import("./validation");
+    const css = buildThemeCss(THEME_DEFAULTS);
+    expect(css).toContain(":root{");
+    expect(css).toContain("--font-sans:");
+    expect(css).toContain("--font-mono:");
+  });
+
+  it("emits the custom stack in :root when customStack is provided", async () => {
+    const { buildThemeCss } = await import("./ThemeStyle");
+    const { THEME_DEFAULTS } = await import("./validation");
+    const css = buildThemeCss(THEME_DEFAULTS, '"Inter", ui-sans-serif, system-ui, sans-serif');
+    expect(css).toContain('"Inter"');
+  });
+});
+
+describe("themeScopeStyle — customStack forwarding", () => {
+  it("produces a --font-sans containing the family name when customStack is set", async () => {
+    const { themeScopeStyle } = await import("./scope-style");
+    const { THEME_DEFAULTS } = await import("./validation");
+    const style = themeScopeStyle(THEME_DEFAULTS, "light", '"MyFont", sans-serif');
+    expect(style["--font-sans" as never]).toContain('"MyFont"');
+  });
+
+  it("falls back to the built-in stack when customStack is null", async () => {
+    const { themeScopeStyle } = await import("./scope-style");
+    const { THEME_DEFAULTS } = await import("./validation");
+    const style = themeScopeStyle(THEME_DEFAULTS, "light", null);
+    expect(style["--font-sans" as never]).toContain("geist");
+  });
+
+  it("falls back to the built-in stack when customStack is omitted", async () => {
+    const { themeScopeStyle } = await import("./scope-style");
+    const { THEME_DEFAULTS } = await import("./validation");
+    const style = themeScopeStyle(THEME_DEFAULTS, "light");
+    expect(style["--font-sans" as never]).toContain("geist");
+  });
+});

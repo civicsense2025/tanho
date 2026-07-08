@@ -180,7 +180,7 @@ async function commitPageItem(
 }
 
 /**
- * Commit a WXR import: pages/posts → OYS pages + blocks (+ redirects), authors
+ * Commit a WXR import: pages/posts → Lamina pages + blocks (+ redirects), authors
  * → people, and (behind toggles) comments → a `custom:comment` type + entries
  * and custom post types → auto-created custom types + entries (both handled in
  * import-custom-types.ts). One receipt row summarizes it all. Each item is

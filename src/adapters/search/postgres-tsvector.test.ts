@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 /**
  * Integration test against a REAL, disposable Postgres database — not a
  * mock. Requires POSTGRES_TEST_DATABASE_URL (a scratch database already
- * migrated with scripts/postgres-search-tsvector.sql, including the oys_app
+ * migrated with scripts/postgres-search-tsvector.sql, including the lamina_app
  * role from docs/recipes/swap-database-to-postgres.md's step 1 — this
  * adapter's own migration's RLS policy grants that role, so the connection
  * used here must authenticate AS it). Skips (not fails) when that env var is

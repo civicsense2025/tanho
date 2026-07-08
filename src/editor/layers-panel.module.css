@@ -1,0 +1,280 @@
+/* Layers panel — Figma/Photoshop-style tree outline of the page block tree.
+   Self-contained: reads only the design-system CSS-variable vocabulary, no
+   new tokens. The outer container is positioned/sized by the integrator; this
+   panel fills it and owns its internal column layout. */
+
+.panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ---- header ---- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.toggle {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-muted);
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+/* ---- body (hidden when collapsed) ---- */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panel[data-open="false"] .body,
+.panel[data-open="false"] .footer {
+  display: none;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+/* ---- footer ---- */
+.footer {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.addBtn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.addBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* ---- tree rows ---- */
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-1) 4px 0;
+  border-radius: var(--radius-xs);
+  cursor: grab;
+  user-select: none;
+  transition: background var(--dur) var(--ease);
+}
+
+.row:hover {
+  background: var(--surface);
+}
+
+.row[data-selected] {
+  background: var(--surface-hover);
+}
+
+.row[data-dragging="true"] {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* live drop indicator: a 2px accent line above/below the hovered row.
+   `above` = insert before; `below` = insert after (or, for a container
+   hovered on its lower half, insert as its first child). */
+.row::before,
+.row::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--accent-tint);
+}
+
+.row::before {
+  top: -1px;
+}
+
+.row::after {
+  bottom: -1px;
+}
+
+.row[data-drop="above"]::before,
+.row[data-drop="below"]::after {
+  opacity: 1;
+}
+
+/* chevron (containers) + alignment spacer (leaf rows) */
+.chevron,
+.spacer {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chevron {
+  border: none;
+  background: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 0;
+}
+
+.chevron:hover {
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.boundMark {
+  flex-shrink: 0;
+  color: var(--accent-2);
+  font-size: var(--text-xs);
+  line-height: 1;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.row[data-selected] .label {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+
+.cat {
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.row:hover .cat,
+.row[data-selected] .cat {
+  opacity: 1;
+}
+
+/* ---- row actions (show on hover OR when selected) ---- */
+.actions {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.row:hover .actions,
+.row[data-selected] .actions {
+  opacity: 1;
+}
+
+.act {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 0;
+}
+
+.act:hover:not(:disabled) {
+  background: var(--surface-card);
+  color: var(--text);
+}
+
+.act:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.actDanger:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

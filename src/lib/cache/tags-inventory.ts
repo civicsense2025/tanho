@@ -46,4 +46,6 @@ export const STATIC_CACHE_TAGS: readonly string[] = [
   "settings:onboarding",
   "settings:domain",
   "settings:analytics",
+  "settings:appearance",
+  "symbols",
 ];

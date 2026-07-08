@@ -1,0 +1,169 @@
+/* Self-contained gridlines/guides overlay + toggle styles. Uses only the
+   existing CSS-variable vocabulary — no new design tokens. The overlay is
+   purely visual: every layer is pointer-events:none and absolutely positioned
+   inside a position:relative host (the canvas frame), so it never affects
+   layout or blocks canvas interactions. */
+
+/* ---- overlay root (the parent must be position:relative + .pb-gridlines-host) ---- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  /* above block content, below toolbars/chrome (z 6+) */
+  overflow: hidden;
+}
+
+/* ---- column gridlines: N equal columns (the column background is set inline
+   from `columns` — see GridlinesOverlay — so this holds only layout + opacity) ---- */
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.3;
+}
+
+/* ---- baseline grid: horizontal lines every `gridSize` px (default 8).
+   Fainter than column gridlines so both can be on without visual noise. ---- */
+.baseline {
+  position: absolute;
+  inset: 0;
+  opacity: 0.15;
+}
+
+/* ---- rulers: thin ticked bars along the top and left ----
+   Minor ticks (6px) every --pb-grid (default 8px); major ticks (full 12px)
+   every --pb-major (default 80px = 10×8). The CSS custom properties are set
+   inline by GridlinesOverlay from the user's gridSize preference. Pure CSS,
+   no JS measurement. */
+.rulerTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  border-bottom: 1px solid var(--border);
+  background-image:
+    linear-gradient(90deg, var(--text-faint) 0 1px, transparent 1px 100%),
+    repeating-linear-gradient(90deg, var(--text-faint) 0 1px, transparent 1px var(--pb-major, 80px));
+  background-size: var(--pb-grid, 8px) 6px, 100% 12px;
+  background-position: 0 6px, 0 0;
+  background-repeat: repeat-x, repeat;
+  opacity: 0.45;
+}
+
+.rulerLeft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 12px;
+  border-right: 1px solid var(--border);
+  background-image:
+    linear-gradient(0deg, var(--text-faint) 0 1px, transparent 1px 100%),
+    repeating-linear-gradient(0deg, var(--text-faint) 0 1px, transparent 1px var(--pb-major, 80px));
+  background-size: 6px var(--pb-grid, 8px), 12px 100%;
+  background-position: 6px 0, 0 0;
+  background-repeat: repeat-y, repeat;
+  opacity: 0.45;
+}
+
+/* ---- toggle wrapper (holds the segmented control + settings popover) ---- */
+.toggleWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* ---- toggle (replicates the top-bar segmented control, self-contained) ----
+   Mirrors editor-shell segGroup/segBtn/segOn using the same CSS variables, but
+   lives here so this component has no dependency on editor-shell.module.css. */
+.segGroup {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  gap: 2px;
+}
+
+.segBtn {
+  width: 34px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-faint);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.segBtn:hover {
+  color: var(--text-muted);
+}
+
+.segOn {
+  background: var(--surface-card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- settings popover ---- */
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 200px;
+  padding: var(--space-3);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settingRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.settingLabel {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+
+.chipRow {
+  display: flex;
+  gap: 4px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.chip:hover {
+  color: var(--text);
+}
+
+.chipOn {
+  background: var(--surface-card);
+  color: var(--text);
+  border-color: var(--accent);
+  font-weight: var(--weight-medium);
+}

@@ -8,11 +8,11 @@ is a small JSON object (or tar.gz archive for whole sites) tagged with a
 
 | Format | Unit | File | Module |
 | --- | --- | --- | --- |
-| `oys-theme@1` | A theme (the ~12 color/typography scalars) | `.theme.json` | `src/modules/theme/portable.ts` |
-| `oys-pack@1` | A block pack or design pack | `.pack.json` | `src/modules/blocks/packs/portable.ts` |
-| `oys-site@1` | A whole site (content tables + uploads) | `.tar.gz` | `src/modules/portability/` |
+| `lamina-theme@1` | A theme (the ~12 color/typography scalars) | `.theme.json` | `src/modules/theme/portable.ts` |
+| `lamina-pack@1` | A block pack or design pack | `.pack.json` | `src/modules/blocks/packs/portable.ts` |
+| `lamina-site@1` | A whole site (content tables + uploads) | `.tar.gz` | `src/modules/portability/` |
 
-## `oys-theme@1` — theme portable format
+## `lamina-theme@1` — theme portable format
 
 A theme is the small set of design scalars (accent color, fonts, radii, etc.)
 the renderer reads. The portable form carries only those scalars — no derived
@@ -20,7 +20,7 @@ values, no media, no ids — so it's tiny and deployment-agnostic.
 
 ```ts
 type PortableTheme = {
-  format: "oys-theme@1";
+  format: "lamina-theme@1";
   name: string;
   theme: ThemeInput;        // parses against themeInputSchema
   generatedAt?: number;
@@ -35,11 +35,11 @@ rejected outright (never partially applied). On success the theme is stored as
 a named preset (`theme_presets`); activate it to make it the live theme.
 
 **Validation rules:**
-- `format` must equal `"oys-theme@1"`.
+- `format` must equal `"lamina-theme@1"`.
 - `theme` must parse against `themeInputSchema` (fail-closed).
 - `name` is truncated to 80 chars; defaults to `"Imported theme"`.
 
-## `oys-pack@1` — pack portable format
+## `lamina-pack@1` — pack portable format
 
 A pack is the unit you export, share, sell, or import. There are two kinds:
 
@@ -50,7 +50,7 @@ A pack is the unit you export, share, sell, or import. There are two kinds:
 
 ```ts
 type PortablePack = {
-  format: "oys-pack@1";
+  format: "lamina-pack@1";
   kind: "block-pack" | "design-pack";
   name: string;
   description?: string;
@@ -110,7 +110,7 @@ existing page are **skipped** (not overwritten). At activation the block trees
 are re-validated with the **strict** `validateBlockTree` — unknown-type
 placeholders are stripped at this stage so they don't become live page content.
 
-## `oys-site@1` — whole-site portable format
+## `lamina-site@1` — whole-site portable format
 
 A whole-site bundle is a `tar.gz` archive:
 
@@ -122,7 +122,7 @@ uploads/<storageKey> — one file per row in the `media` table
 
 ```ts
 type Manifest = {
-  format: "oys-site@1";
+  format: "lamina-site@1";
   version: 1;
   generatedAt: number;
   counts: Record<string, number>;

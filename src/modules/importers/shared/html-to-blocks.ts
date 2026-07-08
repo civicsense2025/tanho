@@ -15,7 +15,7 @@ export const RICHTEXT_CHUNK_TARGET = 150_000;
  * `mapPostBody` and wxr/map.ts's `mapItemBody` used to duplicate verbatim.
  *
  * Splits html into top-level elements, maps each recognized element to its native
- * OYS block via `detectCard`, and coalesces runs of unrecognized elements back into
+ * Lamina block via `detectCard`, and coalesces runs of unrecognized elements back into
  * chunked richtext blocks (so 5 plain paragraphs become one richtext block, not 5).
  * Runs SEQUENTIALLY, not via Promise.all, because a detector's embed path can make a
  * real network call (oEmbed) — a post with many embeds resolves them one at a time,

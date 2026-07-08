@@ -35,7 +35,11 @@ export function MediaPickerModal({
   allowPublic?: boolean;
 }) {
   const [source, setSource] = useState<Source>("uploads");
-  const [items, setItems] = useState<PickerItem[] | null>(null);
+  const [loaded, setLoaded] = useState<{
+    items: PickerItem[];
+    source: Source;
+    key: number;
+  } | null>(null);
   const [q, setQ] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [uploading, startUpload] = useTransition();
@@ -43,17 +47,22 @@ export function MediaPickerModal({
   const [reloadKey, setReloadKey] = useState(0);
 
   // Load the active source's items (re-run on source change or after an upload).
+  // `items` is derived: null (loading) when the current source/key doesn't match
+  // the last loaded batch, the array once the fetch for the current params resolves.
   useEffect(() => {
     let alive = true;
-    setItems(null);
     const load = source === "public" ? listPublicAssetsAction : listImageMediaAction;
     void load().then((res) => {
-      if (alive) setItems(res.ok ? (res.data ?? []) : []);
+      if (alive)
+        setLoaded({ items: res.ok ? (res.data ?? []) : [], source, key: reloadKey });
     });
     return () => {
       alive = false;
     };
   }, [source, reloadKey]);
+
+  const items =
+    loaded?.source === source && loaded?.key === reloadKey ? loaded.items : null;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

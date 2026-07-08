@@ -18,8 +18,8 @@ The platform runs anywhere Node 22 runs:
 
 ```bash
 npm ci && npm run build
-DATABASE_URL=file:/var/lib/oys/site.db npm run db:migrate
-DATABASE_URL=file:/var/lib/oys/site.db node_modules/.bin/next start -p 3000
+DATABASE_URL=file:/var/lib/lamina/site.db npm run db:migrate
+DATABASE_URL=file:/var/lib/lamina/site.db node_modules/.bin/next start -p 3000
 ```
 
 Put a reverse proxy (Caddy/nginx) in front for TLS. Local-disk uploads work

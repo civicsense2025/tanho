@@ -40,7 +40,7 @@ export async function dryRunMarkdownImport(file: File): Promise<Result<MarkdownD
 }
 
 /**
- * Commit a Markdown-zip import: one OYS page per markdown file (skipping a route
+ * Commit a Markdown-zip import: one Lamina page per markdown file (skipping a route
  * that's already taken rather than overwriting), 301s from any frontmatter aliases,
  * then one safety receipt + audit row. Idempotent on re-runs — a route that already
  * exists is reported as a collision, never duplicated (via the shared commit loop).

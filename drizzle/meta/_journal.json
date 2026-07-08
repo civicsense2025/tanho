@@ -225,6 +225,41 @@
       "when": 1783360239211,
       "tag": "0031_unique_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1783364868907,
+      "tag": "0032_sudden_miss_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1783405124816,
+      "tag": "0033_team-management",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1783445986837,
+      "tag": "0034_parallel_blonde_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1783449030266,
+      "tag": "0035_organic_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1783469429491,
+      "tag": "0036_messy_puff_adder",
+      "breakpoints": true
     }
   ]
 }

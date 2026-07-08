@@ -10,21 +10,25 @@ const listPublishedTypes = vi.fn();
 const countPublishedRows = vi.fn();
 const listPublishedRowsForSitemap = vi.fn();
 
-// The core section reads pages + entries off the db client via
-// db.select({...}).from(TABLE).where(...) — a thenable chain whose terminal
-// (.where) resolves to the row array. Each mocked schema is a tagged sentinel
-// so the db mock can route `from(table)` to the right row set. `_rows` holds
-// the per-suite fixtures (var so it's hoisted alongside the mock factories).
-var pageRows: unknown[] = [];
-var entryRows: unknown[] = [];
+// Fixtures are hoisted and mutable so the db mock factory captures a stable
+// reference and sees per-test updates.
+const fixtures = {
+  pageRows: [] as unknown[],
+  entryRows: [] as unknown[],
+};
 
 vi.mock("@/lib/db/client", () => ({
   db: {
+    $count: () => Promise.resolve(0),
     select: () => ({
       from: (table: { __table?: string }) => ({
-        where: () => Promise.resolve(table?.__table === "pages" ? pageRows : entryRows),
+        where: () => Promise.resolve(table?.__table === "pages" ? fixtures.pageRows : fixtures.entryRows),
       }),
     }),
+    query: {
+      media: { findMany: () => Promise.resolve([]) },
+      collections: { findMany: () => Promise.resolve([]) },
+    },
   },
 }));
 vi.mock("@/modules/pages/schema", () => ({ pages: { __table: "pages" } }));
@@ -77,8 +81,8 @@ const makeType = (slug: string): TableBackedType =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  pageRows = [];
-  entryRows = [];
+  fixtures.pageRows = [];
+  fixtures.entryRows = [];
   getGeneralSettings.mockResolvedValue({ indexable: true });
   getSeoSettings.mockResolvedValue({ siteUrl: "https://example.com" });
   getCanonicalSiteUrl.mockResolvedValue("https://example.com/");
@@ -87,7 +91,6 @@ beforeEach(() => {
   countPublishedRows.mockResolvedValue(0);
   listPublishedRowsForSitemap.mockResolvedValue([]);
 });
-
 describe("getSitemapBase", () => {
   it("returns the canonical url with the trailing slash stripped", async () => {
     expect(await getSitemapBase()).toBe("https://example.com");
@@ -159,16 +162,17 @@ describe("listSitemapSections", () => {
 
     expect(await listSitemapSections()).toEqual([{ id: 0, kind: "core" }]);
   });
+
 });
 
 describe("buildSitemapForSection — core", () => {
   it("includes pages, entries, /resources and every published type's index url", async () => {
-    pageRows = [
-      { route: "/", noIndex: false, updatedAt: new Date("2024-01-01") },
-      { route: "/about", noIndex: false, updatedAt: new Date("2024-01-02") },
-      { route: "/secret", noIndex: true, updatedAt: new Date("2024-01-03") },
+    fixtures.pageRows = [
+      { route: "/", title: "Home", noIndex: false, updatedAt: new Date("2024-01-01"), ogImageMediaId: null },
+      { route: "/about", title: "About", noIndex: false, updatedAt: new Date("2024-01-02"), ogImageMediaId: "media-about" },
+      { route: "/secret", title: "Secret", noIndex: true, updatedAt: new Date("2024-01-03"), ogImageMediaId: null },
     ];
-    entryRows = [
+    fixtures.entryRows = [
       { type: "project", slug: "alpha", data: {}, updatedAt: new Date("2024-02-01") },
       { type: "note", slug: "skip-me", data: {}, updatedAt: new Date("2024-02-02") },
     ];
@@ -184,7 +188,6 @@ describe("buildSitemapForSection — core", () => {
     expect(urls).not.toContain("https://example.com/note/skip-me"); // no detail path
     expect(urls).toContain("https://example.com/resources");
     expect(urls).toContain("https://example.com/products"); // type index url
-    // The home page carries priority 1.
     expect(items.find((i) => i.url === "https://example.com/")?.priority).toBe(1);
   });
 
@@ -196,11 +199,10 @@ describe("buildSitemapForSection — core", () => {
 
   it("returns [] when the site is non-indexable", async () => {
     getGeneralSettings.mockResolvedValue({ indexable: false });
-    pageRows = [{ route: "/", noIndex: false, updatedAt: new Date("2024-01-01") }];
+    fixtures.pageRows = [{ route: "/", title: "Home", noIndex: false, updatedAt: new Date("2024-01-01"), ogImageMediaId: null }];
     expect(await buildSitemapForSection({ id: 0, kind: "core" }, "https://example.com")).toEqual([]);
   });
 });
-
 describe("buildSitemapForSection — type", () => {
   it("emits base + row.path with lastModified from updated_at", async () => {
     listPublishedTypes.mockResolvedValue([makeType("posts")]);

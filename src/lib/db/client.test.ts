@@ -10,8 +10,12 @@ const clientSrc = readFileSync(
 
 describe("db client foreign_keys PRAGMA", () => {
   it("enables foreign_keys = ON before constructing the db export", () => {
+    // Fire-and-forget (`void client.execute(...)`, not `await`) so the module
+    // stays loadable from tsx/CJS contexts (no top-level await). The sqlite3
+    // driver executes synchronously for file URLs, so the PRAGMA lands before
+    // any query; for Turso it's a no-op (FKs enforced server-side).
     expect(clientSrc).toMatch(
-      /await client\.execute\(["']PRAGMA foreign_keys = ON["']\)/,
+      /client\.execute\(["']PRAGMA foreign_keys = ON["']\)/,
     );
     const pragmaIdx = clientSrc.indexOf("PRAGMA foreign_keys = ON");
     const dbIdx = clientSrc.indexOf("export const db");

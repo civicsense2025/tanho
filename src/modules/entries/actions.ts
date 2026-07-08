@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
@@ -13,6 +14,9 @@ import { blockSets } from "@/modules/pages/schema";
 import { getEntitySchema } from "@/entities/registry-async";
 import { saveOwnerBlocks, publishOwnerBlocks } from "@/modules/blocks/actions";
 import { getEditorChromePreview } from "@/modules/chrome/queries";
+import { customTypes } from "@/modules/custom-types/schema";
+import { descriptorsFromFieldDefs } from "@/modules/custom-types/admin/descriptors";
+import { FIELD_DESCRIPTORS, seedData, slugify } from "./admin/field-descriptors";
 import type { BlockNode } from "@/blocks/types";
 import { entries, type EntryRow } from "./schema";
 import { entryDetailsSchema } from "./validation";
@@ -69,6 +73,46 @@ export async function createEntry(input: unknown): Promise<Result<{ id: string }
   });
   invalidate(details.type);
   return { ok: true, data: { id: row.id } };
+}
+
+/**
+ * Create a blank entry of the given type and immediately redirect into the
+ * block editor. Used by the dashboard "+ New ..." button for projects, guides,
+ * resources, and custom content types.
+ */
+export async function createBlankEntry(type: string, label: string): Promise<never> {
+  const schema = await getEntitySchema(type);
+  if (!schema) throw new Error(`Unknown content type: ${type}`);
+
+  let customFields: import("@/modules/custom-types/validation").FieldDef[] | undefined;
+  if (type.startsWith("custom:")) {
+    const slug = type.slice("custom:".length);
+    const row = await db.query.customTypes.findFirst({ where: eq(customTypes.slug, slug) });
+    if (!row) throw new Error(`Unknown custom type: ${slug}`);
+    if (row.tableName) {
+      throw new Error(`"${row.name}" is table-backed; manage its rows in Content types → ${row.name}`);
+    }
+    customFields = row.fields;
+  }
+
+  const displayLabel = label || schema.label;
+  const baseSlug = slugify(displayLabel) || "untitled";
+  let slug = baseSlug;
+  let n = 2;
+  while (await db.query.entries.findFirst({ where: and(eq(entries.type, type), eq(entries.slug, slug)) })) {
+    slug = `${baseSlug}-${n}`;
+    n++;
+  }
+
+  const descriptors = type.startsWith("custom:")
+    ? descriptorsFromFieldDefs(customFields!)
+    : FIELD_DESCRIPTORS[type] ?? [];
+  const data = seedData(descriptors, undefined);
+  const title = `Untitled ${displayLabel}`;
+
+  const res = await createEntry({ type, slug, title, status: "draft", data });
+  if (!res.ok) throw new Error(res.error);
+  redirect(`/admin/edit/${encodeURIComponent(type)}/${res.data!.id}`);
 }
 
 export async function updateEntry(id: string, input: unknown): Promise<Result> {

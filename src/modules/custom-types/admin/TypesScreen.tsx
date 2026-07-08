@@ -1,8 +1,9 @@
 import type { CustomTypeRow } from "../schema";
-import { CORE_TYPES, STRUCTURED_TYPES } from "./type-catalog";
+import { CORE_TYPES } from "./type-catalog";
 import { TypeToggleRow } from "./TypeToggleRow";
 import { CreateTypeForm } from "./CreateTypeForm";
 import { CreateDataTypeForm } from "./CreateDataTypeForm";
+import { ImportTablePicker } from "./ImportTablePicker";
 import { TypeCard } from "./TypeCard";
 import { DataTypeCard } from "./DataTypeCard";
 
@@ -18,18 +19,16 @@ const eyebrowStyle = {
 const boxStyle = { border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden" };
 
 /**
- * Content Types — the design's two-section layout. "Built in" holds the core +
- * commerce types (Pages/Posts/Products/Collections); "Custom" holds the
- * structured types this site ships (Projects/Guides/Resources) plus any
- * owner-defined custom types. Each shipped row toggles on/off; a disabled type
- * is hidden from the site + search (real `content_types` state). Owner-defined
- * types keep their existing field-builder card.
+ * Content Types — two sections. "Built in" holds the core + commerce types
+ * (Pages/Posts/Products/Collections) that live on dedicated tables with
+ * specialized behaviour (SEO, Stripe, custom code). "Data-backed" holds every
+ * type backed by a real `ct_*` table — the built-in structured types
+ * (Projects/Guides/Resources) plus any owner-created or imported types.
  *
- * A custom type is one of two flavors: **legacy JSON-backed** (entries + data
- * JSON; edited via TypeCard) or **data-backed** (a real `ct_*` table, opt-in
- * via the content-schema layer; edited via DataTypeCard). They're partitioned
- * here by whether `tableName` is set, and shown in separate labelled groups so
- * the two aren't confused.
+ * All data-backed types are equal: one table, one typed column per field,
+ * managed through the same field-builder or import-from-DB tool. The legacy
+ * JSON-backed `entries` pattern is deprecated; remaining legacy types (if any)
+ * are shown in a muted group at the bottom.
  */
 export function TypesScreen({
   custom,
@@ -69,32 +68,11 @@ export function TypesScreen({
       </section>
 
       <section>
-        <h2 style={{ ...eyebrowStyle, margin: "0 0 var(--space-3)" }}>Custom</h2>
-        <div style={boxStyle}>{STRUCTURED_TYPES.map(rowFor)}</div>
-
-        {legacy.length > 0 ? (
-          <div style={{ marginTop: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-            {legacy.map((t) => (
-              <TypeCard key={t.id} type={t} />
-            ))}
-          </div>
-        ) : dataBacked.length === 0 ? (
-          <p style={{ marginTop: "var(--space-4)", padding: "var(--space-6)", textAlign: "center", color: "var(--text-faint)", fontSize: "var(--text-sm)", border: "1px dashed var(--border-strong)", borderRadius: "var(--radius-sm)" }}>
-            No fully custom types yet — testimonials, team members, FAQs, whatever
-            your site needs beyond the above.
-          </p>
-        ) : null}
-
-        <div style={{ marginTop: "var(--space-6)" }}>
-          <CreateTypeForm />
-        </div>
-      </section>
-
-      <section>
         <h2 style={{ ...eyebrowStyle, margin: "0 0 var(--space-3)" }}>Data-backed</h2>
         <p style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
           Content types backed by their own real database table — one typed
-          column per field. Publish one to give it its own public pages.
+          column per field. Create one with the field builder or import an
+          existing table from your database.
         </p>
 
         {dataBacked.length > 0 ? (
@@ -103,10 +81,34 @@ export function TypesScreen({
               <DataTypeCard key={t.id} type={t} />
             ))}
           </div>
-        ) : null}
+        ) : (
+          <p style={{ marginBottom: "var(--space-6)", padding: "var(--space-6)", textAlign: "center", color: "var(--text-faint)", fontSize: "var(--text-sm)", border: "1px dashed var(--border-strong)", borderRadius: "var(--radius-sm)" }}>
+            No data-backed types yet. Create one with the field builder or
+            import an existing table from your database.
+          </p>
+        )}
 
-        <CreateDataTypeForm />
+        <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+          <CreateDataTypeForm />
+          <ImportTablePicker />
+        </div>
       </section>
+
+      {legacy.length > 0 ? (
+        <section>
+          <h2 style={{ ...eyebrowStyle, margin: "0 0 var(--space-3)" }}>Legacy</h2>
+          <p style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-sm)", color: "var(--text-faint)" }}>
+            JSON-backed types from the previous storage model. Migrate these to
+            data-backed types for typed columns and indexing.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
+            {legacy.map((t) => (
+              <TypeCard key={t.id} type={t} />
+            ))}
+          </div>
+          <CreateTypeForm />
+        </section>
+      ) : null}
     </div>
   );
 }

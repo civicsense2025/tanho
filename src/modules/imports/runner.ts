@@ -6,6 +6,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { rawRun } from "@/lib/db/raw";
 import { slugify } from "@/lib/slug";
 import { customTypes, type CustomTypeRow } from "@/modules/custom-types/schema";
 import { fieldListSchema } from "@/modules/custom-types/validation";
@@ -240,7 +241,7 @@ async function ensureType(job: ImportJobRow, planned: PlannedType): Promise<Ensu
   //    (re)write the metadata row below.
   if (!(await tableExists(tableName))) {
     for (const stmt of createTableStatements(tableName, parsed.data, currentDialect())) {
-      await db.run(stmt);
+      await rawRun(stmt);
     }
   }
 

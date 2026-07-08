@@ -80,6 +80,13 @@ describe("layoutToVars (tokens-only custom properties)", () => {
     expect(layoutToVars({ cols: "2", minColWidth: "none" })["--pbl-cols"]).toBe("repeat(2, minmax(0, 1fr))");
   });
 
+  it("maps radius to --pbl-radius var token", () => {
+    expect(layoutToVars({ radius: "md" })["--pbl-radius"]).toBe("var(--radius-md)");
+    expect(layoutToVars({ radius: "pill" })["--pbl-radius"]).toBe("var(--radius-pill)");
+    expect(layoutToVars({ radius: "none" })["--pbl-radius"]).toBe("0");
+    expect(layoutToVars({})["--pbl-radius"]).toBeUndefined();
+  });
+
   it("emits ONLY tokens/keywords/ints — no raw px or hex", () => {
     const v = layoutToVars({
       direction: "row", justify: "evenly", align: "baseline", gap: "12", colGap: "6", rowGap: "4",

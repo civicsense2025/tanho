@@ -7,6 +7,14 @@ import { people } from "@/modules/people/schema";
 import { getViewer } from "@/modules/people/viewer";
 import { tierBySlug, readMembershipSettings } from "./tiers";
 
+// NOTE: membership-grant review-request emails are a future enhancement. The
+// trigger (sendReviewRequestEmail in modules/reviews/email) exists and is ready,
+// but a review request doesn't map cleanly to a per-post target for membership
+// activation — memberships are granted by the Stripe subscription webhook
+// (modules/memberships/events.ts), not by an action here. When a natural target
+// shape lands (e.g. reviewing the membership/community itself), wire
+// sendReviewRequestEmail into that grant path.
+
 const APP_URL = process.env.APP_URL ?? "";
 
 export type CheckoutResult =

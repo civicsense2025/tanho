@@ -1,11 +1,13 @@
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { clientIp } from "@/lib/client-ip";
 import { apiTokens } from "./schema";
 import { users } from "../schema";
 import { hashApiToken } from "./tokens";
 import { isApiTokenRateLimited, recordFailedApiTokenAttempt } from "./rate-limit";
 import type { AdminUser } from "../session";
+import { resolvePermissions } from "../guards";
 
 /**
  * Thrown when a bearer token is missing, invalid, expired, or belongs to a
@@ -33,7 +35,7 @@ export class ApiAuthError extends Error {
  */
 export async function requireApiUser(role?: "owner"): Promise<AdminUser> {
   const hdrs = await headers();
-  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+  const ip = clientIp(hdrs);
 
   // Fail fast if this IP has already burned the failed-attempt budget. This is a
   // read-only check: a successful request below never touches the counter, so a
@@ -67,6 +69,7 @@ export async function requireApiUser(role?: "owner"): Promise<AdminUser> {
       email: users.email,
       name: users.name,
       role: users.role,
+      roleId: users.roleId,
       status: users.status,
     })
     .from(apiTokens)
@@ -79,7 +82,10 @@ export async function requireApiUser(role?: "owner"): Promise<AdminUser> {
   if (row.tokenExpiresAt && row.tokenExpiresAt < Date.now()) {
     return failAuth("API token has expired");
   }
-  if (role === "owner" && row.role !== "owner") {
+  // Resolve permissions once — reused for both the owner check and the
+  // return value (avoids a duplicate DB query for owner-token requests).
+  const permissions = await resolvePermissions(row.roleId);
+  if (role === "owner" && !permissions.has("team:owner")) {
     throw new ApiAuthError(403, "Forbidden: owner role required");
   }
 
@@ -89,5 +95,5 @@ export async function requireApiUser(role?: "owner"): Promise<AdminUser> {
     .where(eq(apiTokens.id, row.tokenId))
     .then(undefined, (e) => console.error("[api-token] lastUsedAt stamp failed", e));
 
-  return { id: row.userId, email: row.email, name: row.name, role: row.role };
+  return { id: row.userId, email: row.email, name: row.name, role: row.role, permissions };
 }

@@ -6,7 +6,7 @@ import { makeBlockIdFactory } from "../shared/block-id";
 export type MappedPost = {
   ghostId: string;
   title: string;
-  /** OYS route: "/<slug>" — matches Ghost's default post permalink shape
+  /** Lamina route: "/<slug>" — matches Ghost's default post permalink shape
    *  closely enough that a redirect from the old URL is a straight map. */
   route: string;
   slug: string;
@@ -14,7 +14,7 @@ export type MappedPost = {
    *  longer than richtextSchema's per-block cap is split across sequential
    *  blocks (see chunk-html.ts) rather than truncated or rejected, so a
    *  post of any length imports intact. v1 does not attempt a full
-   *  Ghost-card-to-OYS-block converter; that's disproportionate scope for
+   *  Ghost-card-to-LAM-block converter; that's disproportionate scope for
    *  an importer whose job is "get the content in," not "perfectly
    *  recreate every Ghost card type." */
   blocks: Array<{ id: string; type: string; content: Record<string, unknown> }>;
@@ -52,7 +52,7 @@ export function resetBlockIdCounter(): void {
 }
 
 /**
- * Ghost's `visibility` maps directly onto OYS's paywall tier model:
+ * Ghost's `visibility` maps directly onto Lamina's paywall tier model:
  * "public" → no gate, "members" → any active member, "paid" → also any
  * active member (Ghost's CSV carries no finer tier detail than that).
  */
@@ -69,7 +69,7 @@ function gateTierFor(visibility: GhostPost["visibility"]): string | null {
 /**
  * Splits a post's html into top-level elements, maps each recognizable
  * Ghost card (image/gallery/callout/button/bookmark/embed — see
- * card-detect.ts) to its native OYS block, and coalesces consecutive
+ * card-detect.ts) to its native Lamina block, and coalesces consecutive
  * unrecognized elements back into chunked richtext blocks (so a run of 5
  * plain paragraphs still becomes one or two richtext blocks, not 5). Runs
  * sequentially, not via Promise.all, because detectCard's embed path can
@@ -82,7 +82,7 @@ function mapPostBody(html: string): Promise<{ blocks: MappedPost["blocks"]; issu
 }
 
 /**
- * Map one Ghost post to OYS's page + block-tree shape. Prefers `html`
+ * Map one Ghost post to Lamina's page + block-tree shape. Prefers `html`
  * (richtext accepts html directly, sanitized at render — see
  * blocks/richtext/fields.ts) over `lexical`, since this codebase has no
  * lexical renderer; a lexical-only post's body is dropped with an issue
@@ -129,7 +129,7 @@ export async function mapGhostPost(post: GhostPost): Promise<{ mapped: MappedPos
 }
 
 /**
- * Map one Ghost Members CSV row to OYS's people/memberships shape.
+ * Map one Ghost Members CSV row to Lamina's people/memberships shape.
  * `complimentary_plan` OR a non-empty `stripe_customer_id` both count as
  * "was a paying/comp member" — Ghost's export doesn't otherwise flag "this
  * row is on the paid tier" any more precisely than that.

@@ -1,5 +1,6 @@
 import { and, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { rawRun } from "@/lib/db/raw";
 import { customTypes } from "@/modules/custom-types/schema";
 import { assertIdentifier } from "./identifiers";
 import { tableColumns } from "./introspect";
@@ -48,22 +49,22 @@ export async function backfillNestingSpine(): Promise<{ altered: string[]; skipp
 
     // 1. Add the two spine columns (parent_id may already exist from a partial run).
     if (!cols.includes("parent_id")) {
-      await db.run(sql`ALTER TABLE ${t} ADD COLUMN "parent_id" text`);
+      await rawRun(sql`ALTER TABLE ${t} ADD COLUMN "parent_id" text`);
     }
-    await db.run(sql`ALTER TABLE ${t} ADD COLUMN "path" text NOT NULL DEFAULT ''`);
+    await rawRun(sql`ALTER TABLE ${t} ADD COLUMN "path" text NOT NULL DEFAULT ''`);
 
     // 2. Backfill path = base + "/" + slug. `base` is a bound parameter; the
     //    slug column is referenced by its (fixed) name.
-    await db.run(sql`UPDATE ${t} SET "path" = ${base} || '/' || "slug"`);
+    await rawRun(sql`UPDATE ${t} SET "path" = ${base} || '/' || "slug"`);
 
     // 3. Move uniqueness from slug → path. Add the unique path index, drop the
     //    legacy UNIQUE(slug) (which would otherwise forbid same-slug siblings
     //    under different parents), and add a plain slug index for by-slug reads.
-    await db.run(
+    await rawRun(
       sql`CREATE UNIQUE INDEX IF NOT EXISTS ${sql.identifier(`${table}_path_unique`)} ON ${t} ("path")`,
     );
-    await db.run(sql`DROP INDEX IF EXISTS ${sql.identifier(`${table}_slug_unique`)}`);
-    await db.run(
+    await rawRun(sql`DROP INDEX IF EXISTS ${sql.identifier(`${table}_slug_unique`)}`);
+    await rawRun(
       sql`CREATE INDEX IF NOT EXISTS ${sql.identifier(`${table}_slug_idx`)} ON ${t} ("slug")`,
     );
 

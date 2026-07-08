@@ -9,7 +9,9 @@ import type { Dialect } from "./dialect";
  *
  * Every statement is a Drizzle `SQL` chunk built with `sql.identifier(...)`
  * for table/column names (so the driver quotes them per dialect) and bound
- * params for any values; the caller runs them with `db.run(...)`. Identifiers
+ * params for any values; the caller runs them with `rawRun(...)` (the
+ * dialect-agnostic raw executor in @/lib/db/raw — SQLite's `db.run`/`db.all`
+ * don't exist on node-postgres, so raw SQL goes through that helper). Identifiers
  * are ALSO pre-validated with `assertIdentifier` before they reach here —
  * belt-and-suspenders over `sql.identifier`'s quoting, since DDL identifiers
  * can never be parameterized.
@@ -116,7 +118,7 @@ function spineClauses(dialect: Dialect): string[] {
 
 /**
  * Postgres-only hardening for a freshly created ct_* table: enable + force RLS
- * and grant the `oys_app` role full row access. `ALTER DEFAULT PRIVILEGES` in
+ * and grant the `lamina_app` role full row access. `ALTER DEFAULT PRIVILEGES` in
  * scripts/postgres-rls-force.sql already GRANTs table privileges to future
  * tables, but RLS enable + a policy are per-table and must be emitted here or
  * the app role reads zero rows. No-op on SQLite (no RLS).
@@ -128,7 +130,7 @@ export function postgresRlsStatements(tableName: string): SQL[] {
     sql`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY`,
     sql`ALTER TABLE ${t} FORCE ROW LEVEL SECURITY`,
     sql.raw(
-      `CREATE POLICY ${quoteIdent(policy)} ON ${quoteIdent(tableName)} TO oys_app USING (true) WITH CHECK (true)`,
+      `CREATE POLICY ${quoteIdent(policy)} ON ${quoteIdent(tableName)} TO lamina_app USING (true) WITH CHECK (true)`,
     ),
   ];
 }

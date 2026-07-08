@@ -10,7 +10,6 @@ import { theme } from "@/modules/theme/schema";
 import { pages, blockSets } from "@/modules/pages/schema";
 import { validatePackTree, treeReferencedTypes } from "@/modules/pages/blocks-io";
 import { slugSchema } from "@/modules/pages/validation";
-import { slugify } from "@/lib/slug";
 import { exportDesignPackJson, importPackJson, type PortablePack } from "../packs/portable";
 import type { BlockNode } from "@/blocks/types";
 import type { ThemeInput } from "@/modules/theme/validation";
@@ -22,6 +21,13 @@ const invalidate = () => {
   updateTag("entries:design_pack");
   updateTag("design-packs");
 };
+
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
 
 const OWNER_TYPE = "entry:design_pack";
 
@@ -109,22 +115,17 @@ export async function importDesignPack(
   };
 }
 
-export type PortablePackExport = PortablePack & {
-  requiresConfigTypes: string[];
-  excludedTypes: string[];
-};
+/** Serialize a design pack to a portable `PortablePack` object. */
+export async function exportDesignPack(id: string): Promise<Result<PortablePack>> {
+  await requireUser();
+  return serializeDesignPack(id);
+}
 
 /**
- * Serialize a design pack to a portable `PortablePack` object. No auth gate —
- * the public marketplace download route calls this after resolving the entry
- * slug; the admin `exportDesignPack` wrapper adds the `requireUser()` check.
- * The result carries `requiresConfigTypes` (blocks the importer must
- * reconfigure) and `excludedTypes` (blocks stripped by the portability
- * allowlist) so the caller can surface them in the UI.
+ * Public serializer for design packs — no auth gate. Used by the marketplace
+ * download route and entitlement actions, which perform their own access checks.
  */
-export async function serializeDesignPack(
-  id: string,
-): Promise<Result<PortablePackExport>> {
+export async function serializeDesignPack(id: string): Promise<Result<PortablePack>> {
   const existing = await db.query.entries.findFirst({ where: eq(entries.id, id) });
   if (!existing) return { ok: false, error: "Design pack not found" };
   const data = existing.data as {
@@ -140,17 +141,7 @@ export async function serializeDesignPack(
     { description: data.description, version: data.packVersion },
     Date.now(),
   );
-  return { ok: true, data: { ...pack, requiresConfigTypes: pack.requiresConfigTypes ?? [], excludedTypes: pack.excludedTypes ?? [] } };
-}
-
-/**
- * Admin export of a design pack. Owner-gated; delegates to `serializeDesignPack`.
- */
-export async function exportDesignPack(
-  id: string,
-): Promise<Result<PortablePackExport>> {
-  await requireUser();
-  return serializeDesignPack(id);
+  return { ok: true, data: pack };
 }
 
 export type ActivateDiagnostics = {
@@ -190,27 +181,16 @@ export async function activateDesignPack(id: string): Promise<Result<ActivateDia
 
   for (const tmpl of data.pageTemplates) {
     const route = tmpl.route || `/${slugify(tmpl.name) || "page"}`;
-    const routeCollision = await db.query.pages.findFirst({ where: eq(pages.route, route) });
-    if (routeCollision) {
+    const collision = await db.query.pages.findFirst({ where: eq(pages.route, route) });
+    if (collision) {
       skipped.push({ name: tmpl.name, route, reason: "Route already in use" });
-      continue;
-    }
-    // pages.slug has its own unique() constraint independent of route — two
-    // templates whose names slugify the same (or re-activating a pack whose
-    // slug is already taken) would otherwise throw an unhandled constraint
-    // violation mid-loop and abort every template after it. Same
-    // skip-don't-overwrite handling as the route check above.
-    const slug = slugify(tmpl.name) || `page-${Date.now()}`;
-    const slugCollision = await db.query.pages.findFirst({ where: eq(pages.slug, slug) });
-    if (slugCollision) {
-      skipped.push({ name: tmpl.name, route, reason: "A page with this slug already exists" });
       continue;
     }
     const [pageRow] = await db
       .insert(pages)
       .values({
         title: tmpl.name,
-        slug,
+        slug: slugify(tmpl.name) || `page-${Date.now()}`,
         route,
         kind: "page",
         status: "published",
@@ -285,3 +265,4 @@ export async function deleteDesignPack(id: string): Promise<Result> {
   invalidate();
   return { ok: true };
 }
+

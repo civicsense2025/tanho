@@ -17,7 +17,7 @@ export type MarqueeContent = z.infer<typeof marqueeSchema>;
 
 export const makeMarquee = (): MarqueeContent =>
   marqueeSchema.parse({
-    items: ["Ship fast", "Own your site", "No lock-in", "Yours forever"],
+    items: ["Ship fast", "Lamina", "No lock-in", "Yours forever"],
     direction: "left",
     speed: "normal",
     pauseOnHover: true,

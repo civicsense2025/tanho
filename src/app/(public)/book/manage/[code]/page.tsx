@@ -29,6 +29,7 @@ export default async function ManageBookingPage({
         tz: booking.tz,
         location: booking.location,
         status: booking.status,
+        meetLink: booking.meetLink,
       }}
     />
   );

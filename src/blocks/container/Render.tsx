@@ -18,6 +18,7 @@ export function RenderContainer({ content, ctx }: { content: ContainerContent; c
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-5)",
+        borderRadius: "var(--pbl-radius, 0)",
       }}
     >
       {ctx.children(content.blocks as BlockNode[])}

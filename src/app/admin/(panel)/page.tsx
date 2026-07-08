@@ -12,6 +12,10 @@ import { onboardingChecklistItems } from "@/modules/onboarding/setup-checklist-i
 import { SetupChecklist } from "@/modules/commerce/admin/SetupChecklist";
 import { contentToPurchaseCorrelations } from "@/modules/analytics/correlation";
 import { CorrelationCard } from "@/modules/analytics/admin/CorrelationCard";
+import { getEnabledCustomTypes } from "@/modules/custom-types/queries";
+import { getEntitySchema } from "@/entities/registry-async";
+import { toEntitySchemaSummary } from "@/entities/types";
+import { getContentTypesSettings } from "@/modules/custom-types/content-types-settings";
 
 function greeting(now: Date): string {
   const h = now.getHours();
@@ -43,20 +47,41 @@ async function AdminDashboardPageInner() {
     redirect("/admin/onboarding");
   }
 
-  const [allPages, projects, guides, resources, upcoming, correlations] = await Promise.all([
+  const [allPages, projects, guides, resources, upcoming, correlations, customTypes, settings] = await Promise.all([
     listPages(),
     listEntries("project"),
     listEntries("guide"),
     listEntries("resource"),
     listBookings("upcoming"),
     contentToPurchaseCorrelations(),
+    getEnabledCustomTypes(),
+    getContentTypesSettings(),
   ]);
 
   const pages = allPages.filter((p) => p.kind !== "post");
   const posts = allPages.filter((p) => p.kind === "post");
   const published = allPages.filter((p) => p.status === "published").length;
   const draft = allPages.filter((p) => p.status === "draft").length;
-  const contentItems = allPages.length + projects.length + guides.length + resources.length;
+
+  const customTypeEntries = await Promise.all(
+    customTypes
+      .filter((t) => !t.tableName)
+      .map(async (t) => {
+        const entity = `custom:${t.slug}`;
+        const [schema, items] = await Promise.all([getEntitySchema(entity), listEntries(entity)]);
+        return {
+          slug: t.slug,
+          name: t.name,
+          plural: t.pluralName || t.name,
+          entity,
+          items,
+          schema: schema ? toEntitySchemaSummary(schema) : undefined,
+          customFields: t.fields,
+        };
+      }),
+  );
+
+  const contentItems = allPages.length + projects.length + guides.length + resources.length + customTypeEntries.reduce((n, t) => n + t.items.length, 0);
   const nextBooking = upcoming[0];
 
   const counts = {
@@ -65,6 +90,7 @@ async function AdminDashboardPageInner() {
     projects: projects.length,
     guides: guides.length,
     resources: resources.length,
+    custom: Object.fromEntries(customTypeEntries.map((t) => [t.slug, t.items.length])),
   };
 
   return (
@@ -131,8 +157,10 @@ async function AdminDashboardPageInner() {
         projects={projects}
         guides={guides}
         resources={resources}
+        customTypes={customTypeEntries}
         codePages={codePageSummaries()}
         counts={counts}
+        disabledTypes={new Set(settings.disabled)}
       />
     </main>
   );

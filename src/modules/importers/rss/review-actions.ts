@@ -56,7 +56,7 @@ export async function dryRunRssImport(args: { xml?: string; url?: string }): Pro
 }
 
 /**
- * Commit an RSS/Atom import: one OYS post per feed item (skipping a route
+ * Commit an RSS/Atom import: one Lamina post per feed item (skipping a route
  * that's already taken rather than overwriting), 301s from each item's source
  * permalink, then one safety receipt + audit row. Idempotent on re-runs — a
  * route that already exists is reported as a collision, never duplicated (via

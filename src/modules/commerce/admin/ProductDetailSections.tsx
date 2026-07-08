@@ -9,8 +9,10 @@ import type { FormState } from "./product-form-state";
 
 type Setter = <K extends keyof FormState>(k: K, v: FormState[K]) => void;
 
-/** Inventory, Shipping and SEO sections — pure controlled inputs. */
+/** Inventory, Shipping and SEO sections — pure controlled inputs.
+ *  Shipping is shown only for physical products (other kinds skip shipping). */
 export function ProductDetailSections({ s, set }: { s: FormState; set: Setter }) {
+  const isPhysical = s.kind === "physical";
   return (
     <>
       <Section title="Inventory">
@@ -32,31 +34,33 @@ export function ProductDetailSections({ s, set }: { s: FormState; set: Setter })
         </Row>
       </Section>
 
-      <Section title="Shipping">
-        <Row label="Weight">
-          <Input value={s.weight} onChange={(e) => set("weight", e.target.value)} placeholder="0" />
-        </Row>
-        <Row label="Weight unit">
-          <Seg
-            value={s.weightUnit}
-            onChange={(v) => set("weightUnit", v as FormState["weightUnit"])}
-            options={[
-              { value: "lb", label: "lb" },
-              { value: "kg", label: "kg" },
-            ]}
-          />
-        </Row>
-        <Row label="Shipping class">
-          <Select
-            value={s.shippingClass}
-            onChange={(e) => set("shippingClass", e.target.value as FormState["shippingClass"])}
-          >
-            <option value="standard">Standard</option>
-            <option value="heavy">Heavy</option>
-            <option value="digital">Digital</option>
-          </Select>
-        </Row>
-      </Section>
+      {isPhysical ? (
+        <Section title="Shipping">
+          <Row label="Weight">
+            <Input value={s.weight} onChange={(e) => set("weight", e.target.value)} placeholder="0" />
+          </Row>
+          <Row label="Weight unit">
+            <Seg
+              value={s.weightUnit}
+              onChange={(v) => set("weightUnit", v as FormState["weightUnit"])}
+              options={[
+                { value: "lb", label: "lb" },
+                { value: "kg", label: "kg" },
+              ]}
+            />
+          </Row>
+          <Row label="Shipping class">
+            <Select
+              value={s.shippingClass}
+              onChange={(e) => set("shippingClass", e.target.value as FormState["shippingClass"])}
+            >
+              <option value="standard">Standard</option>
+              <option value="heavy">Heavy</option>
+              <option value="digital">Digital</option>
+            </Select>
+          </Row>
+        </Section>
+      ) : null}
 
       <Section title="SEO">
         <Row label="SEO title">

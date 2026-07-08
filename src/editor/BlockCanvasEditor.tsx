@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createBlock } from "@/blocks/registry";
-import { pageLayout, type PageLayoutSettings } from "@/blocks/layout";
+import { pageLayout } from "@/blocks/layout";
 import type { BlockNode } from "@/blocks/types";
+import { Layers } from "lucide-react";
 import { Button } from "@/components/core/Button";
 import { BlockPicker, type PickerStyle } from "./BlockPicker";
 import { BetweenInsert } from "./BetweenInsert";
@@ -14,10 +15,15 @@ import { Inspector } from "./Inspector";
 import { DeviceToggle, DEVICES } from "./DeviceToggle";
 import { PreviewChrome } from "./PreviewChrome";
 import { useCanvasDrag } from "./useCanvasDrag";
-import { useEditor, type ContentTypeContext } from "./store";
+import { useEditor } from "./store";
+import { useAutosave } from "./useAutosave";
+import { LayersPanel } from "./LayersPanel";
+import { GridlinesToggle } from "./GridlinesToggle";
+import { GridlinesOverlay } from "./GridlinesOverlay";
+import { useGridlines } from "./useGridlines";
+import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
+import { type BlockCanvasEditorProps } from "./BlockCanvasEditor.types";
 import shell from "./editor-shell.module.css";
-
-type SaveResult = { ok: boolean; error?: string };
 
 /**
  * Generic block-canvas editor — the design's fullscreen page builder, extracted
@@ -39,67 +45,16 @@ export function BlockCanvasEditor({
   onPublish,
   topBarLeft,
   screenLabel,
-  route = "",
+  route: _route = "",
   status = "draft",
   layout: layoutSettings,
   settingsLabel,
-  extraSaveSignal,
   initialDraftDiffers = false,
   headerBlocks = [],
   footerBlocks = [],
-  previewContent,
+  previewContent: _previewContent,
   contentTypeContext,
-}: {
-  ownerType: string;
-  ownerId: string;
-  initialBlocks: BlockNode[];
-  /** Enabled block types from the DB registry (server-fetched). Drives picker
-   *  filtering; undefined = show all compiled defs. */
-  enabledTypes?: string[];
-  /** The owner-specific settings UI, rendered in the Inspector's non-Block tab. */
-  settingsPanel: ReactNode;
-  onSaveBlocks: (tree: BlockNode[]) => Promise<SaveResult>;
-  /** Optional — not every owner type needs a publish step. */
-  onPublish?: () => Promise<SaveResult>;
-  /** Owner-specific chrome (breadcrumb, title, render-mode…) rendered at the
-   *  start of the top bar, before the device/layout/save controls. */
-  topBarLeft?: ReactNode;
-  /** `data-screen-label` on the fullscreen shell (debugging/e2e hook). */
-  screenLabel?: string;
-  /** Accepted for back-compat; no longer rendered (the fake address bar was
-   *  removed — the canvas shows the real chrome only). */
-  route?: string;
-  status?: "draft" | "published";
-  /** Canvas frame spacing knobs (gutter/padY/blockGap/maxWidth) — same
-   *  vocabulary the public renderer uses, so edit and published views match. */
-  layout?: PageLayoutSettings;
-  /** Inspector's settings-tab label — Inspector defaults this to "Page". */
-  settingsLabel?: string;
-  /** Lets the owner-specific settings autosave (e.g. PageEditor's debounced
-   *  savePageDetails) share the same top-bar save indicator as the block
-   *  autosave — mirrors the pre-extraction behavior where both writers set
-   *  the same saveState/publishState. `token` must change on every emission
-   *  (even repeats of the same state) so the render-time check below re-applies it. */
-  extraSaveSignal?: { state: "idle" | "saving" | "saved" | "error"; message?: string | null; token: number };
-  /** Whether the draft already differs from the published version on first
-   *  paint (server-computed) — seeds the draft-ribbon flag shown in
-   *  PreviewChrome. Defaults to false for owner types with no publish step. */
-  initialDraftDiffers?: boolean;
-  /** The published chrome trees (bound sub-blocks pre-resolved), rendered
-   *  read-only around the canvas by PreviewChrome so every editor surface shows
-   *  the real site header/footer. Empty = no chrome band. */
-  headerBlocks?: BlockNode[];
-  footerBlocks?: BlockNode[];
-  /** DISPLAY-ONLY per-block content transform for the canvas (see DragCtx.
-   *  previewContent). The content-type template editor sets this to fill
-   *  {{field}} tokens + resolve `field` blocks from a sample row; undefined
-   *  everywhere else. Never affects the stored/saved tree. */
-  previewContent?: (content: Record<string, unknown>, type: string) => Record<string, unknown>;
-  /** The content type being templated (its fields) — drives the picker's
-   *  per-field suggestions, the `field` block picker, and the insert-field
-   *  helper. Undefined for pages/entries/chrome editors. */
-  contentTypeContext?: ContentTypeContext;
-}) {
+}: BlockCanvasEditorProps) {
   // Namespacing info for the caller's onSaveBlocks/onPublish closures (e.g.
   // saveOwnerBlocks("page", ownerId, tree)) — this component doesn't need it
   // directly, only accepts it per the shared owner-editor contract.
@@ -162,45 +117,26 @@ export function BlockCanvasEditor({
   // its own (see sheetOpen below); this covers the "edit page settings" path.
   const [pageSheetOpen, setPageSheetOpen] = useState(false);
   const [pickerStyle] = useState<PickerStyle>("menu");
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [publishState, setPublishState] = useState<string | null>(null);
   const [draftDiffers, setDraftDiffers] = useState(initialDraftDiffers);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  // Layers panel (left rail) + gridlines/guides overlay — author editing aids.
+  const [layersOpen, setLayersOpen] = useState(false);
+  const gridlines = useGridlines();
 
-  const blockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleBlockSave = useCallback(
-    (tree: BlockNode[]) => {
-      if (blockTimer.current) clearTimeout(blockTimer.current);
-      setSaveState("saving");
-      setDraftDiffers(true);
-      blockTimer.current = setTimeout(async () => {
-        const res = await onSaveBlocks(tree);
-        setSaveState(res.ok ? "saved" : "error");
-        if (!res.ok) setPublishState(res.error ?? "Save failed");
-      }, 1000);
+  const { saveState, errorMessage, schedule: scheduleSave, flush: flushSave, cancel: cancelSave, resetBaseline } = useAutosave<BlockNode[]>({
+    save: async (tree) => {
+      const res = await onSaveBlocks(tree);
+      return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Save failed" };
     },
-    [onSaveBlocks],
-  );
+  });
 
   useEffect(() => {
-    init(initialBlocks, scheduleBlockSave, ownerId);
-    return () => {
-      if (blockTimer.current) clearTimeout(blockTimer.current);
-    };
+    resetBaseline(initialBlocks);
+    init(initialBlocks, (tree, kind) => { setDraftDiffers(true); scheduleSave(tree, kind); }, ownerId);
+    return () => { cancelSave(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerId]);
-
-  // Owner-specific settings autosave (e.g. page-detail save) writes into the
-  // same indicator the block autosave uses, exactly as it did pre-extraction.
-  // Adjusting state during render (not an effect) so a new token is applied
-  // in the same commit — same pattern as the tab-override reset below.
-  const [appliedSaveToken, setAppliedSaveToken] = useState(extraSaveSignal?.token);
-  if (extraSaveSignal && extraSaveSignal.token !== appliedSaveToken) {
-    setAppliedSaveToken(extraSaveSignal.token);
-    setSaveState(extraSaveSignal.state);
-    if (extraSaveSignal.message !== undefined) setPublishState(extraSaveSignal.message);
-  }
 
   // When the selected block changes, drop any manual tab override so a newly
   // selected block re-opens the Block tab. Adjusting state during render is
@@ -233,16 +169,15 @@ export function BlockCanvasEditor({
   const doPublish = async () => {
     if (!onPublish) return;
     setPublishState("Publishing…");
-    if (blockTimer.current) clearTimeout(blockTimer.current);
-    const saved = await onSaveBlocks(blocks);
-    if (!saved.ok) return setPublishState(saved.error ?? "Save failed");
+    const ok = await flushSave();
+    if (!ok) { setPublishState("Save failed"); return; }
     const res = await onPublish();
     setPublishState(res.ok ? "Published ✓" : (res.error ?? "Publish failed"));
     if (res.ok) setDraftDiffers(false);
   };
 
   const saveLabel =
-    saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Save failed" : "";
+    saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? (errorMessage ?? "Save failed") : "";
 
   const dragCtx: DragCtx = {
     device,
@@ -254,7 +189,6 @@ export function BlockCanvasEditor({
     startDrag,
     dragCandidate,
     onInsert: (parentId, index, type, patch) => addBlock(parentId, index, type, patch),
-    previewContent,
   };
 
   const L = pageLayout(layoutSettings ?? {}, device);
@@ -272,6 +206,18 @@ export function BlockCanvasEditor({
           <button type="button" title="Canvas + inspector" aria-pressed={canvasLayout === "canvas"} className={canvasLayout === "canvas" ? shell.segOn : shell.segBtn} onClick={() => { clearSelection(); setCanvasLayout("canvas"); }}>▤</button>
           <button type="button" title="Stacked cards" aria-pressed={canvasLayout === "stacked"} className={canvasLayout === "stacked" ? shell.segOn : shell.segBtn} onClick={() => { clearSelection(); setCanvasLayout("stacked"); }}>▦</button>
         </div>
+        <button
+          type="button"
+          title="Layers — show the block tree"
+          aria-pressed={layersOpen}
+          className={layersOpen ? shell.segOn : shell.segBtn}
+          onClick={() => setLayersOpen((v) => !v)}
+          aria-label="Toggle layers panel"
+        >
+          <Layers size={15} />
+        </button>
+        <GridlinesToggle {...gridlines} />
+        <AdminThemeToggle />
         {/* Mobile-only: open the settings sheet on the Page tab (no block
             selection needed). Hidden on desktop where the Page tab is always
             visible in the permanent inspector rail. */}
@@ -290,7 +236,24 @@ export function BlockCanvasEditor({
       {/* body */}
       {canvasLayout === "canvas" ? (
         <div className={shell.canvasWrap}>
-          <div className={shell.canvasScroll} onClick={clearSelection} onMouseLeave={() => setHoverId(null)}>
+          {layersOpen ? (
+            <div className={shell.layersRail}>
+              <LayersPanel open={layersOpen} onToggle={setLayersOpen} style={{ width: 240 }} />
+            </div>
+          ) : null}
+          <div
+            className={`${shell.canvasScroll} pb-gridlines-host`}
+            onClick={clearSelection}
+            onMouseLeave={() => setHoverId(null)}
+          >
+            <GridlinesOverlay
+              gridlines={gridlines.gridlines}
+              baselineGrid={gridlines.baselineGrid}
+              blockOutlines={gridlines.blockOutlines}
+              rulers={gridlines.rulers}
+              columns={gridlines.columns}
+              gridSize={gridlines.gridSize}
+            />
             <div className={shell.canvasPad}>
               <div className={shell.deviceFrame} style={{ maxWidth: canvasWidth }}>
                 <PreviewChrome

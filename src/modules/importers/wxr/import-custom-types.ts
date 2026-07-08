@@ -8,7 +8,7 @@ import type { ItemPreprocessor } from "./preprocess";
 /** A mutable issue sink shared with the commit engine's receipt. */
 type Unmapped = Array<{ kind: string; detail: string }>;
 
-/** Post types that are never their own OYS content: post/page are handled as
+/** Post types that are never their own Lamina content: post/page are handled as
  *  pages; attachment/nav_menu_item carry no first-class content. */
 export const NON_CPT_TYPES = new Set(["post", "page", "attachment", "nav_menu_item"]);
 

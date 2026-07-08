@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { loginAction, type LoginState } from "@/modules/auth/actions";
 import { Input } from "@/components/forms/Input";
 import { Button } from "@/components/core/Button";
@@ -58,6 +59,12 @@ export function LoginForm() {
       <Button type="submit" loading={pending} style={{ width: "100%" }}>
         Enter
       </Button>
+      <Link
+        href="/admin/reset-password"
+        style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", alignSelf: "center" }}
+      >
+        Forgot password?
+      </Link>
     </form>
   );
 }

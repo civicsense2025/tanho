@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { dataSourceBindingSchema, postgresConfigSchema } from "./validation";
 import { dataSourceConfigSchema } from "./validation.server";
 
@@ -27,6 +27,17 @@ describe("postgresConfigSchema (sync)", () => {
 });
 
 describe("dataSourceConfigSchema (async, includes host-blocklist)", () => {
+  // The SSRF guard (assertHostNotBlocked in validation.server.ts) skips the
+  // loopback/metadata check when NODE_ENV !== "production" — a deliberate
+  // escape hatch for local dev (docker-compose Supabase on 127.0.0.1). These
+  // tests verify the production behavior, so stub NODE_ENV for the suite.
+  const originalNodeEnv = process.env.NODE_ENV;
+  beforeAll(() => {
+    vi.stubEnv("NODE_ENV", "production");
+  });
+  afterAll(() => {
+    vi.stubEnv("NODE_ENV", originalNodeEnv ?? "");
+  });
   it("accepts a host that resolves to a public-looking address", async () => {
     const result = await dataSourceConfigSchema.safeParseAsync({ ...BASE, host: "1.2.3.4" });
     expect(result.success).toBe(true);

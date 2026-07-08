@@ -4,8 +4,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
+import { clientIp } from "@/lib/client-ip";
 import { writeAudit } from "@/modules/audit/log";
 import { markInstallComplete, userCount } from "@/modules/onboarding/install-state";
+import { ensureSystemRolesSeeded } from "@/modules/team/seed";
 import { hashPassword } from "./password";
 import { users } from "./schema";
 import { createAdminSession } from "./session";
@@ -63,9 +65,23 @@ export async function createFirstOwner(
       // user, abort rather than create a second owner.
       const existing = await tx.select({ id: users.id }).from(users).limit(1);
       if (existing.length > 0) throw new Error("already-set-up");
+      // Ensure the Owner system role + `team:owner` sentinel exist before we
+      // create the user — a fresh deploy that skips `npm run seed` has empty
+      // roles/permissions tables, and `requireUser("owner")` authorizes via
+      // the permission set resolved from `roleId`. Idempotent; rolls back
+      // with the user insert on the "already-set-up" race.
+      const roleIds = await ensureSystemRolesSeeded(tx);
+      const ownerRoleId = roleIds["Owner"];
       const [inserted] = await tx
         .insert(users)
-        .values({ email, name, passwordHash, role: "owner", status: "active" })
+        .values({
+          email,
+          name,
+          passwordHash,
+          role: "owner",
+          status: "active",
+          roleId: ownerRoleId,
+        })
         .returning({ id: users.id });
       return inserted.id;
     });
@@ -77,7 +93,7 @@ export async function createFirstOwner(
   }
 
   const hdrs = await headers();
-  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0].trim();
+  const ip = clientIp(hdrs);
   await createAdminSession(userId, { ip, userAgent: hdrs.get("user-agent") ?? undefined });
   await markInstallComplete();
   await writeAudit({ userId, action: "auth.first-owner-created" });

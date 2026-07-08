@@ -13,7 +13,7 @@
  */
 
 /** Format tag + bump this when the bundle shape changes incompatibly. */
-export const BUNDLE_FORMAT = "oys-site@1" as const;
+export const BUNDLE_FORMAT = "lamina-site@1" as const;
 
 /**
  * Content tables, in FK-safe write order (parents before children). Mirrors

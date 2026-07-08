@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 
 /** Anonymous, opaque, per-browser id. NOT a fingerprint, NOT tied to identity. */
-export const ANON_COOKIE = "oys_anon";
+export const ANON_COOKIE = "lamina_anon";
 const ANON_DAYS = 180;
 
 /** A fresh random anon id (base64url, 128-bit). */

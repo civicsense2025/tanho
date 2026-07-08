@@ -107,6 +107,18 @@ export const fieldListSchema = z
     }
   });
 
+/**
+ * Base path for a content type's public routes. Must start with `/`, contain
+ * only lowercase letters/digits/hyphens/slashes, no `..`, no empty segments,
+ * and be ≤80 chars. e.g. `/work`, `/resources`, `/docs/api`.
+ */
+export const basePathSchema = z
+  .string()
+  .max(80)
+  .regex(/^\/[a-z0-9][a-z0-9/-]*$/, "Base path must start with / and contain only lowercase letters, digits, hyphens, and slashes")
+  .refine((p) => !p.includes("//") && !p.includes("/../") && !p.endsWith("/.."), "Base path must not contain '..' or empty segments")
+  .optional();
+
 /** The payload saveCustomType accepts (name → slug is derived server-side). */
 export const customTypeInputSchema = z.object({
   slug: z

@@ -10,10 +10,10 @@ export type { ImportedBlock };
 export type MappedItem = {
   wpId: string;
   title: string;
-  /** OYS route: "/<normalized-slug>". */
+  /** Lamina route: "/<normalized-slug>". */
   route: string;
   slug: string;
-  /** WP "page" → OYS page kind "page"; everything else → "post". */
+  /** WP "page" → Lamina page kind "page"; everything else → "post". */
   kind: "page" | "post";
   blocks: ImportedBlock[];
   status: "draft" | "published";
@@ -51,7 +51,7 @@ export function resetBlockIdCounter(): void {
 
 /**
  * Coerce a WP `wp:post_name` (which may be empty, percent-encoded, uppercase,
- * underscore- or space-separated, or unicode) to a slug matching OYS's strict
+ * underscore- or space-separated, or unicode) to a slug matching Lamina's strict
  * slugSchema `^[a-z0-9]+(?:-[a-z0-9]+)*$`. Falls back to a slugified title,
  * then to `post-<id>`. Returns the slug plus whether it had to be changed
  * (so the caller can raise a `slug-normalized` issue).
@@ -85,7 +85,7 @@ export function normalizeSlug(rawSlug: string, title: string, postId: string): {
 }
 
 /**
- * WXR `wp:status` → OYS status. Only "publish" publishes; everything else
+ * WXR `wp:status` → Lamina status. Only "publish" publishes; everything else
  * (draft/pending/private/future) imports as a draft. Returns the status plus
  * an optional issue for a non-draft, non-publish status the owner should know
  * was downgraded. "trash" is handled by the caller (skipped entirely).
@@ -101,7 +101,7 @@ export function mapStatus(wpStatus: string, title: string): { status: "draft" | 
 
 /**
  * Split an item's body html into top-level elements, map each recognizable
- * card to its native OYS block, and coalesce runs of unrecognized elements
+ * card to its native Lamina block, and coalesce runs of unrecognized elements
  * back into chunked richtext blocks. Runs sequentially (not Promise.all)
  * because the embed path can make a network call — mirrors Ghost's mapPostBody.
  */
@@ -125,7 +125,7 @@ export function stripGutenbergComments(html: string): string {
 }
 
 /**
- * Map one WXR item (a post or page) to OYS's page + block-tree shape. A body
+ * Map one WXR item (a post or page) to Lamina's page + block-tree shape. A body
  * exceeding one richtext block's cap is split across sequential blocks (never
  * truncated). An item with no body html yields no body blocks and an issue,
  * paralleling Ghost's empty/lexical-only handling.
@@ -173,7 +173,7 @@ export async function mapWxrItemToPage(
   };
 }
 
-/** Map a WXR author (or a bare `dc:creator` with a resolvable email) to OYS's
+/** Map a WXR author (or a bare `dc:creator` with a resolvable email) to Lamina's
  *  people shape. Returns null when there's no usable email — the people table
  *  requires a unique, non-null email, so an email-less author can't be a row. */
 export function mapWxrAuthor(author: WxrAuthor): MappedAuthor | null {

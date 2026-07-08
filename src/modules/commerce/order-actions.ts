@@ -1,13 +1,14 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { payments } from "@/adapters/payments";
-import { orders } from "./schema";
+import { sendReviewRequestEmail } from "@/modules/reviews/email";
+import { orderItems, orders, products } from "./schema";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -17,6 +18,38 @@ const invalidate = () => {
   updateTag("orders");
   updateTag("storefront");
 };
+
+/**
+ * Fire-and-forget product review-request emails for a fulfilled order. Looks up
+ * each line item's product slug for the deep link and dispatches one email per
+ * product. Never throws — errors are logged so fulfillment can't break. Guest
+ * orders (no personId) are skipped by the caller.
+ */
+async function fireProductReviewRequests(orderId: string, personId: string): Promise<void> {
+  try {
+    const items = await db.query.orderItems.findMany({ where: eq(orderItems.orderId, orderId) });
+    const productIds = [...new Set(items.map((i) => i.productId).filter((v): v is string => !!v))];
+    if (productIds.length === 0) return;
+    const productRows = await db.query.products.findMany({
+      where: inArray(products.id, productIds),
+      columns: { id: true, slug: true },
+    });
+    const slugById = new Map(productRows.map((p) => [p.id, p.slug]));
+    await Promise.allSettled(
+      productIds.map((productId) =>
+        sendReviewRequestEmail({
+          personId,
+          targetType: "product",
+          targetId: productId,
+          deepLink: `/shop/${slugById.get(productId) ?? ""}`,
+          targetName: items.find((i) => i.productId === productId)?.name,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error("[reviews] review-request trigger failed", err);
+  }
+}
 
 /**
  * Mark an order fulfilled (editor OK) and record the tracking number.
@@ -47,6 +80,12 @@ export async function fulfillOrder(id: string, tracking: unknown): Promise<Resul
     ownerId: id,
     meta: { tracking: parsedTracking.data },
   });
+
+  // Trigger review-request emails for each product in the order. Only when the
+  // order is linked to a person (guest checkout has no one to email). Fire-and-
+  // forget so fulfillment's return shape/behavior is unchanged.
+  if (order.personId) void fireProductReviewRequests(id, order.personId);
+
   invalidate();
   return { ok: true };
 }

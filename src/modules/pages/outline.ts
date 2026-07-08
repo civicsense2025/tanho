@@ -7,7 +7,7 @@ export type OutlineHeading = {
   /** Anchor id (deduped, unique within the page) — matches the id RenderHeading emits. */
   id: string;
   text: string;
-  /** 1–4, from the heading block's `level` (h1–h4). */
+  /** 1–6, from the heading block's `level` (h1–h6). */
   level: number;
 };
 
@@ -24,7 +24,7 @@ export type Outline = {
   types: Set<string>;
 };
 
-const LEVEL: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4 };
+const LEVEL: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4, h5: 5, h6: 6 };
 
 type Anchorable = {
   blockId: string;

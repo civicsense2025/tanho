@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Curated starter themes for the Brand → Theme library. Same-origin, self-hostable: replace this file to ship your own library. Each theme carries only the base scalars (oys-theme@1 shape).",
+  "note": "Curated starter themes for the Brand → Theme library. Same-origin, self-hostable: replace this file to ship your own library. Each theme carries only the base scalars (lamina-theme@1 shape).",
   "themes": [
     {
       "id": "midnight",

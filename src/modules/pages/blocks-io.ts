@@ -1,45 +1,8 @@
 import { blockDef } from "@/blocks/registry";
 import { isContainer, kidsOf } from "@/blocks/tree";
-import { sanitizeCss, sanitizeAdvancedDecls } from "@/lib/css-sanitizer";
 import type { BlockNode } from "@/blocks/types";
 import type { Gate } from "@/modules/entitlements/gate";
 import { blockTreeSchema, MAX_TREE_BYTES, type BlockNodeInput } from "./validation";
-
-/**
- * Store-time sanitisation of the raw-CSS escape hatch: layout blocks may carry a
- * free-form `customCss` string. We persist ONLY the sanitised form (AST-rebuilt,
- * property/selector/url allow-listed, page-root scoped — see lib/css-sanitizer),
- * so a malicious string never survives in the DB. It is re-sanitised again on render
- * (BlockRenderer) as defence in depth, mirroring the tree's save+render double-check.
- * Mutates the parsed content in place (it's the fresh zod-parsed copy).
- */
-function sanitizeCustomCss(content: Record<string, unknown>): void {
-  if (typeof content.customCss === "string" && content.customCss !== "") {
-    content.customCss = sanitizeCss(content.customCss);
-  }
-}
-
-/**
- * Store-time sanitisation of the raw-value `advancedStyle` bucket (the px/hex escape
- * hatch that complements the token style layer). Each breakpoint's `{prop: value}` map
- * is cleaned via `sanitizeAdvancedDecls` (same ALLOWED_PROPS + isSafeValue gates as
- * customCss) so only safe pairs persist; re-cleaned again on render (BlockRenderer).
- * Mutates in place; drops an emptied layer/bucket so it doesn't linger as `{}`.
- */
-function sanitizeAdvancedStyle(content: Record<string, unknown>): void {
-  const adv = content.advancedStyle;
-  if (!adv || typeof adv !== "object") return;
-  const next: Record<string, Record<string, string>> = {};
-  for (const bp of ["base", "tablet", "desktop"] as const) {
-    const layer = (adv as Record<string, unknown>)[bp];
-    if (layer && typeof layer === "object") {
-      const clean = sanitizeAdvancedDecls(layer);
-      if (Object.keys(clean).length) next[bp] = clean;
-    }
-  }
-  if (Object.keys(next).length) content.advancedStyle = next;
-  else delete content.advancedStyle;
-}
 
 /**
  * Validates a whole incoming block tree: shape via zod, then each node's
@@ -68,8 +31,6 @@ export function validateBlockTree(input: unknown):
         return `Invalid ${node.type} block: ${c.error.issues[0]?.message ?? "bad content"}`;
       }
       const content = c.data as Record<string, unknown>;
-      sanitizeCustomCss(content);
-      sanitizeAdvancedStyle(content);
       const asNode: BlockNode = { id: node.id, type: node.type, content };
       if (isContainer(asNode)) {
         const kids = normalize(kidsOf(asNode) as BlockNodeInput[]);
@@ -125,7 +86,7 @@ export function resolveTreeGate(blocks: BlockNode[]): Gate | null {
 
 /**
  * Pack-import validation — the lenient counterpart to `validateBlockTree`. Used
- * when importing a portable block pack (.oys-pack.json): unknown block types
+ * when importing a portable block pack (.lamina-pack.json): unknown block types
  * (no compiled def on this install) are KEPT in the tree so they render as a
  * graceful "unsupported block" placeholder rather than rejecting the whole
  * pack — the "import never breaks the site" guarantee. Known types are still
@@ -171,8 +132,6 @@ export function validatePackTree(input: unknown):
         continue;
       }
       const content = c.data as Record<string, unknown>;
-      sanitizeCustomCss(content);
-      sanitizeAdvancedStyle(content);
       const asNode: BlockNode = { id: node.id, type: node.type, content };
       if (isContainer(asNode)) {
         const kids = normalize(kidsOf(asNode) as BlockNodeInput[]);

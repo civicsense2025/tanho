@@ -5,7 +5,7 @@ import { people } from "@/modules/people/schema";
 import { personPatchSchema } from "@/modules/people/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
-import { handle, ok, fail, parseBody } from "@/lib/api/v1";
+import { handle, ok, fail, parseBody } from "../../_lib";
 
 /**
  * GET /api/v1/people/:id — full profile (activity, memberships, subscriptions).

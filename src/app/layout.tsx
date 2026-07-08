@@ -3,7 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
 import { ThemeStyle } from "@/modules/theme/ThemeStyle";
-import { getGeneralSettings } from "@/modules/settings/queries";
+import { getGeneralSettings, getAppearanceSettings } from "@/modules/settings/queries";
 import { getTheme } from "@/modules/theme/queries";
 import { mediaPublicUrl } from "@/modules/fonts/queries";
 import { getSeoSettings, resolveOgImage, buildVerification } from "@/modules/seo";
@@ -63,11 +63,21 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const general = await getGeneralSettings();
+  const [general, appearance] = await Promise.all([
+    getGeneralSettings(),
+    getAppearanceSettings(),
+  ]);
+  // <html data-theme> is the site default from cached appearance settings.
+  // ThemeStyle's CSS handles all three modes: "light"/"dark" via [data-theme]
+  // scopes, "system" via the prefers-color-scheme media query. No request-time
+  // cookies()/headers() read — that forced every route into dynamic rendering.
+  // Visitor overrides apply via VisitorThemeToggle at hydration.
   return (
     <html
       lang={general.language}
       className={`${GeistSans.variable} ${GeistMono.variable}`}
+      data-theme={appearance.siteMode}
+      suppressHydrationWarning
     >
       <body>
         <ThemeStyle />

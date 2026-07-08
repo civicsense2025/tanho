@@ -3,7 +3,7 @@ import type { RenderCtx } from "../types";
 import type { TableOfContentsContent } from "./fields";
 import styles from "./toc.module.css";
 
-const LEVEL_NUM: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4 };
+const LEVEL_NUM: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4, h5: 5, h6: 6 };
 
 /**
  * Table of contents — a jump-link list generated from the page's heading

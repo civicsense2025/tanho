@@ -39,7 +39,7 @@ export async function dryRunMediumImport(file: File): Promise<Result<MediumDryRu
 }
 
 /**
- * Commit a Medium import: one OYS post per story (skipping a route that's
+ * Commit a Medium import: one Lamina post per story (skipping a route that's
  * already taken rather than overwriting), 301s from each story's Medium
  * canonical path, then one safety receipt + audit row. Idempotent on re-runs —
  * a route that already exists is reported as a collision, never duplicated (via

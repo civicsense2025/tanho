@@ -1,6 +1,6 @@
 import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { getForm, getFormResponses } from "@/modules/forms/queries";
-import { handle, ok, fail } from "@/lib/api/v1";
+import { handle, ok, fail } from "../../_lib";
 
 /** GET /api/v1/forms/:id — one form. ?responses=1 includes submissions. */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {

@@ -64,9 +64,9 @@ export function TypeTemplateEditor({
   const previewContent =
     kind === "detail" && sampleRow
       ? (content: Record<string, unknown>, type: string) =>
-          type === "field"
-            ? resolveFieldContent(content, sampleRow, fieldLabels)
-            : fillContentShallow(content, sampleRow)
+        type === "field"
+          ? resolveFieldContent(content, sampleRow, fieldLabels)
+          : fillContentShallow(content, sampleRow)
       : undefined;
   return (
     <BlockCanvasEditor
@@ -143,7 +143,7 @@ function StarterButton({
       onClick={() => {
         if (blockCount > 0 && !window.confirm("Replace the current template with the starter layout?")) return;
         clearSelection();
-        apply(() => starterDetailTemplate(fields, titleField, slugField));
+        apply(() => starterDetailTemplate(fields, titleField, slugField), "structural");
       }}
     >
       ✧ Starter layout

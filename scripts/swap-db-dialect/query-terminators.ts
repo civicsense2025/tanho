@@ -1,8 +1,14 @@
 /**
- * Fixes SQLite-only query terminators (.get() / .all()) that Postgres's
- * async node-postgres driver doesn't have. Each call site already `await`s
- * the query, so `.get()` becomes a destructured first row and `.all()` is
- * simply the array the query already returns.
+ * Fixes SQLite-only query terminators (.get() / .all()) on the STATIC-schema
+ * query builder that Postgres's async node-postgres driver doesn't have. Each
+ * call site already `await`s the query, so `.get()` becomes a destructured first
+ * row and `.all()` is simply the array the query already returns.
+ *
+ * NOTE: RAW SQL execution (the content-schema DDL engine's `db.run(sql)` /
+ * `db.all<T>(sql)` for dynamic `ct_*` tables) is NOT handled here — it goes
+ * through the dialect-agnostic `rawRun`/`rawAll` helpers in `src/lib/db/raw.ts`,
+ * which branch on `currentDialect()` at runtime and therefore need no codemod
+ * rewrite. Only the fixed, driver-terminator call sites below need patching.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 

@@ -1,6 +1,6 @@
 import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { listMedia } from "@/modules/media/queries";
-import { handle, ok } from "@/lib/api/v1";
+import { handle, ok } from "../_lib";
 
 /**
  * GET /api/v1/media — list media assets. Optional ?kind=image|video|doc filter.

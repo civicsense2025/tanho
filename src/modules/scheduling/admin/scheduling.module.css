@@ -20,23 +20,39 @@
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  border-bottom: var(--border-width) solid var(--border);
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
 }
 
 .tab {
   border: none;
-  background: none;
-  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  padding: 8px 16px;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--text-faint);
   font-size: var(--text-sm);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  font-family: var(--font-sans);
+  border-radius: var(--radius-pill);
+  opacity: 0.6;
+  transition: var(--transition);
 }
-.tabActive {
+
+.tab:hover {
+  opacity: 1;
   color: var(--text);
-  border-bottom-color: var(--accent);
+}
+
+.tabActive {
+  background: var(--solid);
+  color: var(--text-on-accent);
+  opacity: 1;
+  font-weight: 500;
+}
+
+.tabActive:hover {
+  background: var(--solid);
+  color: var(--text-on-accent);
+  opacity: 1;
 }
 
 .headerRow {
@@ -133,6 +149,7 @@
   cursor: pointer;
   color: var(--text-muted);
 }
+
 .chipOn {
   background: var(--accent-tint);
   border-color: var(--accent);
@@ -163,6 +180,7 @@
   color: var(--danger);
   font-size: var(--text-sm);
 }
+
 .notice {
   color: var(--success);
   font-size: var(--text-sm);
@@ -173,12 +191,14 @@
   flex-direction: column;
   gap: var(--space-1);
 }
+
 .textarea {
   width: 100%;
   min-height: 6rem;
   resize: vertical;
   font: inherit;
 }
+
 .actions {
   display: flex;
   gap: var(--space-3);

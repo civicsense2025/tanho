@@ -1,12 +1,13 @@
 import { parse, type HTMLElement } from "node-html-parser";
 import { resolveEmbedUrl } from "@/modules/embeds/resolve";
+import { safeHref } from "@/modules/importers/shared/safe-href";
 import type { ParseIssue } from "./parse";
 
 export type DetectedBlock = { type: string; content: Record<string, unknown> };
 
 /**
  * Maps Ghost's kg-*-card HTML structures (confirmed against Ghost's own
- * renderer source, TryGhost/Koenig) to native OYS blocks, instead of
+ * renderer source, TryGhost/Koenig) to native Lamina blocks, instead of
  * stuffing every top-level element into one richtext blob. Anything that
  * doesn't match a known card class returns null — the caller falls back to
  * wrapping the element in richtext, unchanged from before this module
@@ -95,7 +96,7 @@ function detectCallout(el: HTMLElement): { block: DetectedBlock; issues: ParseIs
 
 function detectButton(el: HTMLElement): { block: DetectedBlock; issues: ParseIssue[] } | null {
   const a = el.querySelector("a.kg-btn");
-  const href = a?.getAttribute("href");
+  const href = safeHref(a?.getAttribute("href"));
   if (!a || !href) return null;
   return {
     block: {
@@ -110,11 +111,11 @@ function detectButton(el: HTMLElement): { block: DetectedBlock; issues: ParseIss
 }
 
 function detectBookmark(el: HTMLElement): { block: DetectedBlock; issues: ParseIssue[] } | null {
-  // Ghost's bookmark card has no native OYS equivalent — fall back to a
+  // Ghost's bookmark card has no native Lamina equivalent — fall back to a
   // labeled link (buttons block), keeping the title + url, losing the rich
   // preview (description/thumbnail/publisher). See map.ts's docs for why.
   const container = el.querySelector("a.kg-bookmark-container");
-  const href = container?.getAttribute("href");
+  const href = safeHref(container?.getAttribute("href"));
   if (!href) return null;
   const title = el.querySelector(".kg-bookmark-title")?.text.trim() || href;
   return {
@@ -146,6 +147,8 @@ async function detectEmbed(el: HTMLElement): Promise<{ block: DetectedBlock; iss
   if (!resolved.ok) {
     // Unsupported/unresolvable provider — fall back to a labeled link
     // rather than silently dropping the embed.
+    const href = safeHref(candidate);
+    if (!href) return null;
     let hostname = "the source";
     try {
       hostname = new URL(candidate).hostname;
@@ -155,7 +158,7 @@ async function detectEmbed(el: HTMLElement): Promise<{ block: DetectedBlock; iss
     return {
       block: {
         type: "buttons",
-        content: { align: "left", items: [{ label: `View on ${hostname}`, href: candidate, variant: "outline", target: "_blank" }] },
+        content: { align: "left", items: [{ label: `View on ${hostname}`, href, variant: "outline", target: "_blank" }] },
       },
       issues: [{ kind: "embed-unsupported", detail: `Embed from ${hostname} has no supported provider; imported as a link` }],
     };

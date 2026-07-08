@@ -4,7 +4,7 @@ import { handle, ok, fail } from "@/lib/api/v1";
 
 /**
  * GET /api/v1/design-packs/:id — export as a portable pack object
- *   (oys-pack@1, kind: "design-pack").
+ *   (lamina-pack@1, kind: "design-pack").
  * DELETE /api/v1/design-packs/:id — delete a design pack.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {

@@ -18,6 +18,7 @@ import {
   templatesSchema,
 } from "./validation";
 import { SCHED_NS, SCHED_EXT_NS, SCHED_TPL_NS } from "./settings";
+import { listCalendars, type CalendarListItem } from "./gcal-calendars";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -146,4 +147,15 @@ export async function resendConfirmation(code: string): Promise<ActionResult> {
     ownerId: code,
   });
   return { ok: true };
+}
+
+/**
+ * List the connected Google account's calendars for the AvailabilityTab
+ * calendar selector. Returns [] when Calendar isn't connected — the UI falls
+ * back to "primary" in that case. Owner-only (calls the Calendar API with the
+ * owner's stored credentials).
+ */
+export async function listGoogleCalendars(): Promise<CalendarListItem[]> {
+  await requireUser("owner");
+  return listCalendars();
 }

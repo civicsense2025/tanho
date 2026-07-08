@@ -47,6 +47,7 @@ async function AnalyticsTrafficPageInner() {
         gscSiteUrl={settings.gscSiteUrl}
         pages={pages}
         queries={queries}
+        productionUrl={process.env.APP_URL}
       />
     </AdminPage>
   );

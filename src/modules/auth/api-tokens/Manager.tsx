@@ -8,7 +8,7 @@ import { Input } from "@/components/forms/Input";
 type CreatedToken = { token: string; row: ApiTokenRow };
 
 /**
- * API token management — owner-only. Mint tokens for external clients (the OYS
+ * API token management — owner-only. Mint tokens for external clients (the Lamina
  * Swift app, scripts). The raw token is shown ONCE on creation; afterwards only
  * the prefix + last-used timestamp are visible.
  */

@@ -41,7 +41,7 @@ export function RenderAlert({ content }: { content: AlertContent; ctx: RenderCtx
           {t.glyph}
         </span>
       ) : null}
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-0-5)", minWidth: 0 }}>
         {title ? (
           <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text)" }}>{title}</div>
         ) : null}

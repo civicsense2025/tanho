@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { TrackedLink } from "@/components/analytics/TrackedLink";
+import { RADIUS_VAR } from "../common";
 import type { RenderCtx } from "../types";
 import type { ButtonsContent } from "./fields";
 
@@ -47,6 +48,9 @@ const VARIANTS: Record<string, CSSProperties> = {
 
 /** CTA row — anchors styled like the core Button component. */
 export function RenderButtons({ content, ctx }: { content: ButtonsContent; ctx: RenderCtx }) {
+  // Per-block radius drives the actual button corners; falls back to the theme
+  // token so buttons round with the site's corner-radius preset unless overridden.
+  const radius = content.radius ? RADIUS_VAR[content.radius] : "var(--radius-sm)";
   return (
     <div
       style={{
@@ -57,7 +61,8 @@ export function RenderButtons({ content, ctx }: { content: ButtonsContent; ctx: 
       }}
     >
       {content.items.map((item, i) => {
-        const style = VARIANTS[item.variant] ?? VARIANTS.solid;
+        const base = VARIANTS[item.variant] ?? VARIANTS.solid;
+        const style: CSSProperties = { ...base, borderRadius: radius };
         const rel = item.target === "_blank" ? "noopener noreferrer" : undefined;
         const label = (
           <>

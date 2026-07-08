@@ -8,9 +8,9 @@ import { handle, ok, fail } from "@/lib/api/v1";
 /**
  * GET /api/v1/integrations/:provider/oauth-url — mint the Google consent URL for
  * a native-app OAuth flow. Owner-only. The state is signed with origin="app",
- * so the shared Google callback redirects to the app's `oys://` scheme when the
+ * so the shared Google callback redirects to the app's `lamina://` scheme when the
  * flow completes (instead of a web admin page). The app opens the returned URL
- * in ASWebAuthenticationSession(callbackURLScheme: "oys").
+ * in ASWebAuthenticationSession(callbackURLScheme: "lamina").
  *
  * Only the three Google surfaces use OAuth; a non-Google provider is rejected.
  * 501s cleanly when the deployment hasn't configured its own Google OAuth app.
@@ -27,6 +27,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ provide
     }
     const state = makeOAuthState(provider, "app");
     const url = buildAuthUrl(provider as (typeof GOOGLE_PROVIDERS)[number], state);
-    return ok({ url, callbackScheme: "oys" });
+    return ok({ url, callbackScheme: "lamina" });
   });
 }

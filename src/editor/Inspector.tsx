@@ -1,8 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import type { z } from "zod";
+import { ChevronUp, ChevronDown, ChevronRight, Copy, Trash2, SquareStack, Save } from "lucide-react";
 import { blockDef, categories, createBlock } from "@/blocks/registry";
 import { isContainer, kidsOf, treeFind, treeLocate, canNest } from "@/blocks/tree";
+import type { BlockNode } from "@/blocks/types";
+import { markdownToSafeHtml } from "@/lib/sanitize";
 import { Button } from "@/components/core/Button";
 import { AddBlockMenu } from "./AddBlockMenu";
 import { ValueField } from "./ValueField";
@@ -12,9 +17,65 @@ import { StyleFields } from "./StyleFields";
 import type { EmbedProvider } from "@/modules/embeds/resolve";
 import { isStyledBlock, isLayoutBlock, hasCustomCss, hasAdvancedStyle, hasMotion } from "@/blocks/common";
 import { useEditor } from "./store";
+import { subtreeSelected } from "./CanvasBlock";
 import styles from "./editor-shell.module.css";
 
 const catLabel = (id: string) => categories.find((c) => c.id === id)?.label ?? id;
+
+/** Unwrap ZodDefault/ZodOptional/ZodNullable wrappers to reach the inner type
+ *  (e.g. z.enum(...).default(...) wraps the enum in ZodDefault). */
+function unwrapZod(field: unknown): unknown {
+  let f = field;
+  for (let i = 0; i < 5; i++) {
+    const inner = (f as { _def?: { innerType?: unknown } })._def?.innerType;
+    if (inner === undefined) break;
+    f = inner;
+  }
+  return f;
+}
+
+/** Extract enum options from a zod schema shape entry, if it's a ZodEnum.
+ *  Used to render Select dropdowns (e.g. heading level/align) instead of
+ *  free-text inputs for fields defined as zod enums. Handles .default()/
+ *  .optional()/.nullable() wrappers that hide the inner ZodEnum. */
+function enumOptionsOf(schema: z.ZodType, key: string): readonly string[] | undefined {
+  const shape = (schema as unknown as { shape?: Record<string, unknown> }).shape;
+  if (!shape) return undefined;
+  const field = unwrapZod(shape[key]);
+  if (field === undefined) return undefined;
+  const opts = (field as { options?: readonly unknown[] }).options;
+  if (Array.isArray(opts)) return opts as readonly string[];
+  // Zod 3 / older API stored values in _def.values
+  const defVals = (field as { _def?: { values?: readonly unknown[] } })._def?.values;
+  if (Array.isArray(defVals)) return defVals as readonly string[];
+  return undefined;
+}
+
+/** For array-typed fields (e.g. buttons.items), extract the item schema's
+ *  enum options so nested array items render Select dropdowns for their enum
+ *  fields. Returns a map of itemKey → enumOptions, or undefined if the field
+ *  isn't an array of objects with enum fields. */
+function itemEnumOptionsOf(schema: z.ZodType, key: string): Record<string, readonly string[]> | undefined {
+  const shape = (schema as unknown as { shape?: Record<string, unknown> }).shape;
+  if (!shape) return undefined;
+  const field = unwrapZod(shape[key]);
+  // ZodArray exposes .element or _def.type; unwrap to the item schema (ZodObject).
+  const element = (field as { element?: unknown }).element
+    ?? (field as { _def?: { type?: unknown } })._def?.type;
+  if (!element) return undefined;
+  const itemShape = (element as { shape?: Record<string, unknown> }).shape;
+  if (!itemShape) return undefined;
+  const map: Record<string, readonly string[]> = {};
+  let hasAny = false;
+  for (const itemKey of Object.keys(itemShape)) {
+    const opts = enumOptionsOf(element as z.ZodType, itemKey);
+    if (opts) {
+      map[itemKey] = opts;
+      hasAny = true;
+    }
+  }
+  return hasAny ? map : undefined;
+}
 
 /**
  * Right-rail inspector — the design's two-tab panel. BLOCK tab edits the
@@ -45,10 +106,24 @@ export function Inspector({
   onClose?: () => void;
 }) {
   const selection = useEditor((s) => s.selection);
+  const blocks = useEditor((s) => s.blocks);
   const hasSelection = selection.size > 0;
+
+  // Micro-header label: orients the user about what they're editing when a
+  // single block is selected on the Block tab.
+  const editingLabel =
+    tab === "block" && selection.size === 1
+      ? (() => {
+        const b = treeFind(blocks, [...selection][0]);
+        return b ? blockDef(b.type)?.label : undefined;
+      })()
+      : undefined;
 
   return (
     <aside className={styles.inspector} data-open={open ? "true" : undefined}>
+      {editingLabel ? (
+        <div className={styles.editingLabel}>Editing: {editingLabel}</div>
+      ) : null}
       <div className={styles.inspectorTabs}>
         <div className={styles.tabBar}>
           <button
@@ -85,6 +160,108 @@ export function Inspector({
   );
 }
 
+/** Recursive tree of a container's children — shown in the inspector so an
+ *  author can see, navigate into, and reorder nested blocks (section >
+ *  columns > blocks) without leaving the rail. Clicking a row selects that
+ *  block (the editor flips to the Block tab to edit it); a row highlights
+ *  when it or any descendant is selected. Container children recurse, each
+ *  indented by depth, with a chevron to collapse the subtree. */
+function NestedTree({ block, depth }: { block: BlockNode; depth: number }) {
+  const kids = kidsOf(block);
+  return (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {kids.map((child, i) => (
+        <TreeRow key={child.id} block={child} depth={depth} index={i} total={kids.length} />
+      ))}
+    </div>
+  );
+}
+
+function TreeRow({
+  block,
+  depth,
+  index,
+  total,
+}: {
+  block: BlockNode;
+  depth: number;
+  index: number;
+  total: number;
+}) {
+  const selection = useEditor((s) => s.selection);
+  const select = useEditor((s) => s.select);
+  const move = useEditor((s) => s.move);
+  const remove = useEditor((s) => s.remove);
+  const [collapsed, setCollapsed] = useState(false);
+  const def = blockDef(block.type);
+  if (!def) return null;
+  const hasKids = isContainer(block) && kidsOf(block).length > 0;
+  const active = subtreeSelected(block, selection);
+
+  return (
+    <div>
+      <div
+        onClick={() => select(block.id, "single")}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+          paddingLeft: `calc(${depth} * var(--space-4))`,
+          paddingRight: "var(--space-1)",
+          background: active ? "var(--surface-hover)" : undefined,
+          cursor: "pointer",
+          borderRadius: "var(--radius-sm)",
+        }}
+      >
+        {hasKids ? (
+          <button
+            type="button"
+            className={styles.toolBtn}
+            style={{ width: 20, height: 20, flexShrink: 0 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setCollapsed((c) => !c);
+            }}
+            title={collapsed ? "Expand" : "Collapse"}
+            aria-label={collapsed ? "Expand" : "Collapse"}
+          >
+            {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+          </button>
+        ) : (
+          <span style={{ width: 20, flexShrink: 0 }} aria-hidden />
+        )}
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontSize: "var(--text-sm)",
+            color: active ? "var(--text)" : "var(--text-muted)",
+            fontWeight: active ? "var(--weight-medium)" : undefined,
+          }}
+          title={def.label}
+        >
+          {def.label}
+        </span>
+        <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", gap: 2, flexShrink: 0 }}>
+          <button type="button" className={styles.toolBtn} style={{ width: 22, height: 22 }} disabled={index === 0} onClick={() => move(block.id, -1)} title="Move up" aria-label="Move up">
+            <ChevronUp size={12} />
+          </button>
+          <button type="button" className={styles.toolBtn} style={{ width: 22, height: 22 }} disabled={index === total - 1} onClick={() => move(block.id, 1)} title="Move down" aria-label="Move down">
+            <ChevronDown size={12} />
+          </button>
+          <button type="button" className={`${styles.toolBtn} ${styles.toolDanger}`} style={{ width: 22, height: 22 }} onClick={() => remove(block.id)} title="Delete" aria-label="Delete">
+            <Trash2 size={12} />
+          </button>
+        </span>
+      </div>
+      {hasKids && !collapsed ? <NestedTree block={block} depth={depth + 1} /> : null}
+    </div>
+  );
+}
+
 /** The block-editing panel (header + quick actions + fields + style + children).
  *  Reads everything from the editor store, so it's reusable standalone — the
  *  chrome editor renders it directly in its rail (no settings tab, since chrome
@@ -105,6 +282,19 @@ export function BlockTab() {
   const bulkWrap = useEditor((s) => s.bulkWrapInSection);
   const saveAsSymbol = useEditor((s) => s.saveSelectionAsSymbol);
   const detach = useEditor((s) => s.detachSymbol);
+
+  // One-time migration: when a legacy richtext block (md-only, empty html) is
+  // selected, seed html from md so the TipTap editor shows its content. Clears
+  // md after — html becomes the single source of truth. Idempotent: once html
+  // is populated the condition is false, so no loop.
+  useEffect(() => {
+    if (selection.size !== 1) return;
+    const block = treeFind(blocks, [...selection][0]);
+    if (!block || block.type !== "richtext") return;
+    const c = block.content as { md?: string; html?: string };
+    if (c.html || !c.md) return;
+    patch(block.id, { ...block.content, html: markdownToSafeHtml(c.md), md: "" });
+  }, [blocks, selection, patch]);
 
   /** Prompt for a name and save the current selection as a reusable block. */
   const promptSaveAsSymbol = async () => {
@@ -127,6 +317,7 @@ export function BlockTab() {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <h3 className={styles.sectionHead}>{selection.size} blocks selected</h3>
+        <p className={styles.hintText}>Actions apply to all selected blocks.</p>
         <Button variant="outline" size="sm" onClick={bulkDuplicate}>Duplicate all</Button>
         <Button variant="outline" size="sm" onClick={bulkWrap}>Wrap in section</Button>
         <Button variant="outline" size="sm" onClick={promptSaveAsSymbol}>Save as block</Button>
@@ -164,12 +355,23 @@ export function BlockTab() {
         </div>
       </div>
 
-      <div className={styles.quickRow}>
-        <button type="button" className={styles.quickAction} disabled={locked} onClick={() => move(id, -1)} title="Move up">↑ Up</button>
-        <button type="button" className={styles.quickAction} disabled={locked} onClick={() => move(id, 1)} title="Move down">↓ Down</button>
-        <button type="button" className={styles.quickAction} disabled={!canWrap} onClick={() => canWrap && wrap(id)} title="Wrap in section">▣ Wrap</button>
-        <button type="button" className={styles.quickAction} disabled={locked} onClick={() => duplicate(id)} title="Duplicate">⧉ Dup</button>
-        <button type="button" className={`${styles.quickAction} ${styles.quickDanger}`} disabled={locked} onClick={() => remove(id)} title="Delete">🗑 Del</button>
+      <div className={styles.toolBar}>
+        <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => move(id, -1)} title="Move up" aria-label="Move up">
+          <ChevronUp size={16} />
+        </button>
+        <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => move(id, 1)} title="Move down" aria-label="Move down">
+          <ChevronDown size={16} />
+        </button>
+        <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => duplicate(id)} title="Duplicate" aria-label="Duplicate">
+          <Copy size={16} />
+        </button>
+        <button type="button" className={`${styles.toolBtn} ${styles.toolDanger}`} disabled={locked} onClick={() => remove(id)} title="Delete" aria-label="Delete">
+          <Trash2 size={16} />
+        </button>
+        <span className={styles.toolSep} />
+        <button type="button" className={`${styles.toolBtn} ${styles.toolSecondary}`} disabled={!canWrap} onClick={() => canWrap && wrap(id)} title="Wrap in section" aria-label="Wrap in section">
+          <SquareStack size={16} />
+        </button>
       </div>
 
       <div className={styles.divider} />
@@ -198,16 +400,12 @@ export function BlockTab() {
             >
               Edit block
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => detach(id)}>
+            <Button variant="ghost" size="sm" onClick={() => detach()}>
               Detach
             </Button>
           </div>
         </div>
-      ) : (
-        <Button variant="ghost" size="sm" onClick={promptSaveAsSymbol}>
-          Save as reusable block
-        </Button>
-      )}
+      ) : null}
 
       {def.type === "embed" ? (
         <EmbedUrlField
@@ -244,6 +442,9 @@ export function BlockTab() {
             key={k}
             name={k}
             value={v}
+            blockType={block.type}
+            enumOptions={enumOptionsOf(def.schema, k)}
+            itemEnumOptions={itemEnumOptionsOf(def.schema, k)}
             onChange={(nv) => patch(block.id, { ...block.content, [k]: nv })}
           />
         ))}
@@ -279,11 +480,27 @@ export function BlockTab() {
 
       {isContainer(block) ? (
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          <span className={styles.sectionHead} style={{ margin: 0 }}>Children</span>
+          <span className={styles.sectionHead} style={{ margin: 0 }}>Nested blocks</span>
+          {kidsOf(block).length === 0 ? (
+            <p className={styles.emptyHint}>No blocks inside this one yet.</p>
+          ) : (
+            <NestedTree block={block} depth={0} />
+          )}
           <AddBlockMenu
-            label="Add inside"
+            label="Add block inside"
             onAdd={(type) => insert(block.id, kidsOf(block).length, createBlock(type))}
           />
+        </div>
+      ) : null}
+
+      {/* Save-as-reusable lives at the bottom as a low-prominence ghost link —
+          kept out of the way of the content/style editing flow above. Symbol
+          blocks show Edit/Detach instead (handled earlier in the panel). */}
+      {block.type !== "symbol" ? (
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--space-4)" }}>
+          <button type="button" className={styles.ghostLink} onClick={promptSaveAsSymbol} title="Save as reusable block">
+            <Save size={14} /> Save as reusable block
+          </button>
         </div>
       ) : null}
     </div>

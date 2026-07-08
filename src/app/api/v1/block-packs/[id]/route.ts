@@ -4,7 +4,7 @@ import { handle, ok, fail } from "@/lib/api/v1";
 
 /**
  * GET /api/v1/block-packs/:id — export the published block tree as a
- *   portable pack object (oys-pack@1, kind: "block-pack").
+ *   portable pack object (lamina-pack@1, kind: "block-pack").
  * DELETE /api/v1/block-packs/:id — delete a block pack and its block trees.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {

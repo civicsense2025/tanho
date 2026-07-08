@@ -23,7 +23,7 @@ export const artistPack: SamplePack = {
     accent2: "#7c9473", // sage
     ink: "#231f1c",
     paper: "#fdf8f2",
-    radius: "soft",
+    radius: "round",
     shadow: "subtle",
   },
   menu: [

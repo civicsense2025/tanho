@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { clientIp } from "@/lib/client-ip";
 import { getViewer } from "@/modules/people/viewer";
 import { forms, formResponses } from "./schema";
 import {
@@ -43,7 +44,7 @@ export async function submitForm(
   }
 
   const hdrs = await headers();
-  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+  const ip = clientIp(hdrs);
   if (form.settings.spam !== false && !(await allowSubmission(formId, ip))) {
     return { ok: false, error: "Too many submissions. Try again in a few minutes." };
   }

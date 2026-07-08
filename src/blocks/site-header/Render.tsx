@@ -1,6 +1,7 @@
 import type { BlockNode, RenderCtx } from "../types";
 import type { SiteHeaderContent } from "./fields";
 import type { SiteHeaderResolved } from "./resolve";
+import { VisitorThemeToggle } from "@/components/public/VisitorThemeToggle";
 import styles from "./header.module.css";
 
 /**
@@ -60,6 +61,11 @@ export function RenderSiteHeader({
         </div>
       ) : null}
       <div className={`${styles.main} ${styles[content.layout] ?? ""}`}>{inner}</div>
+      {content.showThemeToggle && ctx.mode === "public" ? (
+        <div className={styles.themeToggle}>
+          <VisitorThemeToggle />
+        </div>
+      ) : null}
     </header>
   );
 }

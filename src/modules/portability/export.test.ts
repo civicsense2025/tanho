@@ -120,7 +120,7 @@ describe("serializeTables", () => {
   it("stamps the manifest with the passed-in timestamp and format", () => {
     const { manifest } = serializeTables(sampleRows, { includePeople: false, now: 42 });
     expect(manifest.generatedAt).toBe(42);
-    expect(manifest.format).toBe("oys-site@1");
+    expect(manifest.format).toBe("lamina-site@1");
     expect(manifest.version).toBe(1);
   });
 

@@ -8,7 +8,7 @@ import type { MediumPost } from "./parse";
  * Map one parsed Medium story to a page candidate. The heavy lifting — chunking
  * the story body HTML into blocks (image/quote/embed cards via detectMediumCard,
  * everything else coalesced into richtext) — is the shared htmlToBlocks engine,
- * so Medium behaves exactly like every other importer. Medium stories become OYS
+ * so Medium behaves exactly like every other importer. Medium stories become Lamina
  * posts. The 301 source is the story's Medium canonical path (guarded — a
  * malformed canonical falls back to the "/<slug>/" convention Ghost/WXR use), so
  * anyone with the old Medium URL indexed lands on the imported post.

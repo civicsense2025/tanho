@@ -1,44 +1,26 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards";
 import { getPageForEdit, listPages } from "@/modules/pages/queries";
-import { getEditorChromePreview } from "@/modules/chrome/queries";
 import { resolveBoundBlocks } from "@/blocks/resolve-tree";
 import { registryMap } from "@/modules/blocks/registry-queries";
 import { PageEditor } from "@/editor/PageEditor";
 
 export const metadata = { title: "Edit page" };
 
-export default function EditPagePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <EditPagePageInner params={params} />
-    </Suspense>
-  );
-}
-
-async function EditPagePageInner({
+export default async function EditPagePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const [hit, all, regMap, chrome] = await Promise.all([
+  const [hit, all, regMap] = await Promise.all([
     getPageForEdit(id),
     listPages(),
     registryMap(),
-    // Resolved header/footer trees for the builder's real-chrome preview
-    // (shared with the entry/product/collection editors).
-    getEditorChromePreview(),
   ]);
   if (!hit) notFound();
   const dirty = JSON.stringify(hit.blocks) !== JSON.stringify(hit.publishedBlocks);
-  const { headerBlocks, footerBlocks } = chrome;
 
   // Pre-resolve bound (dynamic) blocks server-side so the editor canvas draws
   // their real design (profile header, project list, …) rather than a
@@ -64,8 +46,6 @@ async function EditPagePageInner({
       isDirtyVsPublished={dirty}
       pageOptions={pageOptions}
       enabledTypes={enabledTypes}
-      headerBlocks={headerBlocks}
-      footerBlocks={footerBlocks}
       isOwner={user.role === "owner"}
     />
   );

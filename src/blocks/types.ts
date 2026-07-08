@@ -42,6 +42,9 @@ export type RenderCtx = {
    * sets the repeater record for the rendered subtree (the collection block).
    */
   children: (blocks: BlockNode[], opts?: { horizontal?: boolean; record?: Record<string, unknown> }) => ReactNode;
+  /** Optional editor callback — blocks can render contentEditable controls
+   *  that patch the block content in real time. Absent in public renders. */
+  onChange?: (content: Record<string, unknown>) => void;
   /**
    * The page's precomputed heading-anchor map, keyed by heading block id
    * (from `buildOutline().byBlockId`). Lets `RenderHeading` stamp a

@@ -1,7 +1,7 @@
 /**
  * Google Fonts — curated allowlist + self-host fetch.
  *
- * "Own your site" means we don't leave a third-party runtime dependency in a
+ * "Lamina" means we don't leave a third-party runtime dependency in a
  * customer's pages: instead of linking `fonts.googleapis.com` at render time,
  * when an owner adds a Google font we fetch its woff2 files ONCE, server-side,
  * store them as regular media (kind "font"), and serve them from the site's

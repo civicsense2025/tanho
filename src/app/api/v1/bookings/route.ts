@@ -1,6 +1,6 @@
 import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { listBookings, type BookingSegment } from "@/modules/scheduling/queries";
-import { handle, ok } from "@/lib/api/v1";
+import { handle, ok } from "../_lib";
 
 /**
  * GET /api/v1/bookings — list bookings. Optional ?segment=upcoming|past|cancelled.

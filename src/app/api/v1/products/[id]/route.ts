@@ -6,7 +6,7 @@ import { productSchema } from "@/modules/commerce/validation";
 import { db } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
-import { handle, ok, fail, parseBody } from "@/lib/api/v1";
+import { handle, ok, fail, parseBody } from "../../_lib";
 
 /**
  * GET /api/v1/products/:id — one product with variants + collection ids.

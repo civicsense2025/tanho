@@ -17,6 +17,12 @@ export const sectionSchema = z.object({
     .max(80)
     .regex(/^[a-z0-9-]*$/, "Lowercase letters, digits and hyphens only")
     .default(""),
+  /** Per-section theme mode override. `inherit` (default) follows the page/site
+   *  mode; `light`/`dark` forces this section to render in that mode regardless
+   *  of the visitor's preference — useful for dark hero bands on light pages or
+   *  vice versa. Implemented via a scoped `data-theme` attribute on the
+   *  <section> element, which the CSS token cascade picks up. */
+  themeMode: z.enum(["inherit", "light", "dark"]).default("inherit"),
   blocks: childBlocksSchema.default([]),
 });
 

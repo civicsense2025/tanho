@@ -74,6 +74,14 @@ describe("styleToCss (tokens-only mapping)", () => {
     expect(JSON.stringify(css)).not.toContain("--space-7");
   });
 
+  it("maps margin to semantic CSS vars (same scale as padding)", () => {
+    const css = styleToCss({ marginTop: "4", marginRight: "6", marginBottom: "8", marginLeft: "2" });
+    expect(css.marginTop).toBe("var(--space-4)");
+    expect(css.marginRight).toBe("var(--space-6)");
+    expect(css.marginBottom).toBe("var(--space-8)");
+    expect(css.marginLeft).toBe("var(--space-2)");
+  });
+
   it("emits ONLY semantic tokens — no raw primitives, px, or hex", () => {
     const css = styleToCss({
       padTop: "4", fontSize: "h1", fontWeight: "medium", leading: "snug", tracking: "wide",

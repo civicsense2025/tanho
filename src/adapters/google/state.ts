@@ -12,7 +12,7 @@ import { isGoogleProvider, type GoogleProvider } from "./config";
  * The single registered Google redirect URI is always the web callback, so a
  * native-app-initiated flow still lands there — the callback reads `origin`
  * from the verified state to decide whether to redirect the browser to an
- * admin page (web) or to the app's `oys://` scheme (app). Encoding origin in
+ * admin page (web) or to the app's `lamina://` scheme (app). Encoding origin in
  * the SIGNED state (not a query param) keeps it tamper-proof.
  */
 const PURPOSE = "google-oauth-state";

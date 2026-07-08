@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "@/lib/db/client";
+import { rawRun, rawAll } from "@/lib/db/raw";
 import { assertIdentifier } from "./identifiers";
 
 /**
@@ -10,7 +10,9 @@ import { assertIdentifier } from "./identifiers";
  * object at runtime and passing it to the builder is unsupported in
  * drizzle-orm 0.45.x. Instead we use Drizzle's `sql` template with
  * `sql.identifier(...)` for table/column names (driver-quoted, per-dialect)
- * and bound params for values, run via `db.run` (writes) / `db.all` (reads).
+ * and bound params for values, run via the dialect-agnostic `rawRun` (writes) /
+ * `rawAll` (reads) helpers (@/lib/db/raw) — SQLite's `db.run`/`db.all` don't
+ * exist on node-postgres, so raw SQL goes through those instead.
  * Every identifier is `assertIdentifier`-validated before use.
  *
  * A "row" is a plain record keyed by column name. Callers are responsible for
@@ -34,7 +36,7 @@ export async function listRows(
   const t = ident(tableName);
   const limit = Math.min(Math.max(opts.limit ?? 200, 1), 500);
   const where = opts.onlyPublished ? sql` WHERE "status" = ${"published"}` : sql``;
-  const rows = await db.all<ContentRow>(
+  const rows = await rawAll<ContentRow>(
     sql`SELECT * FROM ${t}${where} ORDER BY "sort_order" ASC, "title" ASC LIMIT ${limit}`,
   );
   return rows;
@@ -48,7 +50,7 @@ export async function getRowBySlug(
 ): Promise<ContentRow | null> {
   const t = ident(tableName);
   const pub = opts.onlyPublished ? sql` AND "status" = ${"published"}` : sql``;
-  const rows = await db.all<ContentRow>(
+  const rows = await rawAll<ContentRow>(
     sql`SELECT * FROM ${t} WHERE "slug" = ${slug}${pub} LIMIT 1`,
   );
   return rows[0] ?? null;
@@ -57,7 +59,7 @@ export async function getRowBySlug(
 /** Fetch a row by id (any status). */
 export async function getRowById(tableName: string, id: string): Promise<ContentRow | null> {
   const t = ident(tableName);
-  const rows = await db.all<ContentRow>(sql`SELECT * FROM ${t} WHERE "id" = ${id} LIMIT 1`);
+  const rows = await rawAll<ContentRow>(sql`SELECT * FROM ${t} WHERE "id" = ${id} LIMIT 1`);
   return rows[0] ?? null;
 }
 
@@ -69,7 +71,7 @@ export async function getRowByPath(
 ): Promise<ContentRow | null> {
   const t = ident(tableName);
   const pub = opts.onlyPublished ? sql` AND "status" = ${"published"}` : sql``;
-  const rows = await db.all<ContentRow>(
+  const rows = await rawAll<ContentRow>(
     sql`SELECT * FROM ${t} WHERE "path" = ${path}${pub} LIMIT 1`,
   );
   return rows[0] ?? null;
@@ -89,7 +91,7 @@ export async function listDescendantRows(
 ): Promise<ContentRow[]> {
   const t = ident(tableName);
   const like = parentPath.replace(/[\\%_]/g, "\\$&") + "/%";
-  return db.all<ContentRow>(
+  return rawAll<ContentRow>(
     sql`SELECT * FROM ${t} WHERE "path" LIKE ${like} ESCAPE '\\' ORDER BY "path" ASC`,
   );
 }
@@ -107,7 +109,7 @@ export async function insertRow(tableName: string, values: ContentRow): Promise<
     entries.map(([, v]) => sql`${v}`),
     sql`, `,
   );
-  await db.run(sql`INSERT INTO ${t} (${cols}) VALUES (${vals})`);
+  await rawRun(sql`INSERT INTO ${t} (${cols}) VALUES (${vals})`);
 }
 
 /** Update a row by id with the given column/value pairs. */
@@ -123,13 +125,13 @@ export async function updateRow(
     entries.map(([k, v]) => sql`${ident(k)} = ${v}`),
     sql`, `,
   );
-  await db.run(sql`UPDATE ${t} SET ${assignments} WHERE "id" = ${id}`);
+  await rawRun(sql`UPDATE ${t} SET ${assignments} WHERE "id" = ${id}`);
 }
 
 /** Delete a row by id. */
 export async function deleteRow(tableName: string, id: string): Promise<void> {
   const t = ident(tableName);
-  await db.run(sql`DELETE FROM ${t} WHERE "id" = ${id}`);
+  await rawRun(sql`DELETE FROM ${t} WHERE "id" = ${id}`);
 }
 
 /**
@@ -143,7 +145,7 @@ export async function listPublishedRowsForSitemap(
   opts: { limit: number; offset: number },
 ): Promise<Array<{ path: string; updated_at: number | null }>> {
   const t = ident(tableName);
-  const rows = await db.all<{ path: string; updated_at: number | null }>(
+  const rows = await rawAll<{ path: string; updated_at: number | null }>(
     sql`SELECT "path", "updated_at" FROM ${t} WHERE "status" = ${"published"} ORDER BY "id" ASC LIMIT ${opts.limit} OFFSET ${opts.offset}`,
   );
   return rows;
@@ -152,7 +154,7 @@ export async function listPublishedRowsForSitemap(
 /** How many published rows a content type has (for sitemap chunk math). */
 export async function countPublishedRows(tableName: string): Promise<number> {
   const t = ident(tableName);
-  const rows = await db.all<{ n: number }>(
+  const rows = await rawAll<{ n: number }>(
     sql`SELECT COUNT(*) AS n FROM ${t} WHERE "status" = ${"published"}`,
   );
   return Number(rows[0]?.n ?? 0);

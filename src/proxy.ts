@@ -197,7 +197,16 @@ export async function proxy(request: NextRequest) {
   }
 
   // --- 2. Admin cookie gate -------------------------------------------------
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login" && pathname !== "/admin/install") {
+  // Public admin surfaces (no cookie required): login, install, and the
+  // password-reset request/confirm flow (an unauth'd admin who forgot their
+  // password must be able to reach it). Everything else under /admin needs a
+  // valid session cookie.
+  const isPublicAdmin =
+    pathname === "/admin/login" ||
+    pathname === "/admin/install" ||
+    pathname === "/admin/reset-password" ||
+    pathname.startsWith("/admin/reset-password/");
+  if (pathname.startsWith("/admin") && !isPublicAdmin) {
     if (!request.cookies.get(ADMIN_COOKIE)?.value) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";

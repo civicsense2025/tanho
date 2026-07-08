@@ -3,7 +3,7 @@ import type { BlockNode } from "@/blocks/types";
 
 /**
  * Portability allowlist — which block types are safe to include in a portable
- * pack (`.oys-pack.json`). A block may be:
+ * pack (`.lamina-pack.json`). A block may be:
  *
  *   - ALWAYS safe (allowlist): pure presentational content with no site-specific
  *     dependencies. Exported verbatim, imports without configuration.

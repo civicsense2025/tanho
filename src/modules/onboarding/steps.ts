@@ -1,15 +1,17 @@
 import { IdentityStep } from "./steps/IdentityStep";
 import { BrandStep } from "./steps/BrandStep";
-import { OnboardingDataSourceStep } from "./steps/OnboardingDataSourceStep";
 import { ReviewStep } from "./steps/ReviewStep";
 import type { WizardStepDef } from "./types";
 
 /**
  * The wizard's step sequence — the registry.ts-equivalent for this module
- * (cf. src/blocks/registry.ts). Every step's own criteria decide `isComplete`
- * (identity/brand have sensible defaults and are never gate-worthy; data-
- * source is the one real gate, tracked via completedSteps once a connection
- * is created; review is always "done" since it's just a summary).
+ * (cf. src/blocks/registry.ts). Every step's `isComplete` returns true —
+ * identity/brand have sensible defaults and review is just a summary.
+ * "Next →" is always enabled on every step.
+ *
+ * Steps are always shown in order regardless of difficulty selection —
+ * difficulty only controls the density of help text and defaults within
+ * each step, not which steps are shown or skipped.
  */
 export const ONBOARDING_STEPS: WizardStepDef[] = [
   {
@@ -25,13 +27,6 @@ export const ONBOARDING_STEPS: WizardStepDef[] = [
     blurb: "Colors and type — you can always fine-tune this later.",
     isComplete: () => true,
     Render: BrandStep,
-  },
-  {
-    id: "data-source",
-    title: "Connect a database",
-    blurb: "Optional — only needed if a page should show live data.",
-    isComplete: (state) => state.completedSteps.includes("data-source"),
-    Render: OnboardingDataSourceStep,
   },
   {
     id: "review",

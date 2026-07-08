@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { sessions, users } from "./schema";
 import { generateSessionToken, hashSessionToken } from "./tokens";
+import { resolvePermissions } from "./guards";
 
 export const ADMIN_COOKIE = "admin_session";
 const SESSION_DAYS = 30;
@@ -13,6 +14,7 @@ export type AdminUser = {
   email: string;
   name: string;
   role: "owner" | "editor";
+  permissions: Set<string>;
 };
 
 export async function createAdminSession(userId: string, meta?: { ip?: string; userAgent?: string }) {
@@ -53,6 +55,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
       email: users.email,
       name: users.name,
       role: users.role,
+      roleId: users.roleId,
       status: users.status,
     })
     .from(sessions)
@@ -70,7 +73,10 @@ export async function getAdminUser(): Promise<AdminUser | null> {
       .set({ expiresAt: Date.now() + ms(SESSION_DAYS) })
       .where(eq(sessions.id, id));
   }
-  return { id: row.userId, email: row.email, name: row.name, role: row.role };
+  // Load the permission set once per request so downstream guards
+  // (requireUser/requirePermission) don't re-query on every call.
+  const permissions = await resolvePermissions(row.roleId);
+  return { id: row.userId, email: row.email, name: row.name, role: row.role, permissions };
 }
 
 export async function destroyAdminSession() {
@@ -80,4 +86,15 @@ export async function destroyAdminSession() {
     await db.delete(sessions).where(eq(sessions.id, hashSessionToken(token)));
   }
   jar.delete(ADMIN_COOKIE);
+}
+
+/**
+ * Destroy EVERY admin session for a user — used by password reset, which is often
+ * a response to a suspected compromise, so any existing (possibly attacker)
+ * session shouldn't survive it. Unlike `destroyAdminSession`, this doesn't touch
+ * the current request's cookie; the caller redirects to login regardless, which
+ * naturally drops any stale cookie on next visit.
+ */
+export async function destroyAllSessionsForUser(userId: string) {
+  await db.delete(sessions).where(and(eq(sessions.kind, "admin"), eq(sessions.userId, userId)));
 }

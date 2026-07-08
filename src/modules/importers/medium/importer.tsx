@@ -8,7 +8,7 @@ import type { MediumDryRunSummary } from "./map";
  * Import hub. The generic <ImportScreen> collects one .zip file (read as an
  * arrayBuffer, i.e. the File is passed straight through to the server action)
  * and runs the shared dry-run → confirm flow. Imports each Medium story as an
- * OYS post, preserving images, pullquotes, embeds, and a 301 from the story's
+ * Lamina post, preserving images, pullquotes, embeds, and a 301 from the story's
  * old Medium URL.
  */
 export const mediumImporter: Importer<MediumDryRunSummary> = {

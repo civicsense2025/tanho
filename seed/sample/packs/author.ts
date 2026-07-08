@@ -1,6 +1,6 @@
 /**
  * SAMPLE PACK — author / novelist.
- * FICTIONAL persona: "Renata Kade". Translated from the OYS Design System's
+ * FICTIONAL persona: "Renata Kade". Translated from the Lamina Design System's
  * `ui_kits/sites/author`. The design's bespoke "statement" / "work-grid" /
  * "press-list" molecules are re-expressed here from CORE blocks: an about
  * section from heading+metric+richtext+list, a `collection` bound to book
@@ -26,7 +26,7 @@ export const authorPack: SamplePack = {
     ink: "#1c1a16",
     paper: "#fdfcf9",
     font: "serif",
-    radius: "soft",
+    radius: "round",
     shadow: "subtle",
   },
   menu: [

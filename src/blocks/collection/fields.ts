@@ -27,6 +27,14 @@ export const collectionSchema = z.object({
   ...styleContent,
   source: collectionSourceSchema.default({ kind: "entries", entity: "post" }),
   limit: z.number().int().min(1).max(100).default(6),
+  /** List-query knobs (applied in resolve after fetch, before the final slice):
+   *  filter → sort → offset → limit. All optional/safe defaults so existing
+   *  content (source+limit only) behaves identically. */
+  orderBy: z.string().max(80).optional(),
+  orderDir: z.enum(["asc", "desc"]).default("desc"),
+  filterField: z.string().max(80).optional(),
+  filterValue: z.string().max(200).optional(),
+  offset: z.number().int().min(0).max(1000).default(0),
   /** The per-record item template — an ordinary child block tree. */
   blocks: childBlocksSchema.default([]),
 });

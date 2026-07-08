@@ -24,6 +24,7 @@ export function RenderColumns({ content, ctx }: { content: ColumnsContent; ctx: 
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gap: "var(--space-6)",
         alignItems: "stretch",
+        borderRadius: "var(--pbl-radius, 0)",
       }}
     >
       {ctx.children(content.blocks as BlockNode[], { horizontal: true })}

@@ -34,12 +34,12 @@ Every mutation lands in `audit_log` (who, what, when).
 
 ## API tokens (bearer auth for external clients)
 
-Cookie sessions are for browsers. External clients — the OYS Swift app, scripts,
+Cookie sessions are for browsers. External clients — the Lamina Swift app, scripts,
 integrations — authenticate with **personal access tokens** instead
 (`modules/auth/api-tokens/`):
 
 - An owner mints a token at **Admin → Settings → API tokens**. The raw token
-  (`oys_<43 chars>`) is shown once; only its SHA-256 hash is stored in
+  (`lamina_<43 chars>`) is shown once; only its SHA-256 hash is stored in
   `api_tokens.token_hash` — the same hash-only pattern as sessions.
 - Clients send `Authorization: Bearer <token>` on `/api/v1/*` requests.
   `requireApiUser(role?)` (`api-tokens/guards.ts`) validates the header, loads

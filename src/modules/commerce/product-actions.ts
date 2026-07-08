@@ -10,8 +10,9 @@ import { indexProduct, removeProductFromIndex } from "@/modules/search/index-doc
 import { publishOwnerBlocks } from "@/modules/blocks/actions";
 import { getEditorChromePreview } from "@/modules/chrome/queries";
 import type { BlockNode } from "@/blocks/types";
-import { productCollections, productVariants, products } from "./schema";
+import { orderItems, productCollections, productVariants, products } from "./schema";
 import { productSchema, variantSchema } from "./validation";
+import { resolveTaxCode } from "./tax-codes";
 import { syncProductToStripe } from "./sync";
 import { getProductForEdit, type ProductRow } from "./queries";
 
@@ -22,6 +23,16 @@ const invalidate = () => {
   updateTag("storefront");
 };
 
+/**
+ * Apply derived defaults the form doesn't know about. The tax code auto-fills
+ * from `kind` when the creator hasn't picked one explicitly — the common path
+ * for small creators who'd never choose a Stripe tax code on their own.
+ */
+function applyDerivedDefaults(data: ReturnType<typeof productSchema.parse>) {
+  const taxCode = resolveTaxCode(data.kind, data.taxCode);
+  return { ...data, taxCode };
+}
+
 /** Create a product (editor OK). Syncs to Stripe if it starts active. */
 export async function createProduct(input: unknown): Promise<Result<{ id: string }>> {
   const user = await requireUser();
@@ -29,7 +40,7 @@ export async function createProduct(input: unknown): Promise<Result<{ id: string
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid product" };
   }
-  const data = parsed.data;
+  const data = applyDerivedDefaults(parsed.data);
   const dupe = await db.query.products.findFirst({ where: eq(products.slug, data.slug) });
   if (dupe) return { ok: false, error: `Slug ${data.slug} is already in use` };
 
@@ -50,7 +61,15 @@ export async function createProduct(input: unknown): Promise<Result<{ id: string
   return { ok: true, data: { id: row.id } };
 }
 
-/** Update a product (editor OK). Re-syncs Stripe on activation or price change. */
+/**
+ * Update a product (editor OK). Re-syncs Stripe on activation or price change.
+ *
+ * KIND IMmutability GUARD: switching a product's `kind` after orders exist
+ * orphans historical data (shipping rows on a now-digital product, etc.).
+ * The caller must confirm the change in the UI; we still reject silent flips
+ * when the product has any order rows. Deleting the product and recreating it
+ * is the supported path for a true type change post-orders.
+ */
 export async function updateProduct(id: string, input: unknown): Promise<Result> {
   const user = await requireUser();
   const existing = await db.query.products.findFirst({ where: eq(products.id, id) });
@@ -60,13 +79,37 @@ export async function updateProduct(id: string, input: unknown): Promise<Result>
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid product" };
   }
-  const data = parsed.data;
+  const data = applyDerivedDefaults(parsed.data);
   if (data.slug !== existing.slug) {
     const dupe = await db.query.products.findFirst({ where: eq(products.slug, data.slug) });
     if (dupe) return { ok: false, error: `Slug ${data.slug} is already in use` };
   }
 
-  await db.update(products).set({ ...data, updatedAt: Date.now() }).where(eq(products.id, id));
+  // Block silent kind transitions once the product has orders. The admin UI
+  // surfaces a confirm dialog; this is the server-side backstop for any path
+  // that bypasses it (API, scripts, etc.). The check + update run in a
+  // transaction to close the TOCTOU window (a concurrent order created
+  // between the check and the update would otherwise bypass the guard).
+  try {
+    await db.transaction(async (tx) => {
+      if (data.kind !== existing.kind) {
+        const item = await tx.query.orderItems.findFirst({
+          where: eq(orderItems.productId, id),
+          columns: { id: true },
+        });
+        if (item) {
+          throw new Error(
+            "This product has orders — changing its type would orphan historical data. Delete and recreate it instead.",
+          );
+        }
+      }
+      await tx.update(products).set({ ...data, updatedAt: Date.now() }).where(eq(products.id, id));
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Update failed";
+    if (msg.includes("orphan historical data")) return { ok: false, error: msg };
+    throw e; // re-throw unexpected errors
+  }
 
   const becameActive = data.status === "active" && existing.status !== "active";
   const priceChanged = data.priceCents !== existing.priceCents;

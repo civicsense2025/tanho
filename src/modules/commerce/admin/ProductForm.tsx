@@ -26,6 +26,7 @@ import { PhotosField } from "./PhotosField";
 import { VariantsRepeater } from "./VariantsRepeater";
 import { CollectionsField, type CollectionOption } from "./CollectionsField";
 import { ProductDetailSections } from "./ProductDetailSections";
+import { ProductTypeSection } from "./ProductTypeSection";
 import { initState, intOf, type FormState } from "./product-form-state";
 import styles from "./commerce.module.css";
 import shell from "@/editor/editor-shell.module.css";
@@ -109,6 +110,16 @@ export function ProductForm({
         dims: product.dims ?? { l: "", w: "", h: "", unit: "in" },
         shippingClass: s.shippingClass,
         seo: { title: s.seoTitle, description: s.seoDescription },
+        kind: s.kind,
+        billingModel: s.billingModel,
+        membershipTier: s.billingModel === "recurring" ? s.membershipTier : null,
+        taxCode: s.taxCode.trim() || null,
+        taxBehavior: s.taxBehavior,
+        fulfillmentMode: s.fulfillmentMode,
+        accessGrantTargetType: s.accessGrantTargetType || null,
+        accessGrantTargetId: s.accessGrantTargetId || null,
+        fulfillmentProvider: s.fulfillmentProvider,
+        fulfillmentConfig: null,
       });
       if (!res.ok) return setError(res.error);
       await setProductCollections(product.id, selected);
@@ -218,6 +229,8 @@ export function ProductForm({
         </Row>
         <p className={styles.syncLine}>{syncLine}</p>
       </Section>
+
+      <ProductTypeSection s={s} set={set} setS={setS} setFlash={setFlash} />
 
       <Section title="Photos">
         <PhotosField images={s.images} onChange={(next) => set("images", next)} />

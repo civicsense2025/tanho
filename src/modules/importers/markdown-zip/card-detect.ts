@@ -4,7 +4,7 @@ import type { CardResult } from "@/modules/importers/shared/types";
 /**
  * Element→block detector for markdown imports. markdownToSafeHtml (parse.ts) emits
  * clean structural HTML — `<p>/<h2>/<h3>/<figure>/<img>/<blockquote>/<ul>` etc. The
- * only element with a richer native OYS home than richtext is an image: a top-level
+ * only element with a richer native Lamina home than richtext is an image: a top-level
  * `<figure><img>…</figure>` (markdown `![alt](src)` inside a figure) or a bare
  * top-level `<img>` maps to an `image` block. Everything else returns null and falls
  * through to richtext, matching the Ghost/WXR card-detect contract. Defensive: an

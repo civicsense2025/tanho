@@ -1,6 +1,6 @@
 import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { getOrder } from "@/modules/commerce/queries";
-import { handle, ok, fail } from "@/lib/api/v1";
+import { handle, ok, fail } from "../../_lib";
 
 /** GET /api/v1/orders/:id — one order with items, dispute, and linked person. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {

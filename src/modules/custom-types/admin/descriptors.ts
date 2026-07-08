@@ -1,4 +1,4 @@
-import type { FieldDescriptor, FieldKind } from "@/modules/entries/admin/fields";
+import type { FieldDescriptor, FieldKind } from "@/modules/entries/admin/field-descriptors";
 import type { FieldDef } from "../validation";
 
 /**

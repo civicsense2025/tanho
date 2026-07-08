@@ -6,7 +6,7 @@ import {
 } from "./federation";
 
 const CATALOG = {
-  format: "oys-marketplace@1",
+  format: "lamina-marketplace@1",
   name: "Peer",
   description: "d",
   packs: [
@@ -51,7 +51,7 @@ describe("fetchPeerCatalog", () => {
     const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(true);
     if (res.ok) {
-      expect(res.catalog.format).toBe("oys-marketplace@1");
+      expect(res.catalog.format).toBe("lamina-marketplace@1");
       expect(res.catalog.name).toBe("Peer");
       expect(res.catalog.packs).toHaveLength(1);
       expect(res.catalog.packs[0].slug).toBe("hero");
@@ -89,16 +89,16 @@ describe("fetchPeerCatalog", () => {
   });
 
   it("rejects a catalog with the wrong format tag", async () => {
-    mockFetch(() => jsonRes({ format: "oys-marketplace@9", name: "x", packs: [] }));
+    mockFetch(() => jsonRes({ format: "lamina-marketplace@9", name: "x", packs: [] }));
     const res = await fetchPeerCatalog("https://peer.example", ["https://peer.example"]);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toContain("oys-marketplace@1");
+    if (!res.ok) expect(res.error).toContain("lamina-marketplace@1");
   });
 
   it("tolerates malformed pack entries (skips them, keeps valid ones)", async () => {
     mockFetch(() =>
       jsonRes({
-        format: "oys-marketplace@1",
+        format: "lamina-marketplace@1",
         name: "x",
         packs: [
           { type: "block-pack", slug: "ok", title: "Ok" },
@@ -115,7 +115,7 @@ describe("fetchPeerCatalog", () => {
 
 describe("fetchPeerPack", () => {
   it("returns the raw pack JSON for a 200 response", async () => {
-    const pack = { format: "oys-pack@1", kind: "block-pack", name: "Hero", blocks: [] };
+    const pack = { format: "lamina-pack@1", kind: "block-pack", name: "Hero", blocks: [] };
     mockFetch(() => jsonRes(pack));
     const res = await fetchPeerPack("https://peer.example", "block-pack", "hero", ["https://peer.example"]);
     expect(res.ok).toBe(true);

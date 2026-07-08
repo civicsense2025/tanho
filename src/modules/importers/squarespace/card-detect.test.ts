@@ -51,6 +51,11 @@ describe("detectSquarespaceCard — delegation", () => {
   it("returns null for an unrecognized element", async () => {
     expect(await detectSquarespaceCard(`<p>text</p>`)).toBeNull();
   });
+
+  it("returns null for a delegated Gutenberg button with a javascript: href", async () => {
+    const html = `<div class="wp-block-button"><a class="wp-block-button__link" href="javascript:alert(1)">Hack</a></div>`;
+    expect(await detectSquarespaceCard(html)).toBeNull();
+  });
 });
 
 describe("precleanSquarespaceHtml", () => {

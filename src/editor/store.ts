@@ -13,17 +13,14 @@ import {
   newBlockId,
 } from "@/blocks/tree";
 import type { BlockNode, Device } from "@/blocks/types";
-import { createSymbol, inlineSymbol } from "@/modules/blocks/symbol-actions";
 import type { SymbolOverride } from "@/blocks/symbol/fields";
+import { createSymbol, inlineSymbol } from "@/modules/blocks/symbol-actions";
+import type { ChangeKind } from "./useAutosave";
 
-/** One editable field of the content type being templated. */
 export type ContentTypeField = { key: string; label: string; kind: string };
 
-/** Content-type context surfaced to the editor when templating a content type. */
 export type ContentTypeContext = {
-  /** The type's slug (e.g. "products") — matches a block's `suggestedFor`. */
   slug: string;
-  /** The type's fields — for field-pickers, per-field suggestions, token helper. */
   fields: ContentTypeField[];
 };
 
@@ -31,7 +28,11 @@ type EditorState = {
   blocks: BlockNode[];
   selection: Set<string>;
   lastSelected: string | null;
-  onChange: ((blocks: BlockNode[]) => void) | null;
+  /** Called after every tree mutation. `kind` classifies the change so the
+   *  autosave hook can pick the right debounce delay: "structural" for
+   *  insert/move/delete/duplicate (fast save), "text" for content edits
+   *  (slower save, less DB strain during active typing). */
+  onChange: ((blocks: BlockNode[], kind: ChangeKind) => void) | null;
   /** Key of the content last loaded via init(); lets a consumer render its own
    *  server data until the (post-paint effect) init has populated the store. */
   readyFor: string | null;
@@ -43,14 +44,10 @@ type EditorState = {
    *  pickers filter to this; null = show all compiled defs (backward compat for
    *  callers that don't wire the registry through). Set once by PageEditor. */
   enabledTypes: Set<string> | null;
-  /** The content-type being templated, when the editor is a content-type
-   *  template editor — its fields drive the picker's per-field suggestions, the
-   *  `field` block's field-picker, and the text blocks' "insert field" helper.
-   *  null in every other editor (pages/entries/chrome). */
   contentTypeContext: ContentTypeContext | null;
 
-  init(blocks: BlockNode[], onChange: (blocks: BlockNode[]) => void, key?: string | null): void;
-  apply(fn: (bs: BlockNode[]) => BlockNode[]): void;
+  init(blocks: BlockNode[], onChange: (blocks: BlockNode[], kind: ChangeKind) => void, key?: string | null): void;
+  apply(fn: (bs: BlockNode[]) => BlockNode[], kind?: ChangeKind): void;
   setDevice(device: Device): void;
   setEnabledTypes(types: Set<string> | null): void;
   setContentTypeContext(ctx: ContentTypeContext | null): void;
@@ -71,14 +68,8 @@ type EditorState = {
   bulkDuplicate(): void;
   bulkWrapInSection(): void;
 
-  /** Save the current selection (same-parent siblings) as a reusable symbol and
-   *  replace it in place with one linked instance. Returns the new symbol id, or
-   *  null if the selection can't be saved (empty / cross-parent). */
-  saveSelectionAsSymbol(name: string): Promise<string | null>;
-  /** Insert a symbol instance at the current selection (or end of root). */
-  insertSymbol(symbolId: string, label?: string): void;
-  /** Replace a symbol instance with its resolved tree (fresh ids) — unlink it. */
-  detachSymbol(id: string): Promise<void>;
+  saveSelectionAsSymbol(name: string): Promise<void>;
+  detachSymbol(): Promise<void>;
 };
 
 export const useEditor = create<EditorState>((set, get) => ({
@@ -95,10 +86,10 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ blocks, onChange, selection: new Set(), lastSelected: null, readyFor: key });
   },
 
-  apply(fn) {
+  apply(fn, kind = "text") {
     const next = fn(get().blocks);
     set({ blocks: next });
-    get().onChange?.(next);
+    get().onChange?.(next, kind);
   },
 
   setDevice: (device) => set({ device }),
@@ -139,10 +130,10 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().apply((bs) => treeSetContent(bs, id, content));
   },
   move(id, dir) {
-    get().apply((bs) => treeMove(bs, id, dir));
+    get().apply((bs) => treeMove(bs, id, dir), "structural");
   },
   insert(parentId, index, block) {
-    get().apply((bs) => treeInsert(bs, parentId, index, block));
+    get().apply((bs) => treeInsert(bs, parentId, index, block), "structural");
     set({ selection: new Set([block.id]), lastSelected: block.id });
   },
   dropMove(id, parentId, index) {
@@ -150,10 +141,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       const { blocks: without, removed } = treeRemove(bs, id);
       if (!removed) return bs;
       return treeInsert(without, parentId, index, removed);
-    });
+    }, "structural");
   },
   remove(id) {
-    get().apply((bs) => treeRemove(bs, id).blocks);
+    get().apply((bs) => treeRemove(bs, id).blocks, "structural");
     const next = new Set(get().selection);
     next.delete(id);
     set({ selection: next });
@@ -164,7 +155,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       const orig = treeFind(bs, id);
       if (!loc || !orig) return bs;
       return treeInsert(bs, loc.parentId, loc.index + 1, cloneWithIds(orig));
-    });
+    }, "structural");
   },
   /** Wrap a single block in a fresh section, in place (single-select analog of bulkWrapInSection). */
   wrapInSection(id) {
@@ -234,75 +225,38 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ selection: new Set([wrapper.id]), lastSelected: wrapper.id });
   },
 
-  /** Save the selection as a symbol, then replace it with one linked instance.
-   *  Same same-parent-siblings guard as bulkWrapInSection. The saved definition
-   *  keeps the members' ids (stable override targeting); the instance gets a
-   *  fresh id, as does every future insertion of this symbol. */
   async saveSelectionAsSymbol(name) {
-    const { selection, blocks } = get();
-    const ids = [...selection];
-    if (!ids.length) return null;
-    const locs = ids
-      .map((id) => ({ id, loc: treeLocate(blocks, id) }))
-      .filter((x): x is { id: string; loc: NonNullable<ReturnType<typeof treeLocate>> } => !!x.loc);
-    const parentId = locs[0]?.loc.parentId ?? null;
-    if (!locs.every((x) => x.loc.parentId === parentId)) return null;
-    const members = ids.map((id) => treeFind(blocks, id)!).filter(Boolean);
-    if (!members.length) return null;
-
-    const created = await createSymbol(name, members);
-    if (!created.ok || !created.data) return null;
-    const symbolId = created.data.id;
-
-    const insertAt = Math.min(...locs.map((x) => x.loc.index));
-    const instance: BlockNode = {
-      id: newBlockId(),
-      type: "symbol",
-      content: { symbolId, overrides: [], _label: name.trim() || "Saved block" },
-    };
-    get().apply((bs) => {
-      let acc = bs;
-      for (const id of ids) acc = treeRemove(acc, id).blocks;
-      return treeInsert(acc, parentId, insertAt, instance);
-    });
-    set({ selection: new Set([instance.id]), lastSelected: instance.id });
-    return symbolId;
+    const { blocks, selection } = get();
+    const selected = [...selection]
+      .map((id) => treeFind(blocks, id))
+      .filter((b): b is BlockNode => !!b);
+    if (!selected.length) return;
+    const res = await createSymbol(name, selected);
+    if (!res.ok && typeof window !== "undefined") window.alert(res.error);
   },
 
-  insertSymbol(symbolId, label) {
-    const instance: BlockNode = {
-      id: newBlockId(),
-      type: "symbol",
-      content: { symbolId, overrides: [], ...(label ? { _label: label } : {}) },
-    };
-    const sel = [...get().selection];
-    const loc = sel.length ? treeLocate(get().blocks, sel[0]!) : null;
-    get().apply((bs) =>
-      loc
-        ? treeInsert(bs, loc.parentId, loc.index + 1, instance)
-        : treeInsert(bs, null, get().blocks.length, instance),
-    );
-    set({ selection: new Set([instance.id]), lastSelected: instance.id });
-  },
-
-  async detachSymbol(id) {
-    const node = treeFind(get().blocks, id);
-    const loc = treeLocate(get().blocks, id);
-    if (!node || !loc || node.type !== "symbol") return;
-    const content = node.content as { symbolId?: string; overrides?: SymbolOverride[] };
+  async detachSymbol() {
+    const { blocks, selection } = get();
+    const id = [...selection][0];
+    if (!id) return;
+    const block = treeFind(blocks, id);
+    if (!block || block.type !== "symbol") return;
+    const content = block.content as { symbolId?: string; overrides?: SymbolOverride[] };
     if (!content.symbolId) return;
     const res = await inlineSymbol(content.symbolId, content.overrides);
-    if (!res.ok || !res.data) return;
-    const inlined = res.data.blocks;
+    if (!res.ok) {
+      if (typeof window !== "undefined") window.alert(res.error);
+      return;
+    }
     get().apply((bs) => {
-      const { blocks: without } = treeRemove(bs, id);
-      // Splice the inlined blocks at the instance's former position, order-preserving.
-      let acc = without;
-      inlined.forEach((b, i) => {
-        acc = treeInsert(acc, loc.parentId, loc.index + i, b);
-      });
-      return acc;
-    });
-    set({ selection: new Set(inlined.map((b) => b.id)) });
+      const loc = treeLocate(bs, id);
+      if (!loc) return bs;
+      let next = treeRemove(bs, id).blocks;
+      for (let i = res.data!.blocks.length - 1; i >= 0; i--) {
+        next = treeInsert(next, loc.parentId, loc.index, res.data!.blocks[i]);
+      }
+      return next;
+    }, "structural");
+    set({ selection: new Set(), lastSelected: null });
   },
 }));

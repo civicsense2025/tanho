@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { commonContent, styleContent, advancedStyleContent, motionContent } from "../common";
 
-const HEADING_LEVELS = ["h1", "h2", "h3", "h4"] as const;
+const HEADING_LEVELS = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
 
 export const tableOfContentsSchema = z.object({
   ...commonContent,

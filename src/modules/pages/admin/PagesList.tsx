@@ -42,9 +42,11 @@ function RenderModeBadge({ hasPaywall }: { hasPaywall?: boolean }) {
 export function PagesList({
   pages,
   codePages = [],
+  onCreate,
 }: {
   pages: PageRow[];
   codePages?: CodePageSummary[];
+  onCreate?: () => void;
 }) {
   const router = useRouter();
   const [, start] = useTransition();
@@ -69,9 +71,9 @@ export function PagesList({
         }}
       >
         <p style={{ margin: "0 0 var(--space-4)" }}>No pages yet.</p>
-        <Link href="/admin/pages/new">
-          <Button variant="accent" size="sm">+ New page</Button>
-        </Link>
+        {onCreate ? (
+          <Button variant="accent" size="sm" onClick={onCreate}>+ New page</Button>
+        ) : null}
       </div>
     );
   }

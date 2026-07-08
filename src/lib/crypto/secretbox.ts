@@ -19,8 +19,8 @@ import {
  * `sealSecret` throws in production when the key is unset — we never want to
  * write "encrypted" credentials under a publicly-known key.
  */
-const INFO = "oys-secretbox-v1";
-const DEV_FALLBACK = "oys-dev-secretbox-insecure-key-do-not-ship";
+const INFO = "lamina-secretbox-v1";
+const DEV_FALLBACK = "lamina-dev-secretbox-insecure-key-do-not-ship";
 const IV_BYTES = 12; // GCM standard nonce length.
 
 let warned = false;

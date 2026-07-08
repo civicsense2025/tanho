@@ -67,6 +67,14 @@ export function BookingDetailSheet({
         <span>{booking.status}</span>
         <span className={styles.label}>Calendar</span>
         <span>{booking.googleEventId ? `Synced (${booking.googleEventId})` : "Not synced"}</span>
+        {booking.meetLink ? (
+          <>
+            <span className={styles.label}>Meet link</span>
+            <a href={booking.meetLink} target="_blank" rel="noreferrer" className={styles.mono}>
+              Join Google Meet
+            </a>
+          </>
+        ) : null}
         {booking.personId ? (
           <>
             <span className={styles.label}>Person</span>

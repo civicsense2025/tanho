@@ -1,6 +1,6 @@
 /**
  * SAMPLE PACK — developer / open-source maintainer.
- * FICTIONAL persona: "Kai Reyes". Translated from the OYS Design System's
+ * FICTIONAL persona: "Kai Reyes". Translated from the Lamina Design System's
  * `ui_kits/sites/developer` — expressed as real page-builder block trees so a
  * non-dev can rebuild every section by dragging blocks.
  *

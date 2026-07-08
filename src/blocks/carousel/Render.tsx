@@ -39,7 +39,7 @@ export function RenderCarousel({ content }: { content: CarouselContent; ctx: Ren
           {slide.caption && (
             <figcaption
               style={{
-                marginTop: "6px",
+                marginTop: "var(--space-1-5)",
                 fontFamily: "var(--font-mono)",
                 fontSize: "var(--text-2xs)",
                 color: "var(--text-faint)",

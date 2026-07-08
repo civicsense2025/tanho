@@ -1,6 +1,6 @@
 import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { getGeneralSettings } from "@/modules/settings/queries";
-import { handle, ok } from "@/lib/api/v1";
+import { handle, ok } from "../_lib";
 
 /**
  * GET /api/v1/me — token validation + site identity. The Swift app calls this

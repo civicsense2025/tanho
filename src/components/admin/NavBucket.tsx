@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 
 export type NavItem = {
@@ -29,8 +30,12 @@ export function NavBucket({
   items: NavItem[];
   indicator?: boolean;
 }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Check if current page is within this bucket's items
+  const isActive = items.some((item) => item.href && (pathname === item.href || pathname.startsWith(item.href + "/")));
 
   return (
     <div
@@ -51,7 +56,8 @@ export function NavBucket({
           cursor: "pointer",
           padding: 2,
           fontSize: "var(--text-sm)",
-          color: open ? "var(--text)" : "var(--text-muted)",
+          fontWeight: isActive ? 600 : 400,
+          color: open || isActive ? "var(--text)" : "var(--text-muted)",
         }}
       >
         {label}
@@ -77,7 +83,7 @@ export function NavBucket({
                 {/* A `group` on any item after the first starts a new section:
                     a hairline plus an optional small uppercase heading. */}
                 {it.group && i > 0 ? <GroupHeading label={it.group} /> : null}
-                <BucketItem item={it} onNavigate={() => setOpen(false)} />
+                <BucketItem item={it} pathname={pathname} onNavigate={() => setOpen(false)} />
               </div>
             ))}
           </div>
@@ -87,11 +93,12 @@ export function NavBucket({
   );
 }
 
-function BucketItem({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
+function BucketItem({ item, pathname, onNavigate }: { item: NavItem; pathname: string; onNavigate: () => void }) {
+  const isActive = item.href && (pathname === item.href || pathname.startsWith(item.href + "/"));
   const color = item.locked || !item.href ? "var(--text-faint)" : "var(--text)";
   const inner = (
     <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, width: "100%" }}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: isActive ? 600 : 400 }}>
         {item.label}
         {item.locked ? <LockGlyph /> : null}
       </span>
@@ -106,6 +113,7 @@ function BucketItem({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
     borderRadius: "var(--radius-xs)",
     fontSize: "var(--text-sm)",
     color,
+    background: isActive ? "var(--surface-hover)" : "transparent",
   };
   if (!item.href) {
     return <span style={{ ...style, cursor: "default" }}>{inner}</span>;

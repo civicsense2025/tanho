@@ -36,6 +36,32 @@ const dimsSchema = z
 
 export const CURRENCIES = ["usd", "eur", "gbp", "cad"] as const;
 
+export const PRODUCT_KINDS = ["physical", "digital", "service", "course"] as const;
+export type ProductKind = (typeof PRODUCT_KINDS)[number];
+
+export const BILLING_MODELS = ["one-time", "recurring"] as const;
+export type BillingModel = (typeof BILLING_MODELS)[number];
+
+export const FULFILLMENT_MODES = ["ship", "download", "access_grant", "booking", "pod", "none"] as const;
+export type FulfillmentMode = (typeof FULFILLMENT_MODES)[number];
+
+/** Allowed fulfillment modes per product kind. Drives the kind→fulfillmentMode validation contract. */
+export const ALLOWED_FULFILLMENT_BY_KIND: Record<string, readonly FulfillmentMode[]> = {
+  physical: ["ship", "pod", "none"],
+  digital: ["download", "access_grant", "none"],
+  service: ["booking", "none"],
+  course: ["access_grant", "download", "none"],
+};
+
+export const TAX_BEHAVIORS = ["exclusive", "inclusive"] as const;
+export type TaxBehavior = (typeof TAX_BEHAVIORS)[number];
+
+export const FULFILLMENT_PROVIDERS = ["local", "printful", "printify", "manual"] as const;
+export type FulfillmentProvider = (typeof FULFILLMENT_PROVIDERS)[number];
+
+export const ACCESS_GRANT_TARGET_TYPES = ["entry", "membership", "pack", "download"] as const;
+export type AccessGrantTargetType = (typeof ACCESS_GRANT_TARGET_TYPES)[number];
+
 export const variantSchema = z.object({
   id: z.string().max(40).optional(),
   label: z.string().min(1).max(80),
@@ -45,29 +71,67 @@ export const variantSchema = z.object({
   weight: z.string().max(20).default(""),
   dims: z.string().max(120).default(""),
   imageMediaId: z.string().max(120).nullable().default(null),
+  // Variant-level overrides (nullable = inherit from parent product).
+  kind: z.enum(PRODUCT_KINDS).nullable().default(null),
+  taxCode: z.string().max(40).nullable().default(null),
+  requiresShipping: z.boolean().nullable().default(null),
 });
 export type VariantInput = z.infer<typeof variantSchema>;
 
-export const productSchema = z.object({
-  name: z.string().min(1).max(200),
-  slug,
-  status: z.enum(["draft", "active"]).default("draft"),
-  priceCents: z.number().int().min(0).max(100_000_00),
-  compareAtCents: z.number().int().min(0).max(100_000_00).nullable().default(null),
-  currency: z.enum(CURRENCIES).default("usd"),
-  sku: z.string().max(80).default(""),
-  description: z.string().max(100_000).default(""),
-  images: z.array(imageRef).max(24).default([]),
-  trackInventory: z.boolean().default(true),
-  inventory: z.number().int().min(0).max(1_000_000).default(0),
-  lowStockThreshold: z.number().int().min(0).max(1_000_000).default(10),
-  allowBackorder: z.boolean().default(false),
-  weight: z.string().max(20).default(""),
-  weightUnit: z.enum(["lb", "kg"]).default("lb"),
-  dims: dimsSchema,
-  shippingClass: z.enum(["standard", "heavy", "digital"]).default("standard"),
-  seo: seoSchema,
-});
+export const productSchema = z
+  .object({
+    name: z.string().min(1).max(200),
+    slug,
+    status: z.enum(["draft", "active"]).default("draft"),
+    priceCents: z.number().int().min(0).max(100_000_00),
+    compareAtCents: z.number().int().min(0).max(100_000_00).nullable().default(null),
+    currency: z.enum(CURRENCIES).default("usd"),
+    sku: z.string().max(80).default(""),
+    description: z.string().max(100_000).default(""),
+    images: z.array(imageRef).max(24).default([]),
+    trackInventory: z.boolean().default(true),
+    inventory: z.number().int().min(0).max(1_000_000).default(0),
+    lowStockThreshold: z.number().int().min(0).max(1_000_000).default(10),
+    allowBackorder: z.boolean().default(false),
+    weight: z.string().max(20).default(""),
+    weightUnit: z.enum(["lb", "kg"]).default("lb"),
+    dims: dimsSchema,
+    shippingClass: z.enum(["standard", "heavy", "digital"]).default("standard"),
+    seo: seoSchema,
+    // --- Typed-product axes (migration 0034) ---
+    kind: z.enum(PRODUCT_KINDS).default("physical"),
+    billingModel: z.enum(BILLING_MODELS).default("one-time"),
+    /** Required when billingModel=recurring; links to memberships.tier. */
+    membershipTier: z.string().max(80).nullable().default(null),
+    /** Stripe tax code. Auto-assigned from kind on create; editable per-product. */
+    taxCode: z.string().max(40).nullable().default(null),
+    taxBehavior: z.enum(TAX_BEHAVIORS).default("exclusive"),
+    fulfillmentMode: z.enum(FULFILLMENT_MODES).default("ship"),
+    accessGrantTargetType: z.enum(ACCESS_GRANT_TARGET_TYPES).nullable().default(null),
+    accessGrantTargetId: z.string().max(200).nullable().default(null),
+    fulfillmentProvider: z.enum(FULFILLMENT_PROVIDERS).default("local"),
+    fulfillmentConfig: z.record(z.string(), z.unknown()).nullable().default(null),
+  })
+  .refine((data) => data.billingModel !== "recurring" || !!data.membershipTier, {
+    message: "Recurring billing products must reference a membership tier",
+    path: ["membershipTier"],
+  })
+  .superRefine((data, ctx) => {
+    if (!(ALLOWED_FULFILLMENT_BY_KIND[data.kind]?.includes(data.fulfillmentMode) ?? false)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Fulfillment mode "${data.fulfillmentMode}" is not valid for ${data.kind} products`,
+        path: ["fulfillmentMode"],
+      });
+    }
+  })
+  .refine(
+    (data) => !(data.accessGrantTargetType && data.accessGrantTargetId === ""),
+    {
+      message: "Access grant target is required when grant type is set",
+      path: ["accessGrantTargetId"],
+    },
+  );
 export type ProductInput = z.infer<typeof productSchema>;
 
 export const collectionSchema = z.object({

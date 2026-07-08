@@ -95,7 +95,7 @@ describe("createTableStatements", () => {
     expect(rendered.some((s) => s.includes('"price" double precision'))).toBe(true);
     expect(rendered.some((s) => s.includes("ENABLE ROW LEVEL SECURITY"))).toBe(true);
     expect(rendered.some((s) => s.includes("FORCE ROW LEVEL SECURITY"))).toBe(true);
-    expect(rendered.some((s) => s.includes('CREATE POLICY "ct_products_app_only"') && s.includes("oys_app"))).toBe(
+    expect(rendered.some((s) => s.includes('CREATE POLICY "ct_products_app_only"') && s.includes("lamina_app"))).toBe(
       true,
     );
   });

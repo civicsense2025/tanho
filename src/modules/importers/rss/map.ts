@@ -24,7 +24,7 @@ function tryPathname(link: string): string | null {
  * Map one feed item to a page candidate. The body HTML is chunked into blocks
  * by the shared htmlToBlocks engine (image cards via detectFeedCard, everything
  * else coalesced into richtext), so feed imports behave exactly like every
- * other importer. Feed items become published OYS posts; the source permalink
+ * other importer. Feed items become published Lamina posts; the source permalink
  * flows through as `redirectFrom` so the shared commit loop can 301 old → new.
  */
 export async function mapFeedItem(

@@ -21,6 +21,7 @@ export function OverviewScreen({
   ga4PropertyId,
   overview,
   overTime,
+  productionUrl: _productionUrl,
 }: {
   connected: boolean;
   isOwner: boolean;
@@ -28,6 +29,7 @@ export function OverviewScreen({
   ga4PropertyId: string;
   overview: AnalyticsOverview;
   overTime: DayBucket[];
+  productionUrl?: string;
 }) {
   if (!connected) {
     return (
@@ -38,6 +40,8 @@ export function OverviewScreen({
         startHref="/api/oauth/google/google-analytics"
         isOwner={isOwner}
         isGoogleOAuthConfigured={isGoogleOAuthConfigured}
+        service="google-analytics"
+        productionUrl={_productionUrl}
       />
     );
   }

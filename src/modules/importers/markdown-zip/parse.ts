@@ -7,7 +7,7 @@ import type { ParseIssue } from "@/modules/importers/shared/types";
 /** Server-side cap on files parsed from one zip — bounds the DB-write cost. */
 const MAX_IMPORT_ROWS = 20_000;
 
-/** One parsed markdown document → an OYS page candidate. `html` is already
+/** One parsed markdown document → a Lamina page candidate. `html` is already
  *  sanitized (markdownToSafeHtml). */
 export type MdDoc = {
   /** Source file path (for issue messages + de-dup). */

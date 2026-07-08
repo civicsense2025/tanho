@@ -1,5 +1,6 @@
 import {
   SPACE_STEP,
+  RADIUS_VAR,
   LAYOUT_DIRECTIONS,
   LAYOUT_WRAPS,
   LAYOUT_JUSTIFIES,
@@ -199,6 +200,10 @@ export function layoutToVars(layer: LayoutLayer): Record<string, string> {
   } else if (layer.cols) {
     v["--pbl-cols"] = COLS_TEMPLATE[layer.cols];
   }
+
+  // Corner radius — a custom property the layout block's inner element consumes
+  // (var(--pbl-radius, …)); inherits from the chrome wrapper it's set on.
+  if (layer.radius) v["--pbl-radius"] = RADIUS_VAR[layer.radius];
 
   return v;
 }

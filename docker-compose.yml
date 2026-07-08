@@ -1,0 +1,40 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      # Update with your canonical domain name, e.g. https://example.com
+      - APP_URL=https://${DOMAIN}
+      # Local SQLite database path inside the persistent /app/data folder
+      - DATABASE_URL=file:/app/data/site.db
+      # Generate a secure key using: openssl rand -hex 32
+      - APP_ENCRYPTION_KEY=${APP_ENCRYPTION_KEY}
+      # Add optional integrations below as needed:
+      # - STRIPE_SECRET_KEY=
+      # - STRIPE_WEBHOOK_SECRET=
+      # - SMTP_URL=
+      # - EMAIL_FROM=
+    volumes:
+      - ./data:/app/data
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    command: caddy reverse-proxy --from https://${DOMAIN} --to app:3000
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

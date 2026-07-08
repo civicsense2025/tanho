@@ -6,7 +6,8 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 const SETTINGS: Array<{ label: string; href: string; desc: string }> = [
   { label: "General", href: "/admin/settings/general", desc: "Site name, tagline, locale, indexing" },
-  { label: "Brand", href: "/admin/settings/brand", desc: "Colors, type, spacing, logo" },
+  { label: "Appearance", href: "/admin/settings/appearance", desc: "Light, dark, or system theme mode" },
+  { label: "Brand", href: "/admin/settings/brand", desc: "Colors, type, spacing, favicon" },
   { label: "Fonts", href: "/admin/settings/fonts", desc: "Google Fonts or your own uploaded font files" },
   { label: "Blocks", href: "/admin/settings/blocks", desc: "Block registry — enable/disable block types" },
   { label: "People", href: "/admin/settings/people", desc: "Sign-ups, profiles, subscriptions, privacy" },
@@ -17,7 +18,6 @@ const SETTINGS: Array<{ label: string; href: string; desc: string }> = [
   { label: "Data sources", href: "/admin/settings/data-sources", desc: "External database connections for live blocks" },
   { label: "API tokens", href: "/admin/settings/api-tokens", desc: "Bearer tokens for the Swift app and other external clients" },
   { label: "Marketplace", href: "/admin/settings/marketplace", desc: "Enable and configure your pack marketplace" },
-  { label: "Updates", href: "/admin/settings/updates", desc: "Template version, license activation, and update commands" },
 ];
 
 export const metadata = { title: "Settings" };

@@ -22,6 +22,11 @@ export function AnalyticsTabs() {
             href={t.href}
             className={`${styles.tab} ${active ? styles.tabActive : ""}`}
             aria-current={active ? "page" : undefined}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              textDecoration: "none",
+            }}
           >
             {t.label}
           </Link>

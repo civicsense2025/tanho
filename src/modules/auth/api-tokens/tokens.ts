@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 /** 256-bit opaque bearer token for API clients (Swift app, scripts, etc.). */
 export function generateApiToken(): string {
-  return `oys_${randomBytes(32).toString("base64url")}`;
+  return `lamina_${randomBytes(32).toString("base64url")}`;
 }
 
 /** Only the SHA-256 of the token is stored — the DB never sees the raw token. */

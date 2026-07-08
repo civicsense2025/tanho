@@ -4,7 +4,7 @@ import type { WxrComment, WxrItem } from "./parse";
 /**
  * The custom-content-type definitions the WXR importers auto-create so that
  * WordPress comments and custom post types aren't dropped on the floor — they
- * become first-class OYS content the owner can browse, edit and render.
+ * become first-class Lamina content the owner can browse, edit and render.
  *
  * Every field/slug here must satisfy the custom-type meta-schema
  * (custom-types/validation.ts): slug `^[a-z][a-z0-9-]*$`, field key
@@ -78,7 +78,7 @@ const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const MAX_FIELDS = 40; // custom-types/validation.ts MAX_FIELDS
 const TEXT_MAX = 10_000; // builder.ts `text` cap
 
-/** Coerce an arbitrary WP postmeta key to a valid OYS field key
+/** Coerce an arbitrary WP postmeta key to a valid Lamina field key
  *  (`^[a-z][a-z0-9_]*$`, ≤40 chars). Returns "" if nothing usable remains. */
 export function sanitizeFieldKey(raw: string): string {
   let k = raw

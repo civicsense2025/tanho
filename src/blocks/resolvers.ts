@@ -11,6 +11,7 @@ import { resolvePostlist } from "./postlist/resolve";
 import { resolveProfileHeader } from "./profile-header/resolve";
 import { resolveRelatedContent } from "./related-content/resolve";
 import { resolveProjectList } from "./project-list/resolve";
+import { resolveReviews } from "./reviews/resolve";
 import { resolveSkillsList } from "./skills-list/resolve";
 // phase3-chrome-blocks resolvers (site header/footer sub-blocks).
 import { resolveLogo } from "./logo/resolve";
@@ -51,6 +52,7 @@ export const blockResolvers: Record<string, Resolver> = {
   "profile-header": resolveProfileHeader,
   "related-content": resolveRelatedContent,
   "project-list": resolveProjectList,
+  reviews: resolveReviews,
   "skills-list": resolveSkillsList,
   // Not a fully "bound" block (def.bound is NOT set on `table`) — this
   // resolver is a no-op (`content._resolved = null`) unless the block's

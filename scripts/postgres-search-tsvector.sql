@@ -47,10 +47,10 @@ BEGIN
     SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'search_index' AND policyname = 'search_index_app_only'
   ) THEN
     CREATE POLICY search_index_app_only ON search_index
-      FOR ALL TO oys_app
+      FOR ALL TO lamina_app
       USING (true) WITH CHECK (true);
   END IF;
 END
 $$;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON search_index TO oys_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON search_index TO lamina_app;

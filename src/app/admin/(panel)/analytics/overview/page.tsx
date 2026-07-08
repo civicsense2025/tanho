@@ -48,6 +48,7 @@ async function AnalyticsOverviewPageInner() {
         ga4PropertyId={settings.ga4PropertyId}
         overview={kpis}
         overTime={overTime}
+        productionUrl={process.env.APP_URL}
       />
     </AdminPage>
   );

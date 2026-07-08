@@ -5,7 +5,7 @@ import { XMLParser } from "fast-xml-parser";
  * WordPress ("Tools → Export") and Squarespace ("Settings → Import & Export
  * → Export → WordPress") emit. It's RSS 2.0 with WordPress/Dublin-Core
  * namespaces (`wp:`, `content:`, `excerpt:`, `dc:`). IDs and slugs in the
- * file are the source site's, not OYS's — the same "relative to the file"
+ * file are the source site's, not Lamina's — the same "relative to the file"
  * caveat the Ghost importer's parse.ts documents.
  *
  * Mirrors the Ghost importer's parse.ts contract exactly: a malformed

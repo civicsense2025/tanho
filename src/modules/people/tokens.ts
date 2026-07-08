@@ -8,7 +8,7 @@ import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
  * data — a tampered payload or expiry fails the timing-safe signature check.
  */
 const INFO = "people-optin-v1";
-const DEV_FALLBACK = "oys-dev-people-optin-insecure-key";
+const DEV_FALLBACK = "lamina-dev-people-optin-insecure-key";
 
 let warned = false;
 function signingKey(): Buffer {

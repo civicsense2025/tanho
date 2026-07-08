@@ -63,7 +63,7 @@ export function TypeCard({ type }: { type: CustomTypeRow }) {
         <span className={styles.slug}>custom:{type.slug}</span>
         <span style={{ flex: 1 }} />
         <Link
-          href={`/admin/content/${encodeURIComponent(`custom:${type.slug}`)}`}
+          href="/admin"
           className={styles.cardLink}
         >
           Manage entries →

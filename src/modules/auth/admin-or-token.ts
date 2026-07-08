@@ -33,6 +33,6 @@ export async function requireOwnerSessionOrToken(): Promise<AdminUser> {
   }
   const user = await getAdminUser();
   if (!user) throw new AdminAuthError(401, "Not signed in");
-  if (user.role !== "owner") throw new AdminAuthError(403, "Forbidden: owner role required");
+  if (!user.permissions.has("team:owner")) throw new AdminAuthError(403, "Forbidden: owner role required");
   return user;
 }

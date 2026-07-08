@@ -3,12 +3,14 @@
   border-radius: var(--radius-sm);
   background: var(--surface-card);
 }
+
 .cardHead {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 8px 10px;
 }
+
 .cardTitle {
   display: inline-flex;
   align-items: center;
@@ -21,14 +23,17 @@
   color: var(--text);
   padding: 2px 4px;
 }
+
 .cardChevron {
   color: var(--text-faint);
   transition: transform var(--dur) var(--ease);
   display: inline-block;
 }
+
 .cardChevron[data-open="true"] {
   transform: rotate(90deg);
 }
+
 .cardMeta {
   font-family: var(--font-label);
   font-size: var(--text-2xs);
@@ -36,6 +41,7 @@
   letter-spacing: var(--tracking-wide);
   color: var(--text-faint);
 }
+
 .cardBody {
   border-top: 1px solid var(--border);
   padding: var(--space-4);
@@ -43,6 +49,7 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+
 .cardNote {
   margin: 0;
   font-size: var(--text-xs);
@@ -62,14 +69,17 @@
   cursor: pointer;
   transition: var(--transition);
 }
+
 .iconBtn:hover:not(:disabled) {
   color: var(--text);
   border-color: var(--border);
 }
+
 .iconBtn:disabled {
   opacity: 0.35;
   cursor: default;
 }
+
 .iconBtnDanger:hover:not(:disabled) {
   color: var(--danger);
 }
@@ -77,6 +87,7 @@
 .picker {
   position: relative;
 }
+
 .pickerMenu {
   position: absolute;
   top: calc(100% + 6px);
@@ -91,6 +102,7 @@
   box-shadow: var(--shadow-lg);
   padding: var(--space-2);
 }
+
 .pickerCat {
   font-family: var(--font-label);
   font-size: var(--text-2xs);
@@ -99,6 +111,7 @@
   color: var(--text-faint);
   padding: 6px 10px 2px;
 }
+
 .pickerItem {
   display: flex;
   flex-direction: column;
@@ -111,14 +124,17 @@
   padding: 7px 10px;
   cursor: pointer;
 }
+
 .pickerItem:hover {
   background: var(--surface);
 }
+
 .pickerItemLabel {
   font-size: var(--text-sm);
   color: var(--text);
   font-weight: var(--weight-medium);
 }
+
 .pickerItemBlurb {
   font-size: var(--text-xs);
   color: var(--text-faint);
@@ -130,12 +146,15 @@
 .pickerCatSuggested {
   color: var(--accent);
 }
+
 .pickerItemSuggested {
   background: var(--accent-tint, color-mix(in srgb, var(--accent) 8%, transparent));
 }
+
 .pickerItemSuggested:hover {
   background: var(--accent-tint, color-mix(in srgb, var(--accent) 14%, transparent));
 }
+
 .pickerItemSuggested .pickerItemLabel {
   color: var(--accent);
 }
@@ -146,6 +165,7 @@
   overflow: hidden;
   background: var(--bg);
 }
+
 .previewBar {
   display: flex;
   align-items: center;
@@ -157,6 +177,7 @@
   font-size: var(--text-2xs);
   color: var(--text-faint);
 }
+
 .draftRibbon {
   display: flex;
   align-items: center;
@@ -170,6 +191,7 @@
   letter-spacing: var(--tracking-wide);
   color: var(--accent);
 }
+
 .previewBody {
   max-height: 74vh;
   overflow-y: auto;
@@ -182,6 +204,7 @@
   display: flex;
   justify-content: center;
 }
+
 .insertPlus {
   display: inline-flex;
   align-items: center;
@@ -197,11 +220,13 @@
   opacity: 0;
   transition: opacity var(--dur) var(--ease), color var(--dur) var(--ease);
 }
+
 .insertMenu:hover .insertPlus,
 .insertPlus[data-open],
 .insertPlus:focus-visible {
   opacity: 1;
 }
+
 .insertPlus[data-open] {
   color: var(--accent);
   border-color: var(--accent);
@@ -214,6 +239,7 @@
   align-items: center;
   justify-content: center;
 }
+
 .betweenBtn {
   display: flex;
   align-items: center;
@@ -226,16 +252,19 @@
   opacity: 0;
   transition: opacity var(--dur) var(--ease);
 }
+
 .between:hover .betweenBtn,
 .betweenBtn:focus-visible {
   opacity: 1;
 }
+
 .betweenLine {
   flex: 1;
   height: 1px;
   background: var(--accent);
   opacity: 0.5;
 }
+
 .betweenPlus {
   width: 18px;
   height: 18px;
@@ -254,6 +283,7 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
 .rowChip {
   padding: 5px 11px;
   border: 1px solid var(--border);
@@ -263,6 +293,7 @@
   font-size: var(--text-xs);
   cursor: pointer;
 }
+
 .rowChip:hover {
   border-color: var(--accent);
   color: var(--text);
@@ -294,11 +325,30 @@
   box-shadow: var(--shadow-lg);
   padding: var(--space-3);
 }
+
+.pickerGridGroup {
+  margin-bottom: var(--space-2);
+}
+
+.pickerGridGroup:last-child {
+  margin-bottom: 0;
+}
+
+.pickerGridCat {
+  font-family: var(--font-label);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  padding: 2px 2px var(--space-2);
+}
+
 .pickerGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
 }
+
 .pickerGridItem {
   padding: var(--space-3) var(--space-2);
   border: 1px solid var(--border);
@@ -309,6 +359,7 @@
   cursor: pointer;
   text-align: left;
 }
+
 .pickerGridItem:hover {
   background: var(--surface-hover);
   border-color: var(--border-strong);
@@ -326,12 +377,14 @@
   box-shadow: var(--shadow-lg);
   padding: var(--space-3);
 }
+
 .pickerCommandList {
   max-height: 300px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
+
 .pickerCommandItem,
 .pickerCommandItemSel {
   display: flex;
@@ -344,6 +397,7 @@
   cursor: pointer;
   text-align: left;
 }
+
 .pickerCommandItemSel {
   background: var(--surface-hover);
 }

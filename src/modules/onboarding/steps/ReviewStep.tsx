@@ -3,9 +3,8 @@ import type { WizardStepProps } from "../types";
 import type { GeneralSettings } from "@/modules/settings/validation";
 
 /** Plain summary + a restrained success state — no confetti/animation, matching the app's design ethos. */
-export function ReviewStep({ state, initial }: WizardStepProps) {
+export function ReviewStep({ initial }: WizardStepProps) {
   const general = initial.general as GeneralSettings;
-  const dataSourceDone = state.completedSteps.includes("data-source");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -19,11 +18,6 @@ export function ReviewStep({ state, initial }: WizardStepProps) {
         </li>
         <li>
           Brand — <Link href="/admin/settings/brand">edit</Link>
-        </li>
-        <li>
-          Data source —{" "}
-          {dataSourceDone ? "connected" : "not set up yet"} (
-          <Link href="/admin/settings/data-sources">manage</Link>)
         </li>
       </ul>
     </div>

@@ -51,11 +51,9 @@ const dayHoursSchema = z
   .object({ from: z.string().regex(HHMM), to: z.string().regex(HHMM) })
   .nullable();
 
-/** Google connect state — a graceful stub; no real OAuth yet. */
+/** Which Google Calendar to sync bookings to ("primary" by default). */
 const googleSchema = z.object({
-  connected: z.boolean().default(false),
-  account: z.string().max(200).default(""),
-  calendar: z.string().max(200).default(""),
+  calendarId: z.string().max(200).default("primary"),
 });
 
 /**
@@ -70,7 +68,7 @@ export const availabilitySettingsSchema = z.object({
   bufferAfterMin: z.number().int().min(0).max(240).default(0),
   slotIncrementMin: z.number().int().min(5).max(240).default(30),
   hours: z.partialRecord(z.enum(["0", "1", "2", "3", "4", "5", "6"]), dayHoursSchema).default({}),
-  google: googleSchema.default({ connected: false, account: "", calendar: "" }),
+  google: googleSchema.default({ calendarId: "primary" }),
 });
 export type AvailabilitySettings = z.infer<typeof availabilitySettingsSchema>;
 export const AVAILABILITY_DEFAULTS: AvailabilitySettings =

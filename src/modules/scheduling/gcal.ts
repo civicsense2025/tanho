@@ -1,20 +1,10 @@
-import type { AvailabilitySettings } from "./validation";
-
 /**
- * Google Calendar integration — a GRACEFUL STUB. There is no real OAuth here:
- * the "connected" flag lives in the scheduling settings namespace and toggling
- * it flips the admin UI to a connected state. No secrets are stored.
- *
- * HARDENING (later): a real OAuth round-trip would exchange a code for tokens
- * (AES-GCM encrypted at rest per SECURITY.md), then push events via the
- * Calendar API and read busy times into slotsFor. Until then bookings degrade
- * to a client-side "add to Google Calendar" template link the guest clicks.
+ * Client-side "Add to Google Calendar" template link builder. This needs no
+ * OAuth — it opens Google's prefilled event composer in the guest's browser.
+ * The real Calendar sync (push/delete/patch/freebusy + Meet + attendees) lives
+ * in gcal-sync.ts (server-only); this module stays import-safe for client
+ * components because it touches no tokens or DB code.
  */
-
-/** True when the owner has flipped the connect stub on. */
-export function isGoogleConnected(settings: AvailabilitySettings): boolean {
-  return settings.google.connected;
-}
 
 /** Combine a YYYY-MM-DD + HH:MM (assumed UTC) into a Google date-time stamp. */
 function stamp(dateISO: string, hhmm: string, addMinutes = 0): string {

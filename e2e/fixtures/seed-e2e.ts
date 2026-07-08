@@ -10,6 +10,12 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "../../src/lib/db/client";
 import { pages, blockSets } from "../../src/modules/pages/schema";
+import { users } from "../../src/modules/auth/schema";
+import { hashPassword } from "../../src/modules/auth/password";
+import { ensureSystemRolesSeeded } from "../../src/modules/team/seed";
+import { eventTypes } from "../../src/modules/scheduling/schema";
+import { settings } from "../../src/modules/settings/schema";
+import { SCHED_NS } from "../../src/modules/scheduling/settings";
 
 const heading = (id: string, text: string, level = "h2") => ({
   id,
@@ -155,6 +161,143 @@ export async function seedE2e() {
     ],
     /* hasPaywall */ true,
   );
+
+  // Theme showcase: a page with sections exercising the per-section themeMode
+  // override (light, dark, inherit) so e2e can verify data-theme scoping.
+  await upsertPage(
+    "e2e-theme",
+    "e2e-theme",
+    "/e2e-theme",
+    "Theme Showcase",
+    null,
+    [
+      heading("h", "Theme Showcase", "h1"),
+      {
+        id: "sec-light",
+        type: "section",
+        content: {
+          width: "contained",
+          background: "none",
+          py: "md",
+          themeMode: "light",
+          blocks: [heading("h-light", "Light Section", "h2")],
+        },
+      },
+      {
+        id: "sec-dark",
+        type: "section",
+        content: {
+          width: "contained",
+          background: "none",
+          py: "md",
+          themeMode: "dark",
+          blocks: [heading("h-dark", "Dark Section", "h2")],
+        },
+      },
+      {
+        id: "sec-inherit",
+        type: "section",
+        content: {
+          width: "contained",
+          background: "none",
+          py: "md",
+          themeMode: "inherit",
+          blocks: [heading("h-inherit", "Inherit Section", "h2")],
+        },
+      },
+    ],
+  );
+
+  // Scheduling e2e: deterministic owner (for /admin/scheduling), an active free
+  // event type, and availability hours so the public booking flow has slots.
+  await seedE2EOwner();
+  await seedE2EScheduling();
+}
+
+/** Deterministic e2e admin owner — logs in via the /admin/login form. */
+const E2E_OWNER_EMAIL = "e2e-owner@example.com";
+const E2E_OWNER_PASSWORD = "e2e-test-owner-password-123";
+
+async function seedE2EOwner() {
+  // System roles + permission catalog (Owner role carries team:owner sentinel).
+  const roleIds = await ensureSystemRolesSeeded(db);
+  const ownerRoleId = roleIds["Owner"];
+
+  const existing = await db.query.users.findFirst({
+    where: eq(users.email, E2E_OWNER_EMAIL),
+  });
+  if (existing) {
+    await db
+      .update(users)
+      .set({
+        name: "E2E Owner",
+        passwordHash: await hashPassword(E2E_OWNER_PASSWORD),
+        role: "owner",
+        roleId: ownerRoleId,
+        status: "active",
+      })
+      .where(eq(users.id, existing.id));
+  } else {
+    await db.insert(users).values({
+      email: E2E_OWNER_EMAIL,
+      name: "E2E Owner",
+      passwordHash: await hashPassword(E2E_OWNER_PASSWORD),
+      role: "owner",
+      roleId: ownerRoleId,
+      status: "active",
+    });
+  }
+}
+
+/** Active free event type + availability hours so the booking flow has slots. */
+const E2E_EVENT_TYPE_ID = "e2e-event-intro";
+const E2E_EVENT_SLUG = "e2e-intro";
+
+async function seedE2EScheduling() {
+  // Event type — free, 30 min, zoom, active.
+  await db
+    .delete(eventTypes)
+    .where(eq(eventTypes.id, E2E_EVENT_TYPE_ID));
+  await db.insert(eventTypes).values({
+    id: E2E_EVENT_TYPE_ID,
+    slug: E2E_EVENT_SLUG,
+    name: "E2E Intro Call",
+    durationMin: 30,
+    priceCents: 0,
+    color: "accent",
+    description: "A free intro call for e2e testing.",
+    locations: ["zoom"],
+    active: true,
+  });
+
+  // Availability — Mon–Fri 00:00–23:00 UTC, no min notice so slots exist now.
+  // Hours keyed by weekday 0..6 (0 = Sunday). minNoticeHours 0 so today has
+  // slots regardless of when the test runs.
+  const availability = {
+    timezone: "UTC",
+    minNoticeHours: 0,
+    dailyCap: 8,
+    bufferBeforeMin: 0,
+    bufferAfterMin: 0,
+    slotIncrementMin: 30,
+    hours: {
+      "1": { from: "00:00", to: "23:00" },
+      "2": { from: "00:00", to: "23:00" },
+      "3": { from: "00:00", to: "23:00" },
+      "4": { from: "00:00", to: "23:00" },
+      "5": { from: "00:00", to: "23:00" },
+      "6": { from: "00:00", to: "23:00" },
+      "0": { from: "00:00", to: "23:00" },
+    },
+  };
+  await db
+    .delete(settings)
+    .where(eq(settings.namespace, SCHED_NS));
+  await db.insert(settings).values({
+    namespace: SCHED_NS,
+    data: availability,
+    updatedAt: Date.now(),
+  });
 }
 
 /** Remove all e2e fixture pages (for teardown / clean re-seed). */
@@ -162,6 +305,10 @@ export async function cleanE2e() {
   const ids = ["e2e-docs", "e2e-guides", "e2e-structural", "e2e-layout", "e2e-paywall", "e2e-post"];
   await db.delete(blockSets).where(inArray(blockSets.ownerId, ids));
   await db.delete(pages).where(inArray(pages.id, ids));
+  // Scheduling + owner fixtures.
+  await db.delete(eventTypes).where(eq(eventTypes.id, E2E_EVENT_TYPE_ID));
+  await db.delete(settings).where(eq(settings.namespace, SCHED_NS));
+  await db.delete(users).where(eq(users.email, E2E_OWNER_EMAIL));
 }
 
 // Allow running directly (outside Playwright) for manual checks.

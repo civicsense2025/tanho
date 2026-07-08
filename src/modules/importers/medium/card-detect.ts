@@ -1,10 +1,11 @@
 import { parse, type HTMLElement } from "node-html-parser";
 import { resolveEmbedUrl } from "@/modules/embeds/resolve";
+import { safeHref } from "@/modules/importers/shared/safe-href";
 import type { CardResult } from "@/modules/importers/shared/types";
 
 /**
  * Maps Medium's exported story markup (the `graf--*` classes Medium's own
- * exporter emits) to native OYS blocks instead of stuffing every top-level
+ * exporter emits) to native Lamina blocks instead of stuffing every top-level
  * element into one richtext blob:
  *   - `<figure class="graf--figure">` (or any top-level `<figure>` with an
  *     `<img>`) → an `image` block (src + `<figcaption>` → caption),
@@ -84,6 +85,8 @@ async function detectEmbed(el: HTMLElement): Promise<CardResult | null> {
   if (!resolved.ok) {
     // Unsupported/unresolvable provider — fall back to a labeled link rather
     // than silently dropping the embed.
+    const href = safeHref(candidate);
+    if (!href) return null;
     let hostname = "the source";
     try {
       hostname = new URL(candidate).hostname;
@@ -93,7 +96,7 @@ async function detectEmbed(el: HTMLElement): Promise<CardResult | null> {
     return {
       block: {
         type: "buttons",
-        content: { align: "left", items: [{ label: `View on ${hostname}`, href: candidate, variant: "outline", target: "_blank" }] },
+        content: { align: "left", items: [{ label: `View on ${hostname}`, href, variant: "outline", target: "_blank" }] },
       },
       issues: [{ kind: "embed-unsupported", detail: `Embed from ${hostname} has no supported provider; imported as a link` }],
     };

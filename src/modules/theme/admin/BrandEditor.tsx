@@ -49,8 +49,9 @@ export const BrandEditor = forwardRef<
     initial: ThemeInput;
     fontFamilies?: BrandFontFamily[];
     faviconPreviewUrl?: string | null;
+    siteName?: string;
   }
->(function BrandEditor({ initial, fontFamilies = [], faviconPreviewUrl = null }, ref) {
+>(function BrandEditor({ initial, fontFamilies = [], faviconPreviewUrl = null, siteName }, ref) {
   const [t, setT] = useState<ThemeInput>(initial);
   const [dirty, setDirty] = useState(false);
   const [mode, setMode] = useState<"light" | "dark">("light");
@@ -97,6 +98,16 @@ export const BrandEditor = forwardRef<
 
   const bases = { accent: t.accent, accent2: t.accent2, ink: t.ink, paper: t.paper };
 
+  /** Compute the live --font-sans stack for the currently selected font family,
+   *  so the preview updates immediately when the owner switches fonts (no
+   *  save-and-reload needed). Mirrors fonts/css.ts#cssStackFor's format. */
+  const activeCustomStack = t.fontFamilyId
+    ? (() => {
+      const family = fontFamilies.find((f) => f.id === t.fontFamilyId);
+      return family ? `"${family.name}", ui-sans-serif, system-ui, -apple-system, sans-serif` : null;
+    })()
+    : null;
+
   return (
     <div className={styles.layout}>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-8)" }}>
@@ -111,6 +122,25 @@ export const BrandEditor = forwardRef<
             {dirty ? "Save •" : "Save"}
           </Button>
         </div>
+
+        <Section title="Brand identity" desc="Your logo and site name live elsewhere — edit them there, not here.">
+          <Row label="Logo">
+            <span style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+              Part of your site header.{" "}
+              <Link href="/admin/nav/header" style={{ color: "var(--accent)" }}>
+                Edit in the Header editor →
+              </Link>
+            </span>
+          </Row>
+          <Row label="Site name">
+            <span style={{ fontSize: "var(--text-sm)", color: "var(--text)" }}>
+              {siteName || "—"}
+            </span>
+            <Link href="/admin/settings/general" style={{ fontSize: "var(--text-xs)", color: "var(--accent)", marginLeft: "var(--space-3)" }}>
+              Edit in General settings →
+            </Link>
+          </Row>
+        </Section>
 
         <Section title="Palette presets" desc="A starting point — click to fill the four base colors.">
           <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
@@ -242,7 +272,7 @@ export const BrandEditor = forwardRef<
             </Button>
           ))}
         </div>
-        <ThemePreview theme={t} mode={mode} />
+        <ThemePreview theme={t} mode={mode} customStack={activeCustomStack} />
         <Section title="Contrast (WCAG)">
           <ContrastPanel bases={bases} mode={mode} />
         </Section>

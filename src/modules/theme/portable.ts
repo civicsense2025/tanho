@@ -5,7 +5,7 @@ import { themeInputSchema, type ThemeInput } from "./validation";
  * shape entries in the theme library use. It carries only the ~12 scalars, so
  * it's tiny and deployment-agnostic (no derived colors, no media, no ids).
  */
-export const THEME_FORMAT = "oys-theme@1";
+export const THEME_FORMAT = "lamina-theme@1";
 
 export type PortableTheme = {
   format: typeof THEME_FORMAT;

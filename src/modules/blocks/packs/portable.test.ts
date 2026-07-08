@@ -22,7 +22,7 @@ describe("portable pack — importPackJson", () => {
   });
 
   it("rejects an unsupported format tag (fail-closed)", () => {
-    const res = importPackJson({ format: "oys-pack@9", kind: "block-pack", name: "x", blocks: [] });
+    const res = importPackJson({ format: "lamina-pack@9", kind: "block-pack", name: "x", blocks: [] });
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toContain(PACK_FORMAT);
   });

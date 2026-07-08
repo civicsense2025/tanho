@@ -31,10 +31,11 @@ import type { Device } from "../types";
  * clobber base through the spread, so the editor deletes keys rather than writing
  * undefined, and styleToCss skips undefined/empty so the spread falls through.
  *
- * INNER-BOX ONLY: padding / typography / colour / border / radius / shadow /
- * text-align. Never margin or maxWidth — this is applied on the chrome-bearing
- * <div data-block> wrapper, and margin/maxWidth there would break the parent
- * gutter/full-bleed math and shift editor selection chrome.
+ * INNER-BOX ONLY: padding / margin / typography / colour / border / radius /
+ * shadow / text-align. Never maxWidth — this is applied on the chrome-bearing
+ * <div data-block> wrapper. Margin augments the parent layout block's gap (and
+ * full-bleed sections don't opt in, so their negative-margin math is untouched);
+ * maxWidth would break the parent gutter/full-bleed math, so it stays excluded.
  */
 
 /** Merge the three layers down to the one that applies at `device`. Returns a
@@ -64,6 +65,15 @@ export function styleToCss(layer: StyleLayer): CSSProperties {
   if (padRight) s.paddingRight = padRight;
   if (padBottom) s.paddingBottom = padBottom;
   if (padLeft) s.paddingLeft = padLeft;
+
+  const marginTop = layer.marginTop && SPACE_STEP[layer.marginTop];
+  const marginRight = layer.marginRight && SPACE_STEP[layer.marginRight];
+  const marginBottom = layer.marginBottom && SPACE_STEP[layer.marginBottom];
+  const marginLeft = layer.marginLeft && SPACE_STEP[layer.marginLeft];
+  if (marginTop) s.marginTop = marginTop;
+  if (marginRight) s.marginRight = marginRight;
+  if (marginBottom) s.marginBottom = marginBottom;
+  if (marginLeft) s.marginLeft = marginLeft;
 
   if (layer.fontSize) s.fontSize = FONT_SIZE_VAR[layer.fontSize];
   if (layer.fontWeight) s.fontWeight = FONT_WEIGHT_VALUE[layer.fontWeight];
@@ -116,6 +126,15 @@ export function styleDecls(layer: StyleLayer): Record<string, string> {
   if (padRight) s["padding-right"] = padRight;
   if (padBottom) s["padding-bottom"] = padBottom;
   if (padLeft) s["padding-left"] = padLeft;
+
+  const marginTop = layer.marginTop && SPACE_STEP[layer.marginTop];
+  const marginRight = layer.marginRight && SPACE_STEP[layer.marginRight];
+  const marginBottom = layer.marginBottom && SPACE_STEP[layer.marginBottom];
+  const marginLeft = layer.marginLeft && SPACE_STEP[layer.marginLeft];
+  if (marginTop) s["margin-top"] = marginTop;
+  if (marginRight) s["margin-right"] = marginRight;
+  if (marginBottom) s["margin-bottom"] = marginBottom;
+  if (marginLeft) s["margin-left"] = marginLeft;
 
   if (layer.fontSize) s["font-size"] = FONT_SIZE_VAR[layer.fontSize];
   if (layer.fontWeight) s["font-weight"] = FONT_WEIGHT_VALUE[layer.fontWeight];

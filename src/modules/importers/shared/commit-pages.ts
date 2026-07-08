@@ -15,7 +15,7 @@ import type { ImportedBlock, ParseIssue } from "./types";
 export type PageCandidate = {
   title: string;
   slug: string;
-  /** OYS route, "/<slug>". */
+  /** Lamina route, "/<slug>". */
   route: string;
   kind: "page" | "post";
   status: "draft" | "published";

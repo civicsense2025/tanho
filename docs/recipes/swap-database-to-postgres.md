@@ -19,10 +19,10 @@ every `src/modules/*/schema.ts` file needs converting, not just the client.
    (or any Postgres client connected as `postgres`):
 
    ```sql
-   CREATE ROLE oys_app WITH LOGIN NOINHERIT PASSWORD 'generate-a-real-one-here';
+   CREATE ROLE lamina_app WITH LOGIN NOINHERIT PASSWORD 'generate-a-real-one-here';
    ```
 
-   `oys_app` is the fixed name the codemod's generated policies grant
+   `lamina_app` is the fixed name the codemod's generated policies grant
    access to (step 2 below) — don't rename it without also updating the
    codemod, and don't reuse Supabase's reserved `anon`/`authenticated`/
    `authenticator`/`service_role` names.
@@ -39,7 +39,7 @@ every `src/modules/*/schema.ts` file needs converting, not just the client.
 
    It also fixes the small number of SQLite-only query terminators
    (`.get()` / `.all()`) that Postgres's async driver doesn't have, and
-   adds `.enableRLS()` plus a `pgPolicy()` granting the `oys_app` role full
+   adds `.enableRLS()` plus a `pgPolicy()` granting the `lamina_app` role full
    access to every table (see "Row-Level Security" below). It's
    idempotent — safe to re-run, and it skips schema files that don't
    import `drizzle-orm/sqlite-core` (a few `schema.ts`/`*-schema.ts` files
@@ -56,8 +56,8 @@ every `src/modules/*/schema.ts` file needs converting, not just the client.
    `.enableRLS()`/`pgPolicy()` additions) `ENABLE ROW LEVEL SECURITY` and
    `CREATE POLICY` statements — confirm both appear in the generated
    `drizzle/0000_*.sql` before proceeding, since `CREATE POLICY ... TO
-   oys_app` will fail if step 1's role doesn't exist yet in the target
-   database. Point `DATABASE_URL` at the `oys_app` role's connection
+   lamina_app` will fail if step 1's role doesn't exist yet in the target
+   database. Point `DATABASE_URL` at the `lamina_app` role's connection
    string (not `postgres`'s) before running this.
 5. **Add the FORCE RLS migration** — a `--custom` migration Drizzle can't
    generate on its own (it has no schema-level API for `FORCE ROW LEVEL
@@ -69,7 +69,7 @@ every `src/modules/*/schema.ts` file needs converting, not just the client.
 
    Replace the generated empty file's contents with
    [`scripts/postgres-rls-force.sql`](../../scripts/postgres-rls-force.sql) —
-   it grants `oys_app` the table/sequence privileges matching its RLS
+   it grants `lamina_app` the table/sequence privileges matching its RLS
    policies and applies `FORCE ROW LEVEL SECURITY` to every table.
 6. **Add the search migration** — another `--custom` migration, for the same
    reason as step 5: full-text search needs a `tsvector` generated column +
@@ -93,7 +93,7 @@ every `src/modules/*/schema.ts` file needs converting, not just the client.
 7. **Migrate, seed, and test**: `npm run db:migrate` (applies the table
    DDL/RLS migration, the FORCE RLS migration, and the search migration, in
    order), then `npm run seed` and run the app and the suite — connected as
-   `oys_app` throughout, confirming RLS doesn't break legitimate app access.
+   `lamina_app` throughout, confirming RLS doesn't break legitimate app access.
 
 ## Column-type mapping (what the codemod does)
 
@@ -132,11 +132,11 @@ these scripts either.
 
 **Connecting as a role other than `postgres` through the pooler**: Supabase's
 Supavisor pooler routes by a tenant-scoped username, not a bare role name —
-even for the `oys_app` role from step 1, the connection string's username
-must be `oys_app.<project-ref>`, not just `oys_app`:
+even for the `lamina_app` role from step 1, the connection string's username
+must be `lamina_app.<project-ref>`, not just `lamina_app`:
 
 ```
-postgresql://oys_app.<project-ref>:<password>@aws-<n>-<region>.pooler.supabase.com:5432/postgres
+postgresql://lamina_app.<project-ref>:<password>@aws-<n>-<region>.pooler.supabase.com:5432/postgres
 ```
 
 Using the bare role name against the pooler fails with a routing/tenant
@@ -146,7 +146,7 @@ first.
 ## Row-Level Security
 
 Every table gets RLS enabled (`.enableRLS()`) and a single policy
-(`<table>_app_only`) granting full access **only** to the `oys_app` role —
+(`<table>_app_only`) granting full access **only** to the `lamina_app` role —
 this is **defense-in-depth**, not this app's real authorization model. Every
 feature's actual access control is `requireUser()` / `requireApiUser()` in
 `src/modules/*/actions.ts` and API routes (see
@@ -156,7 +156,7 @@ or a stray `DATABASE_URL` pointed at a different role ever leaks separately
 from your real credentials, it can't read or write your tables via
 PostgREST or the SQL editor. Verified directly against a live Supabase
 project: a session with `SET ROLE anon` reads **zero rows** from a
-FORCE-RLS-locked table that a session connected as `oys_app` reads
+FORCE-RLS-locked table that a session connected as `lamina_app` reads
 correctly.
 
 **What this does *not* protect against, by Postgres/Supabase design — not a

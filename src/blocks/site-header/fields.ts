@@ -32,6 +32,10 @@ export const siteHeaderSchema = z.object({
    *  the same white-label pattern logo/site-footer use — a brand default is
    *  never stored in the tree). Only rendered when `twoTier` is true. */
   utilityText: z.string().max(120).default(""),
+  /** Show a light/dark/system theme toggle in the header (public site only).
+   *  Visitors can flip the site's appearance; their choice is persisted via a
+   *  cookie so SSR picks it up with no flash. */
+  showThemeToggle: z.boolean().default(false),
   blocks: childBlocksSchema.default([]),
 });
 

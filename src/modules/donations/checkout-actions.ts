@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
+import { clientIp } from "@/lib/client-ip";
 import { payments } from "@/adapters/payments";
 import { getViewer } from "@/modules/people/viewer";
 import { orderItems, orders } from "@/modules/commerce/schema";
@@ -27,7 +28,7 @@ function appUrl(): string {
  */
 export async function startDonationCheckout(input: unknown): Promise<StartDonationResult> {
   const hdrs = await headers();
-  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+  const ip = clientIp(hdrs);
   if (!(await allowDonationCheckout(ip))) {
     return { ok: false, error: "Too many attempts. Please try again in a few minutes." };
   }

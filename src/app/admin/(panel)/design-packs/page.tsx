@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { requireUser } from "@/modules/auth/guards";
 import { listEntries } from "@/modules/entries/queries";
@@ -7,20 +6,12 @@ import { AdminPage } from "@/components/admin/AdminPage";
 
 export const metadata = { title: "Design packs" };
 
-export default function DesignPacksPage() {
-  return (
-    <Suspense fallback={null}>
-      <DesignPacksPageInner />
-    </Suspense>
-  );
-}
-
 /**
  * Theme + page template bundles. Import a .pack.json, export one, or activate
  * a design pack to apply its theme and create its pages. Imports are fail-safe:
  * unknown block types render as placeholders, never breaking the site.
  */
-async function DesignPacksPageInner() {
+export default async function DesignPacksPage() {
   await requireUser();
   const packs = await listEntries("design_pack");
   return (

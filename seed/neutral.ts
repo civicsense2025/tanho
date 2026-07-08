@@ -15,6 +15,7 @@ import { seedChrome } from "./modules/chrome";
 import { seedSeo } from "./modules/seo";
 import { seedProfile } from "./modules/profile";
 import { seedEntries } from "./modules/entries";
+import { seedContentTypes } from "./modules/content-types";
 import { seedPeople } from "./modules/people";
 import { seedCommerce } from "./modules/commerce";
 import { seedMemberships } from "./modules/memberships";
@@ -22,12 +23,14 @@ import { seedScheduling } from "./modules/scheduling";
 import { seedAnalytics } from "./modules/analytics";
 import { seedForms } from "./modules/forms";
 import { seedHardening } from "./modules/hardening";
+import { seedTeam } from "./modules/team";
 
 async function main() {
   const db = seedDb();
   await seedSettings(db);
   await seedTheme(db);
   await seedOwner(db);
+  await seedTeam(db);
   await seedBlockRegistry(db);
   await seedPages(db);
   const { mainMenuId } = await seedMenus(db);
@@ -35,6 +38,7 @@ async function main() {
   await seedSeo(db);
   await seedProfile(db);
   await seedEntries(db);
+  await seedContentTypes(db);
   await seedPeople(db);
   await seedCommerce(db);
   await seedMemberships(db);

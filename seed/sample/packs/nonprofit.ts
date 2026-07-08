@@ -23,7 +23,7 @@ export const nonprofitPack: SamplePack = {
     accent2: "#7c9a3c", // leaf green
     ink: "#1a1f16",
     paper: "#fbfaf6",
-    radius: "soft",
+    radius: "round",
     shadow: "subtle",
   },
   menu: [

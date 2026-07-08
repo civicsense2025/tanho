@@ -29,7 +29,7 @@ vi.mock("@/modules/auth/session", () => ({
   ADMIN_COOKIE: "admin_session",
   createAdminSession,
 }));
-class RedirectError extends Error {}
+class RedirectError extends Error { }
 const redirect = vi.fn((url: string) => {
   throw new RedirectError(url);
 });
@@ -53,7 +53,7 @@ beforeEach(async () => {
   // share the same DB — libSQL :memory: gives a transaction its own connection,
   // which loses visibility of tables not written during that tx. Production
   // (file/Turso) shares the DB across connections, so this mirrors it.
-  tmpDir = mkdtempSync(join(tmpdir(), "oys-first-owner-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "lamina-first-owner-"));
   client = createClient({ url: `file:${join(tmpDir, "test.db")}` });
   testDb = drizzle(client, { schema });
   await migrate(testDb, { migrationsFolder: "./drizzle" });
@@ -79,6 +79,20 @@ describe("createFirstOwner", () => {
     expect(rows[0]!.status).toBe("active");
     // Password is hashed, never stored raw.
     expect(rows[0]!.passwordHash).not.toBe(GOOD.password);
+
+    // The first owner must be scaffolded as an Owner: a non-null roleId whose
+    // permission set includes the `team:owner` sentinel. Without this,
+    // `requireUser("owner")` (which checks the permission set, not the enum)
+    // throws "Forbidden: owner role required" on the very next page load —
+    // the install wizard dead-ends. Regression for the fresh-deploy bug where
+    // the user was created with roleId=null and the roles/permissions tables
+    // were empty because `npm run seed` hadn't run.
+    expect(rows[0]!.roleId).not.toBeNull();
+    // Dynamically imported so guards.ts (which imports next/navigation) loads
+    // after the vi.mock factories are initialized.
+    const { resolvePermissions } = await import("@/modules/auth/guards");
+    const perms = await resolvePermissions(rows[0]!.roleId);
+    expect(perms.has("team:owner")).toBe(true);
 
     // Logged in via the SAME primitive the login flow uses.
     expect(createAdminSession).toHaveBeenCalledWith(rows[0]!.id, expect.any(Object));

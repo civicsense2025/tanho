@@ -1,5 +1,6 @@
 import { parse, type HTMLElement } from "node-html-parser";
 import { resolveEmbedUrl } from "@/modules/embeds/resolve";
+import { safeHref } from "@/modules/importers/shared/safe-href";
 import type { ParseIssue } from "./parse";
 
 export type DetectedBlock = { type: string; content: Record<string, unknown> };
@@ -9,7 +10,7 @@ export type CardResult = { block: DetectedBlock; issues: ParseIssue[] };
  * Maps the common WordPress-rendered HTML structures found in a WXR
  * `content:encoded` body — Gutenberg block markup (`wp-block-image`,
  * `wp-block-gallery`, `wp-block-button`, `wp-block-embed`) and the classic
- * `[caption]` shortcode render (`wp-caption`) — to native OYS blocks, instead
+ * `[caption]` shortcode render (`wp-caption`) — to native Lamina blocks, instead
  * of stuffing every top-level element into one richtext blob. Anything that
  * doesn't match a known structure returns null; the caller falls back to
  * wrapping the element in richtext (sanitized at render). Every extraction is
@@ -88,17 +89,20 @@ function detectGallery(el: HTMLElement): CardResult | null {
 
 function detectButton(el: HTMLElement): CardResult | null {
   // A `wp-block-buttons` wrapper can hold several buttons; collect every anchor
-  // with an href so a button group maps to one buttons block with N items.
-  const anchors = el.querySelectorAll("a").filter((a) => a.getAttribute("href"));
-  if (anchors.length === 0) return null;
+  // with a safe href so a button group maps to one buttons block with N items.
+  const items = el
+    .querySelectorAll("a")
+    .map((a) => ({ a, href: safeHref(a.getAttribute("href")) }))
+    .filter((x): x is { a: HTMLElement; href: string } => Boolean(x.href));
+  if (items.length === 0) return null;
   return {
     block: {
       type: "buttons",
       content: {
         align: "left",
-        items: anchors.map((a) => ({
+        items: items.map(({ a, href }) => ({
           label: a.text.trim() || "Button",
-          href: a.getAttribute("href")!,
+          href,
           variant: "solid",
           target: "_self",
         })),
@@ -123,6 +127,8 @@ async function detectEmbed(el: HTMLElement): Promise<CardResult | null> {
   if (!resolved.ok) {
     // Unsupported/unresolvable provider — fall back to a labeled link rather
     // than dropping the embed, matching Ghost's detectEmbed fallback.
+    const href = safeHref(candidate);
+    if (!href) return null;
     let hostname = "the source";
     try {
       hostname = new URL(candidate).hostname;
@@ -134,7 +140,7 @@ async function detectEmbed(el: HTMLElement): Promise<CardResult | null> {
         type: "buttons",
         content: {
           align: "left",
-          items: [{ label: `View on ${hostname}`, href: candidate, variant: "outline", target: "_blank" }],
+          items: [{ label: `View on ${hostname}`, href, variant: "outline", target: "_blank" }],
         },
       },
       issues: [{ kind: "embed-unsupported", detail: `Embed from ${hostname} has no supported provider; imported as a link` }],

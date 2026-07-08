@@ -23,7 +23,7 @@ export function RenderBadge({ content }: { content: BadgeContent; ctx: RenderCtx
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "4px",
+        gap: "var(--space-1)",
         padding: "3px var(--space-2)",
         borderRadius: "var(--radius-pill)",
         background: t.bg,

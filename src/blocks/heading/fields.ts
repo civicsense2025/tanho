@@ -7,7 +7,7 @@ export const headingSchema = z.object({
   ...advancedStyleContent,
   ...motionContent,
   text: z.string().max(500),
-  level: z.enum(["h1", "h2", "h3", "h4"]).default("h2"),
+  level: z.enum(["h1", "h2", "h3", "h4", "h5", "h6"]).default("h2"),
   align: z.enum(["left", "center", "right"]).default("left"),
 });
 

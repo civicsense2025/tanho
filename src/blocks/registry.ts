@@ -71,6 +71,7 @@ import { bookingDef } from "./booking/def";
 import { formDef } from "./form/def";
 import { entryListDef } from "./entry-list/def";
 import { fieldDef } from "./field/def";
+import { reviewsDef } from "./reviews/def";
 
 // ─── BEGIN phase3-chrome-blocks (site header/footer as blocks) ──────────────
 // Contiguous block for easy merge — another worktree also edits this file.
@@ -174,6 +175,7 @@ const defs: Array<BlockDef<any>> = [
   entryListDef,
   collectionDef,
   fieldDef,
+  reviewsDef,
   // ─── BEGIN phase3-chrome-blocks ───────────────────────────────────────────
   siteHeaderDef,
   siteFooterDef,

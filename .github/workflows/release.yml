@@ -1,0 +1,57 @@
+name: Release
+
+# Publishes a signed platform release to the Lamina Hub. Triggered by pushing a
+# version tag (e.g. `git tag v0.2.0 && git push origin v0.2.0`). The heavy lifting
+# — packaging tracked files, baking .lamina/version.json, Ed25519-signing the
+# ZIP, and POSTing to the hub — lives in scripts/build-release.ts so it can also be
+# run locally (`npx tsx scripts/build-release.ts --version X --dry-run`).
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   ED25519_PRIVATE_KEY  PEM Ed25519 private key. Public half is baked into the CLI;
+#                        a compromised hub cannot forge a release without this.
+#   HUB_ADMIN_TOKEN      Bearer token the hub accepts for release publishing.
+# Optional:
+#   HUB_URL              Hub base URL. Defaults to https://hub.lamina.com.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# Never run two publishes for the same tag concurrently.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # build-release.ts reads the release commit via `git rev-parse HEAD` and
+          # packages it with `git archive` — the tagged commit is what's checked out.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # Gate the release on the same checks main must pass, so a tag can't ship
+      # something that wouldn't merge.
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test -- --run
+      - name: White-label gate
+        run: bash scripts/check-white-label.sh
+      - name: Build
+        run: npm run build
+
+      - name: Build, sign, and publish release to the hub
+        env:
+          HUB_URL: ${{ secrets.HUB_URL }}
+          HUB_ADMIN_TOKEN: ${{ secrets.HUB_ADMIN_TOKEN }}
+          ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
+        run: npx tsx scripts/build-release.ts

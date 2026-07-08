@@ -2,6 +2,12 @@ import { mkdirSync } from "node:fs";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "../src/lib/db/schema";
+import { resolveEnvPrefix } from "../src/lib/env/prefix";
+
+// Seed/import scripts run via tsx outside Next.js, so the instrumentation.ts
+// boot hook never fires. Resolve prefixed env vars (e.g. TANHO_DATABASE_URL →
+// DATABASE_URL) before any read. Canonical names always win. Idempotent.
+resolveEnvPrefix();
 
 /** Standalone DB handle for seed scripts (no Next.js runtime). */
 export function seedDb() {

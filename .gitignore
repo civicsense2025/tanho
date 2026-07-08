@@ -56,11 +56,14 @@ dev.db-*
 backups/
 *.tar.gz
 
-# Own Your Site CLI runtime state (license activation + update manifest)
-.own-your-site/
+# Local release dry-run output (scripts/build-release.ts --dry-run)
+dist-release/
 
 # Playwright e2e ephemeral output
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Devin MCP local config (contains secrets)
+.devin/config.local.json

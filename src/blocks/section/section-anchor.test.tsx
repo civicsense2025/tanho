@@ -39,3 +39,25 @@ describe("section anchorId", () => {
     expect(html).not.toContain('id="setup"');
   });
 });
+
+describe("section themeMode override", () => {
+  it("emits data-theme=dark when themeMode is dark", async () => {
+    const html = await render({ themeMode: "dark" });
+    expect(html).toContain('data-theme="dark"');
+  });
+
+  it("emits data-theme=light when themeMode is light", async () => {
+    const html = await render({ themeMode: "light" });
+    expect(html).toContain('data-theme="light"');
+  });
+
+  it("omits data-theme when themeMode is inherit (default)", async () => {
+    const html = await render({ themeMode: "inherit" });
+    expect(html).not.toContain("data-theme");
+  });
+
+  it("omits data-theme when themeMode is not set", async () => {
+    const html = await render({});
+    expect(html).not.toContain("data-theme");
+  });
+});

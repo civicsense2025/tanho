@@ -35,7 +35,7 @@ A theme is just the ~12 scalars — tiny and portable.
 - The **Theme library** on that screen offers curated starter themes you can
   import in one click. It reads a same-origin catalog at
   `public/theme-library/index.json` — swap that file to ship your own library
-  (each entry is an `oys-theme@1` payload; no external host needed).
+  (each entry is an `lamina-theme@1` payload; no external host needed).
 
 ## Logo & favicon
 

@@ -19,7 +19,7 @@ const DEMO_THEME = themeInputSchema.parse({
   headingScale: 1.05,
   leading: 1.6,
   density: 1,
-  radius: "soft",
+  radius: "round",
   shadow: "subtle",
 });
 

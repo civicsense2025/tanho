@@ -1,8 +1,9 @@
 import { parse, type HTMLElement } from "node-html-parser";
 import type { CardResult, ParseIssue } from "../shared/types";
+import { safeHref } from "../shared/safe-href";
 
 /**
- * Maps Substack's post-body HTML structures to native OYS blocks, mirroring
+ * Maps Substack's post-body HTML structures to native Lamina blocks, mirroring
  * ghost/card-detect.ts. Substack renders its editor content with stable class
  * hooks — `captioned-image-container` for images, `.button`/`a.button` for
  * link buttons, `.subscribe-widget` for the inline subscribe band, and
@@ -55,7 +56,7 @@ function detectImage(el: HTMLElement): CardResult | null {
 
 function detectButton(el: HTMLElement): CardResult | null {
   const a = el.rawTagName?.toLowerCase() === "a" ? el : el.querySelector("a.button") ?? el.querySelector("a");
-  const href = a?.getAttribute("href");
+  const href = safeHref(a?.getAttribute("href"));
   if (!a || !href) return null;
   // Substack subscribe buttons point back at the publication; keep them as a
   // link button (the reader can still follow it) — no special-casing needed.

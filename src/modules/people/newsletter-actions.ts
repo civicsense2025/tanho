@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { clientIp } from "@/lib/client-ip";
 import { allowLoginAttempt } from "@/modules/auth/rate-limit";
 import { email as emailAdapter } from "@/adapters/email";
 import { emailSubscriptions, people } from "./schema";
@@ -41,7 +42,7 @@ export async function subscribeAction(
   const list = parsed.data.list;
 
   const hdrs = await headers();
-  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+  const ip = clientIp(hdrs);
   if (!(await allowLoginAttempt(emailLc, ip))) {
     return { error: "Too many attempts. Try again in a few minutes." };
   }

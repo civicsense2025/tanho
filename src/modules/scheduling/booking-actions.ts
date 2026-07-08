@@ -1,16 +1,19 @@
 "use server";
 
-import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { people } from "@/modules/people/schema";
 import { logActivity } from "@/modules/people/activity";
 import { bookings, eventTypes } from "./schema";
 import { generateManageCode } from "./code";
-import { bookingIntakeSchema, LOCATIONS } from "./validation";
+import {
+  createSchema,
+  rescheduleSchema,
+  slotsQuerySchema,
+  type CreateBookingResult,
+} from "./booking-schemas";
 import { getEventTypeBySlug, bookingsForDate, getBookingByCode } from "./queries";
 import { getAvailabilitySettings } from "./settings";
-import { slotsFor, type SlotBooking } from "./slots";
+import { slotsFor } from "./slots";
 import { sendBookingEmail } from "./reminders";
 import {
   createBookingCheckout,
@@ -18,31 +21,10 @@ import {
   refundBookingIfPolicy,
 } from "./booking-payment";
 import { isConnected } from "@/modules/integrations";
-import { busyTimes, deleteBookingEvent, pushBookingEvent } from "./gcal-sync";
-import { busyToSlotBookings } from "./gcal-busy";
-
-/** A YYYY-MM-DD date and HH:MM time, validated by shape. */
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
-const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time");
-
-const createSchema = z.object({
-  eventTypeSlug: z.string().min(1).max(120),
-  date: dateSchema,
-  time: timeSchema,
-  location: z.enum(LOCATIONS),
-  person: bookingIntakeSchema,
-});
-
-export type CreateBookingResult =
-  | { ok: true; code: string }
-  /** Paid booking held pending — guest must complete Stripe checkout. */
-  | { ok: true; code: string; checkoutUrl: string }
-  | { ok: false; error: string };
-
-const slotsQuerySchema = z.object({
-  eventTypeSlug: z.string().min(1).max(120),
-  date: dateSchema,
-});
+import { deleteBookingEvent } from "./gcal-sync";
+import { syncCreateToCalendar, syncRescheduleToCalendar } from "./gcal-booking-sync";
+import { toSlotBookings, googleBusySlotBookings } from "./slot-helpers";
+import { upsertBooker } from "./booking-people";
 
 /**
  * Public read action: available HH:MM start times for an event type on a date.
@@ -57,39 +39,13 @@ export async function availableSlots(input: unknown): Promise<string[]> {
   if (!eventType || !eventType.active) return [];
   const settings = await getAvailabilitySettings();
   const existing = await bookingsForDate(eventType.id, parsed.data.date);
-  const googleBusy = await googleBusySlotBookings(parsed.data.date, settings.timezone);
+  const googleBusy = await googleBusySlotBookings(parsed.data.date, settings.timezone, settings.google.calendarId);
   return slotsFor(
     parsed.data.date,
     { durationMin: eventType.durationMin },
     settings,
     [...toSlotBookings(existing, eventType.durationMin), ...googleBusy],
   );
-}
-
-/** Map DB booking rows to the shape slotsFor consumes. */
-function toSlotBookings(
-  rows: Array<{ date: string; time: string; status: SlotBooking["status"] }>,
-  durationMin: number,
-): SlotBooking[] {
-  return rows.map((r) => ({ date: r.date, time: r.time, durationMin, status: r.status }));
-}
-
-/**
- * Google Calendar busy intervals for `dateISO`, as extra SlotBooking rows to
- * subtract — [] when Calendar isn't connected or the call fails, which is
- * the safe default (never wrongly blocks a slot). Best-effort, non-throwing.
- */
-async function googleBusySlotBookings(dateISO: string, tz: string): Promise<SlotBooking[]> {
-  try {
-    if (!(await isConnected("google-calendar"))) return [];
-    const dayStart = `${dateISO}T00:00:00Z`;
-    const dayEnd = `${dateISO}T23:59:59Z`;
-    const busy = await busyTimes(dayStart, dayEnd);
-    return busyToSlotBookings(busy, dateISO, tz);
-  } catch (err) {
-    console.error("[scheduling] busyTimes lookup failed", err);
-    return [];
-  }
 }
 
 /**
@@ -116,7 +72,7 @@ export async function createBooking(input: unknown): Promise<CreateBookingResult
 
   const settings = await getAvailabilitySettings();
   const existing = await bookingsForDate(eventType.id, req.date);
-  const googleBusy = await googleBusySlotBookings(req.date, settings.timezone);
+  const googleBusy = await googleBusySlotBookings(req.date, settings.timezone, settings.google.calendarId);
   const available = slotsFor(
     req.date,
     { durationMin: eventType.durationMin },
@@ -128,33 +84,11 @@ export async function createBooking(input: unknown): Promise<CreateBookingResult
   }
 
   // Upsert the booker in People by email; never downgrade an existing member.
-  const emailLc = req.person.email.toLowerCase();
-  const existingPerson = await db.query.people.findFirst({
-    where: eq(people.email, emailLc),
+  const personId = await upsertBooker({
+    email: req.person.email,
+    name: req.person.name,
+    phone: req.person.phone,
   });
-  let personId: string;
-  if (existingPerson) {
-    personId = existingPerson.id;
-    // Fill in a missing name/phone without clobbering existing values.
-    const patch: Partial<typeof people.$inferInsert> = {};
-    if (!existingPerson.name && req.person.name) patch.name = req.person.name;
-    if (!existingPerson.phone && req.person.phone) patch.phone = req.person.phone;
-    if (Object.keys(patch).length) {
-      await db.update(people).set(patch).where(eq(people.id, personId));
-    }
-  } else {
-    const [row] = await db
-      .insert(people)
-      .values({
-        email: emailLc,
-        name: req.person.name,
-        phone: req.person.phone,
-        kind: "lead",
-        status: "active",
-      })
-      .returning({ id: people.id });
-    personId = row!.id;
-  }
 
   const code = generateManageCode();
   // Charge only when the event has a price AND Stripe (BYO key) is configured.
@@ -233,27 +167,23 @@ export async function createBooking(input: unknown): Promise<CreateBookingResult
   }
 
   // Google Calendar push (best-effort; a Calendar failure never fails the
-  // booking). Only attempted when the owner has connected Calendar.
-  try {
-    if (await isConnected("google-calendar")) {
-      const googleEventId = await pushBookingEvent(
-        {
-          date: req.date,
-          time: req.time,
-          tz: settings.timezone,
-          durationMin: eventType.durationMin,
-          location: req.location,
-          answers: req.person.answers,
-        },
-        eventType.name,
-      );
-      if (googleEventId) {
-        await db.update(bookings).set({ googleEventId }).where(eq(bookings.code, code));
-      }
-    }
-  } catch (err) {
-    console.error("[scheduling] calendar push failed", err);
-  }
+  // booking). The guest is added as an attendee so Google sends a real calendar
+  // invite with the Meet link. The returned event id + Meet link are stored.
+  await syncCreateToCalendar(
+    code,
+    {
+      date: req.date,
+      time: req.time,
+      tz: settings.timezone,
+      durationMin: eventType.durationMin,
+      location: req.location,
+      answers: req.person.answers,
+      attendeeEmail: req.person.email,
+      attendeeName: req.person.name,
+    },
+    eventType.name,
+    settings.google.calendarId,
+  );
 
   return { ok: true, code };
 }
@@ -287,7 +217,7 @@ export async function cancelBooking(code: string): Promise<ManageResult> {
   if (booking.googleEventId) {
     try {
       if (await isConnected("google-calendar")) {
-        await deleteBookingEvent(booking.googleEventId);
+        await deleteBookingEvent(booking.googleEventId, booking.calendarId ?? "primary");
       }
     } catch (err) {
       console.error("[scheduling] calendar delete failed", err);
@@ -299,8 +229,6 @@ export async function cancelBooking(code: string): Promise<ManageResult> {
   }
   return { ok: true };
 }
-
-const rescheduleSchema = z.object({ date: dateSchema, time: timeSchema });
 
 /**
  * Reschedule a confirmed booking via its manage code. The new slot is
@@ -331,11 +259,14 @@ export async function rescheduleBooking(
   const others = (await bookingsForDate(booking.eventTypeId, parsed.data.date)).filter(
     (b) => b.id !== booking.id,
   );
+  // Include Google Calendar busy times — same as createBooking/availableSlots,
+  // so a reschedule can't land on a slot blocked by an external calendar event.
+  const googleBusy = await googleBusySlotBookings(parsed.data.date, settings.timezone, settings.google.calendarId);
   const available = slotsFor(
     parsed.data.date,
     { durationMin: eventType.durationMin },
     settings,
-    toSlotBookings(others, eventType.durationMin),
+    [...toSlotBookings(others, eventType.durationMin), ...googleBusy],
   );
   if (!available.includes(parsed.data.time)) {
     return { ok: false, error: "That time is no longer available." };
@@ -345,6 +276,18 @@ export async function rescheduleBooking(
     .update(bookings)
     .set({ date: parsed.data.date, time: parsed.data.time })
     .where(eq(bookings.id, booking.id));
+
+  // Update the synced Calendar event (best-effort; a Calendar failure never
+  // fails the reschedule). PATCH in place avoids the delete+recreate race.
+  await syncRescheduleToCalendar(
+    booking,
+    parsed.data.date,
+    parsed.data.time,
+    settings.timezone,
+    eventType.durationMin,
+    eventType.name,
+  );
+
   if (booking.personId) {
     await logActivity(booking.personId, "note", "Rescheduled booking", {
       code,

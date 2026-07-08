@@ -41,11 +41,6 @@ export const designPackSchema: EntitySchema<typeof designPackDataSchema> = {
   plural: "Design packs",
   /** No public route — design packs are admin/library assets. */
   basePath: "/design-packs",
-  /** Has its own dedicated admin screen (/admin/design-packs) — not the
-   *  generic content grid, which has no field descriptors for this
-   *  entity's real fields (theme/pageTemplates/block trees) and would
-   *  render a useless bare Title/Slug/Status form. */
-  taxonomy: true,
   dataSchema: designPackDataSchema,
   listColumns: [
     { key: "source", header: "Source", width: "9rem" },

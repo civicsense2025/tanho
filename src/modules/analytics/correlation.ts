@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "@/lib/db/client";
+import { rawAll } from "@/lib/db/raw";
 import { analyticsEvents } from "./schema";
 import { orderItems, orders } from "@/modules/commerce/schema";
 
@@ -27,7 +27,7 @@ export async function contentToPurchaseCorrelations(
   limit = 10,
 ): Promise<CorrelationRow[]> {
   const windowMs = windowDays * DAY_MS;
-  const rows = await db.all<{ path: string; productName: string; personCount: number }>(sql`
+  const rows = await rawAll<{ path: string; productName: string; personCount: number }>(sql`
     select
       ${analyticsEvents.path} as path,
       ${orderItems.name} as productName,

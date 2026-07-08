@@ -1,13 +1,13 @@
 import { themeInputSchema, type ThemeInput } from "@/modules/theme/validation";
 import { blockTreeSchema, MAX_TREE_BYTES, type BlockNodeInput } from "@/modules/pages/validation";
 import { treeReferencedTypes } from "@/modules/pages/blocks-io";
-import { filterPortableBlocks } from "@/modules/blocks/portability";
+import { filterPortableBlocks } from "../portability";
 import type { BlockNode } from "@/blocks/types";
 
 /**
  * Portable pack format — the unit a user exports, shares, sells, or imports,
- * and the shape marketplace listings use. Sibling to `oys-theme@1` and
- * `oys-site@1`.
+ * and the shape marketplace listings use. Sibling to `lamina-theme@1` and
+ * `lamina-site@1`.
  *
  *   kind: "block-pack"  → a reusable block tree (a section/hero/CTA stack).
  *   kind: "design-pack" → a theme + named page block trees (a full template).
@@ -18,56 +18,15 @@ import type { BlockNode } from "@/blocks/types";
  * so the destination can warn before import. No media bytes, no ids that must
  * collide, no site secrets. Bump PACK_FORMAT on incompatible shape changes.
  */
-export const PACK_FORMAT = "oys-pack@1" as const;
+export const PACK_FORMAT = "lamina-pack@1" as const;
 
 export type PackKind = "block-pack" | "design-pack";
 
-/** A symbol definition inlined into a pack. `id` is the ORIGINAL id at export;
- *  on import it's replaced with a fresh id and the trees' `symbolId`s remapped. */
-export type PortableSymbol = {
+export type PackSymbol = {
   id: string;
   name: string;
-  category?: string;
-  icon?: string;
   blockTree: BlockNodeInput[];
 };
-
-/** Collect every `symbolId` referenced by a `symbol` node anywhere in a tree
- *  (recursing container children). Pure — no DB. */
-export function collectSymbolIds(blocks: BlockNodeInput[]): string[] {
-  const ids = new Set<string>();
-  const walk = (nodes: BlockNodeInput[]) => {
-    for (const n of nodes) {
-      if (n.type === "symbol") {
-        const sid = (n.content as { symbolId?: unknown }).symbolId;
-        if (typeof sid === "string" && sid) ids.add(sid);
-      }
-      const kids = (n.content as { blocks?: unknown }).blocks;
-      if (Array.isArray(kids)) walk(kids as BlockNodeInput[]);
-    }
-  };
-  walk(blocks);
-  return [...ids];
-}
-
-/** Rewrite every `symbol` node's `content.symbolId` through `idMap` (old→new).
- *  Pure; returns a new tree, leaves unmapped ids untouched (they'll dangle →
- *  placeholder, the same graceful-degradation contract as a missing type). */
-export function remapSymbolIds(blocks: BlockNodeInput[], idMap: Record<string, string>): BlockNodeInput[] {
-  const walk = (nodes: BlockNodeInput[]): BlockNodeInput[] =>
-    nodes.map((n) => {
-      const content: Record<string, unknown> = { ...n.content };
-      if (n.type === "symbol") {
-        const sid = content.symbolId;
-        if (typeof sid === "string" && idMap[sid]) content.symbolId = idMap[sid];
-      }
-      if (Array.isArray(content.blocks)) {
-        content.blocks = walk(content.blocks as BlockNodeInput[]);
-      }
-      return { ...n, content };
-    });
-  return walk(blocks);
-}
 
 export type PortablePack = {
   format: typeof PACK_FORMAT;
@@ -83,19 +42,14 @@ export type PortablePack = {
   pages?: Array<{ name: string; blockTree: BlockNodeInput[] }>;
   /** Design-pack: the theme scalars. Block-pack: omitted. */
   theme?: ThemeInput;
-  /** Symbol definitions referenced by any tree in this pack (by `symbolId`),
-   *  inlined so the pack is self-contained. Collected at export from the DB;
-   *  re-created with fresh ids on import (and every `content.symbolId` in the
-   *  pack's trees is remapped to match). Absent when a pack references no symbols. */
-  symbols?: PortableSymbol[];
   /** Every block type referenced anywhere in the pack (declared dependency). */
   requiredBlockTypes: string[];
-  /** Types in the pack that need configuration on import (e.g. paywall, form,
-   *  data-bound blocks). Empty for packs with only allowlisted content. */
-  requiresConfigTypes?: string[];
-  /** Types stripped from the tree during export (excluded by the allowlist).
-   *  Present for transparency — the destination knows what was removed. */
-  excludedTypes?: string[];
+  /** Types in the kept tree that need configuration on the destination install. */
+  requiresConfigTypes: string[];
+  /** Types that were stripped from the tree because they are excluded. */
+  excludedTypes: string[];
+  /** Inlined reusable symbol definitions referenced by `symbol` blocks. */
+  symbols?: PackSymbol[];
   generatedAt?: number;
 };
 
@@ -109,15 +63,67 @@ export type PackImportResult =
     blocks?: BlockNodeInput[];
     pages?: Array<{ name: string; blockTree: BlockNodeInput[] }>;
     theme?: ThemeInput;
-    /** Inlined symbol defs to recreate (with fresh ids) before installing trees. */
-    symbols?: PortableSymbol[];
     requiredBlockTypes: string[];
-    /** Types the exporter flagged as needing configuration on import. */
-    requiresConfigTypes?: string[];
-    /** Types the exporter stripped (excluded by its allowlist). */
-    excludedTypes?: string[];
+    requiresConfigTypes: string[];
+    excludedTypes: string[];
+    symbols?: PackSymbol[];
   }
   | { ok: false; error: string };
+
+function kidsOf(node: BlockNodeInput): BlockNodeInput[] {
+  const blocks = node.content?.blocks;
+  return Array.isArray(blocks) ? (blocks as BlockNodeInput[]) : [];
+}
+
+/** Collect every symbolId referenced by `symbol` blocks in the tree, deduped. */
+export function collectSymbolIds(tree: BlockNodeInput[]): string[] {
+  const ids = new Set<string>();
+  const walk = (nodes: BlockNodeInput[]) => {
+    for (const n of nodes) {
+      if (n.type === "symbol" && typeof (n.content as { symbolId?: unknown }).symbolId === "string") {
+        ids.add((n.content as { symbolId: string }).symbolId);
+      }
+      walk(kidsOf(n));
+    }
+  };
+  walk(tree);
+  return [...ids];
+}
+
+/** Deep-clone a tree and rewrite every symbolId through the provided map. */
+export function remapSymbolIds(tree: BlockNodeInput[], map: Record<string, string>): BlockNodeInput[] {
+  const walk = (nodes: BlockNodeInput[]): BlockNodeInput[] =>
+    nodes.map((n) => {
+      const mapped = walk(kidsOf(n));
+      const content: Record<string, unknown> = { ...n.content };
+      if (mapped.length) content.blocks = mapped;
+      if (n.type === "symbol") {
+        const symbolId = content.symbolId;
+        if (typeof symbolId === "string" && map[symbolId]) {
+          content.symbolId = map[symbolId];
+        }
+      }
+      return { ...n, content };
+    });
+  return walk(tree);
+}
+
+/** Parse and validate an optional symbols array from a pack. */
+function parseSymbols(raw: unknown): PackSymbol[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PackSymbol[] = [];
+  for (const s of raw) {
+    if (!s || typeof s !== "object") continue;
+    const id = typeof (s as { id?: unknown }).id === "string" ? (s as { id: string }).id : "";
+    const name = typeof (s as { name?: unknown }).name === "string" ? (s as { name: string }).name : "";
+    const blockTree = (s as { blockTree?: unknown }).blockTree;
+    if (!Array.isArray(blockTree)) continue;
+    const parsed = blockTreeSchema.safeParse(blockTree);
+    if (!parsed.success) continue;
+    out.push({ id, name, blockTree: parsed.data });
+  }
+  return out;
+}
 
 /** Serialize a block pack to a portable object (for a .pack.json). */
 export function exportBlockPackJson(
@@ -125,6 +131,7 @@ export function exportBlockPackJson(
   blocks: BlockNode[],
   meta: { description?: string; author?: string; license?: string; version?: number } = {},
   now: number,
+  symbols?: PackSymbol[],
 ): PortablePack {
   const { portable, requiresConfigTypes, excludedTypes } = filterPortableBlocks(blocks);
   return {
@@ -139,6 +146,7 @@ export function exportBlockPackJson(
     requiredBlockTypes: treeReferencedTypes(portable),
     requiresConfigTypes,
     excludedTypes,
+    symbols,
     generatedAt: now,
   };
 }
@@ -150,16 +158,17 @@ export function exportDesignPackJson(
   pages: Array<{ name: string; blockTree: BlockNode[] }>,
   meta: { description?: string; author?: string; license?: string; version?: number } = {},
   now: number,
+  symbols?: PackSymbol[],
 ): PortablePack {
   const required = new Set<string>();
   const requiresConfigTypes = new Set<string>();
   const excludedTypes = new Set<string>();
-  const filteredPages = pages.map((p) => {
-    const f = filterPortableBlocks(p.blockTree);
-    for (const t of f.requiresConfigTypes) requiresConfigTypes.add(t);
-    for (const t of f.excludedTypes) excludedTypes.add(t);
-    for (const t of treeReferencedTypes(f.portable)) required.add(t);
-    return { name: p.name, blockTree: f.portable as unknown as BlockNodeInput[] };
+  const portablePages = pages.map((p) => {
+    const r = filterPortableBlocks(p.blockTree);
+    for (const t of r.requiresConfigTypes) requiresConfigTypes.add(t);
+    for (const t of r.excludedTypes) excludedTypes.add(t);
+    for (const t of treeReferencedTypes(r.portable)) required.add(t);
+    return { name: p.name, blockTree: r.portable as unknown as BlockNodeInput[] };
   });
   return {
     format: PACK_FORMAT,
@@ -170,10 +179,11 @@ export function exportDesignPackJson(
     license: meta.license,
     version: meta.version ?? 1,
     theme: themeInputSchema.parse(theme),
-    pages: filteredPages,
+    pages: portablePages,
     requiredBlockTypes: [...required],
     requiresConfigTypes: [...requiresConfigTypes],
     excludedTypes: [...excludedTypes],
+    symbols,
     generatedAt: now,
   };
 }
@@ -198,22 +208,27 @@ export function importPackJson(raw: unknown): PackImportResult {
   }
   const name = typeof obj.name === "string" && obj.name.trim() ? obj.name.trim().slice(0, 120) : "Imported pack";
 
+  const readStrings = (key: string): string[] =>
+    Array.isArray(obj[key])
+      ? (obj[key] as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
+
   if (kind === "block-pack") {
     const blocks = obj.blocks;
     if (!Array.isArray(blocks)) return { ok: false, error: "Block pack is missing its block tree" };
     if (JSON.stringify(blocks).length > MAX_TREE_BYTES) return { ok: false, error: "Pack content is too large" };
     const parsed = blockTreeSchema.safeParse(blocks);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid blocks" };
-    const required = Array.isArray(obj.requiredBlockTypes)
-      ? (obj.requiredBlockTypes as unknown[]).filter((x): x is string => typeof x === "string")
-      : [];
-    const requiresConfigTypes = Array.isArray(obj.requiresConfigTypes)
-      ? (obj.requiresConfigTypes as unknown[]).filter((x): x is string => typeof x === "string")
-      : [];
-    const excludedTypes = Array.isArray(obj.excludedTypes)
-      ? (obj.excludedTypes as unknown[]).filter((x): x is string => typeof x === "string")
-      : [];
-    return { ok: true, name, kind, blocks: parsed.data, symbols: parseSymbols(obj.symbols), requiredBlockTypes: required, requiresConfigTypes, excludedTypes };
+    return {
+      ok: true,
+      name,
+      kind,
+      blocks: parsed.data,
+      requiredBlockTypes: readStrings("requiredBlockTypes"),
+      requiresConfigTypes: readStrings("requiresConfigTypes"),
+      excludedTypes: readStrings("excludedTypes"),
+      symbols: parseSymbols(obj.symbols),
+    };
   }
 
   // design-pack
@@ -230,34 +245,15 @@ export function importPackJson(raw: unknown): PackImportResult {
     if (!parsed.success) return { ok: false, error: `Design pack page "${pname}" has invalid blocks` };
     pages.push({ name: pname, blockTree: parsed.data });
   }
-  const required = Array.isArray(obj.requiredBlockTypes)
-    ? (obj.requiredBlockTypes as unknown[]).filter((x): x is string => typeof x === "string")
-    : [];
-  const requiresConfigTypes = Array.isArray(obj.requiresConfigTypes)
-    ? (obj.requiresConfigTypes as unknown[]).filter((x): x is string => typeof x === "string")
-    : [];
-  const excludedTypes = Array.isArray(obj.excludedTypes)
-    ? (obj.excludedTypes as unknown[]).filter((x): x is string => typeof x === "string")
-    : [];
-  return { ok: true, name, kind, theme: themeParse.data, pages, symbols: parseSymbols(obj.symbols), requiredBlockTypes: required, requiresConfigTypes, excludedTypes };
-}
-
-/** Shape-validate the pack's inlined symbol defs (lenient — each `blockTree` is
- *  re-validated at install). Ignores anything malformed. */
-function parseSymbols(raw: unknown): PortableSymbol[] {
-  if (!Array.isArray(raw)) return [];
-  const out: PortableSymbol[] = [];
-  for (const s of raw as Array<Record<string, unknown>>) {
-    if (typeof s?.id !== "string" || !Array.isArray(s?.blockTree)) continue;
-    const parsed = blockTreeSchema.safeParse(s.blockTree);
-    if (!parsed.success) continue;
-    out.push({
-      id: s.id,
-      name: typeof s.name === "string" ? s.name.slice(0, 120) : "Saved block",
-      category: typeof s.category === "string" ? s.category : undefined,
-      icon: typeof s.icon === "string" ? s.icon : undefined,
-      blockTree: parsed.data,
-    });
-  }
-  return out;
+  return {
+    ok: true,
+    name,
+    kind,
+    theme: themeParse.data,
+    pages,
+    requiredBlockTypes: readStrings("requiredBlockTypes"),
+    requiresConfigTypes: readStrings("requiresConfigTypes"),
+    excludedTypes: readStrings("excludedTypes"),
+    symbols: parseSymbols(obj.symbols),
+  };
 }

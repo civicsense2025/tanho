@@ -28,6 +28,29 @@ AES-GCM encrypted in the `integration_connections` table (keyed by
 `APP_ENCRYPTION_KEY`), never in env or the client. See
 [entities/integrations.md](entities/integrations.md).
 
+## Env-var prefix
+
+A deployment that shares a host/env group with sibling services can namespace
+**every** platform env var with a single prefix. Set `ENV_PREFIX` once and the
+platform reads `<PREFIX><VAR>` for every variable in the table above — e.g.
+`ENV_PREFIX=TANHO_` makes it read `TANHO_DATABASE_URL`, `TANHO_APP_URL`,
+`TANHO_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, … with no other setup. The prefix
+is resolved once at boot (`src/lib/env/prefix.ts`) and copied to the canonical
+names, so all internal `process.env.X` reads keep working unchanged.
+
+Rules:
+
+- **Canonical wins.** If both `DATABASE_URL` and `TANHO_DATABASE_URL` are set,
+  `DATABASE_URL` is used — so you can always override a single var explicitly.
+- **Auto-detect.** With `ENV_PREFIX` unset, the platform infers the prefix from
+  `*_DATABASE_URL` (then `*_APP_URL`). Set `ENV_PREFIX` explicitly in
+  production to remove all ambiguity when multiple prefixed sets are present.
+- **Covers `NEXT_PUBLIC_*`.** Those are inlined at build time, so the resolver
+  also runs from `next.config.ts` (not only the runtime `instrumentation.ts`
+  boot hook) — rebuild after changing prefixed `NEXT_PUBLIC_*` values.
+- **Non-Next entry points** (drizzle migrations, seed/import scripts) resolve
+  the prefix themselves, so `npm run db:migrate` / `npm run seed` honor it too.
+
 ## Settings namespaces
 
 Runtime configuration lives in the `settings` table, one JSON document per

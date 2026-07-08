@@ -2,8 +2,6 @@ import type { EntryRow } from "../schema";
 import { getPublishedEntryBlocks, listPublishedEntries } from "../queries";
 import { RenderBlocks } from "@/blocks/renderer/BlockRenderer";
 import { CUSTOM_SCOPE_CLASS } from "@/lib/css-sanitizer";
-import { visibleBlocksFor } from "@/blocks/paywall/gate";
-import { buildOutline } from "@/modules/pages/outline";
 import { entryPageCtx } from "./entry-page-ctx";
 import { article } from "@/modules/seo/jsonld";
 import { JsonLd } from "@/modules/seo/JsonLdScript";
@@ -20,8 +18,6 @@ export async function GuideDetail({ entry, hub }: { entry: EntryRow; hub: EntryR
   // structural blocks (TOC, breadcrumbs) work inside guide bodies too. Fetch it
   // once (settings reads are cached): it supplies the canonical URL + site
   // identity for the JSON-LD and, when a breadcrumbs block exists, the trail.
-  const visible = visibleBlocksFor(null, blocks);
-  const { byBlockId: anchors, headings: outline, types } = buildOutline(visible);
   const pageCtx = await entryPageCtx("guide", entry, [
     { title: hub.title, route: `/guides/${hub.slug}` },
   ]);
@@ -29,13 +25,13 @@ export async function GuideDetail({ entry, hub }: { entry: EntryRow; hub: EntryR
   // content → schema.org Article. summary falls back to the tagline.
   const jsonLd = pageCtx
     ? article(
-        {
-          title: entry.title,
-          summary: data.summary || data.tagline || undefined,
-          url: pageCtx.route,
-        },
-        { siteName: pageCtx.siteName, siteUrl: pageCtx.siteUrl },
-      )
+      {
+        title: entry.title,
+        summary: data.summary || data.tagline || undefined,
+        url: pageCtx.route,
+      },
+      { siteName: pageCtx.siteName, siteUrl: pageCtx.siteUrl },
+    )
     : undefined;
 
   // Resolve cited resources to PUBLIC + published rows only. A non-public
@@ -44,12 +40,13 @@ export async function GuideDetail({ entry, hub }: { entry: EntryRow; hub: EntryR
   const furtherReading =
     wanted.size > 0
       ? (await listPublishedEntries("resource")).filter(
-          (r) => (r.data as ResourceData).is_public === true && wanted.has(r.slug),
-        )
+        (r) => (r.data as ResourceData).is_public === true && wanted.has(r.slug),
+      )
       : [];
 
   return (
     <article className={CUSTOM_SCOPE_CLASS}>
+      {jsonLd ? <JsonLd schema={jsonLd} /> : null}
       <header className={styles.header}>
         <a className={styles.backLink} href={`/guides/${hub.slug}`}>
           <span aria-hidden className={styles.glyph}>
@@ -94,12 +91,7 @@ export async function GuideDetail({ entry, hub }: { entry: EntryRow; hub: EntryR
         </section>
       ) : null}
 
-      <RenderBlocks
-        blocks={blocks}
-        anchors={anchors}
-        outline={outline}
-        page={types.has("breadcrumbs") ? pageCtx : undefined}
-      />
+      <RenderBlocks blocks={blocks} />
 
       {furtherReading.length > 0 ? (
         <section className={styles.section}>

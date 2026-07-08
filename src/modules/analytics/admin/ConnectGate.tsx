@@ -5,7 +5,10 @@ import Link from "next/link";
 import { Button } from "@/components/core/Button";
 import buttonStyles from "@/components/core/Button.module.css";
 import type { ConnectState } from "../connect-actions";
+import { GoogleOAuthSetupGuide } from "./GoogleOAuthSetupGuide";
 import styles from "./analytics.module.css";
+
+type GoogleService = "google-analytics" | "google-search-console";
 
 /**
  * Real Google OAuth consent gate. When the deployment hasn't set its own
@@ -22,6 +25,8 @@ export function ConnectGate({
   startHref,
   isOwner,
   isGoogleOAuthConfigured,
+  service,
+  productionUrl,
 }: {
   title: string;
   body: string;
@@ -30,16 +35,20 @@ export function ConnectGate({
   startHref: string;
   isOwner: boolean;
   isGoogleOAuthConfigured: boolean;
+  service: GoogleService;
+  productionUrl?: string;
 }) {
   return (
     <div className={styles.gate}>
       <h2 className={styles.gateTitle}>{title}</h2>
       <p className={styles.gateBody}>{body}</p>
       {!isGoogleOAuthConfigured ? (
-        <span className={styles.gateNote}>
-          Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET in your environment to enable
-          Google connections for this deployment.
-        </span>
+        <>
+          <span className={styles.gateNote}>
+            Google OAuth is not configured. Follow the steps below to set it up.
+          </span>
+          <GoogleOAuthSetupGuide service={service} productionUrl={productionUrl} />
+        </>
       ) : isOwner ? (
         <Link
           href={startHref}

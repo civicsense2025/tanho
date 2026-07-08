@@ -135,7 +135,7 @@ export async function commitGhostImport(
         }
       }
 
-      // Ghost's default permalink is "/<slug>/" (trailing slash); OYS's route
+      // Ghost's default permalink is "/<slug>/" (trailing slash); Lamina's route
       // for the imported page is "/<slug>" (no trailing slash) — a redirect
       // closes that gap for anyone with the old URL bookmarked or indexed.
       const fromPath = `/${mapped.slug}/`;

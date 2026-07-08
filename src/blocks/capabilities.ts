@@ -1,7 +1,7 @@
 /**
  * Optional-capability registry — the graceful-degradation contract.
  *
- * OYS is self-hostable: a customer owns the code and may `npm remove` a heavy optional
+ * Lamina is self-hostable: a customer owns the code and may `npm remove` a heavy optional
  * dependency they don't want (e.g. lottie-web). A block that depends on such a package
  * declares `requiresCapability` on its def; if the package isn't installed we must NOT
  * crash the build or a page — the block is simply hidden from the picker and renders

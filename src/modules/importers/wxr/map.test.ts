@@ -39,7 +39,7 @@ describe("normalizeSlug", () => {
   it("falls back to post-<id> when slug and title are empty", () => {
     expect(normalizeSlug("", "", "42")).toEqual({ slug: "post-42", changed: true });
   });
-  it("produces a slug matching OYS slugSchema", () => {
+  it("produces a slug matching Lamina slugSchema", () => {
     const re = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
     expect(re.test(normalizeSlug("Héllo, World!!!", "t", "1").slug)).toBe(true);
     expect(re.test(normalizeSlug("", "", "9").slug)).toBe(true);

@@ -23,7 +23,7 @@ export const servicesPack: SamplePack = {
     accent2: "#c9a876", // warm neutral / tan
     ink: "#181a19",
     paper: "#ffffff",
-    radius: "soft",
+    radius: "round",
     shadow: "subtle",
   },
   menu: [

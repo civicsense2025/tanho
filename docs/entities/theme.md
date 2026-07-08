@@ -46,9 +46,9 @@ whole platform re-brandable from ~12 stored values. See
 - **Settings → Brand → Themes** — saved themes (Activate / Duplicate / Delete),
   plus Import/Export `.theme.json` and the Theme library.
 
-## Portable format (`oys-theme@1`)
+## Portable format (`lamina-theme@1`)
 
-Export produces `{ format: "oys-theme@1", name, theme: <scalars>, generatedAt }`
+Export produces `{ format: "lamina-theme@1", name, theme: <scalars>, generatedAt }`
 — only the scalars, so a theme is a few hundred bytes and deployment-agnostic.
 Import validates the format tag and the payload fail-closed
 (`src/modules/theme/portable.ts`); a malformed or wrong-version file is rejected,
@@ -57,7 +57,7 @@ never partially applied.
 ## Fit it to your cause
 
 - **Ship your own theme library** — replace `public/theme-library/index.json`
-  with your curated `oys-theme@1` entries. It's fetched same-origin, so there's
+  with your curated `lamina-theme@1` entries. It's fetched same-origin, so there's
   no external host and the CSP stays clean.
 - **Add a font** — append a stack to `FONT_STACKS` in `scales.ts` (a fixed
   table; no schema change).

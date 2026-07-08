@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { clientIp } from "@/lib/client-ip";
 import { getGeneralSettings } from "@/modules/settings/queries";
 import { getTheme } from "@/modules/theme/queries";
 import { OG_DIMENSIONS } from "@/modules/seo";
@@ -6,12 +7,7 @@ import { allowEvent } from "@/modules/analytics/rate-limit";
 
 /** Best-effort client key for rate-limiting a cookieless GET. */
 function clientKey(request: Request): string {
-  const h = request.headers;
-  return (
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    h.get("x-real-ip") ||
-    "anon"
-  );
+  return clientIp(request.headers) || "anon";
 }
 
 /**

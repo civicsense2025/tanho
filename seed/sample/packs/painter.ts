@@ -1,6 +1,6 @@
 /**
  * SAMPLE PACK — visual artist / painter.
- * FICTIONAL persona: "Mira Voss". Translated from the OYS Design System's
+ * FICTIONAL persona: "Mira Voss". Translated from the Lamina Design System's
  * `ui_kits/sites/artist`. (Keyed `painter` so it sits alongside — not on top of —
  * the existing `artist`/"Willowprint" illustration pack.) Work grid → a
  * `collection` bound to work entries; the studio reel is a video; the about

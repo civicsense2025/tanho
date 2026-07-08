@@ -1,7 +1,7 @@
 /**
  * SAMPLE PACK — politician / campaign.
  * FICTIONAL persona: "Marisol Vance", State Senate District 14. Translated from
- * the OYS Design System's `ui_kits/sites/politician` — the persona that most
+ * the Lamina Design System's `ui_kits/sites/politician` — the persona that most
  * exercises CORE reusable blocks: testimonial (endorsements), poll, metric,
  * timeline, a collection for events, form, and a donation embed.
  */
@@ -31,7 +31,7 @@ export const politicianPack: SamplePack = {
     ink: "#12151a",
     paper: "#ffffff",
     font: "humanist",
-    radius: "soft",
+    radius: "round",
     shadow: "subtle",
   },
   menu: [

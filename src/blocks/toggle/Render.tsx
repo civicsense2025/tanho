@@ -31,7 +31,7 @@ export function RenderToggle({ content }: { content: ToggleContent; ctx: RenderC
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "2px",
+          gap: "var(--space-0-5)",
           padding: "3px",
           borderRadius: "var(--radius-pill)",
           background: "var(--surface)",

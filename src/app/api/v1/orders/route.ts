@@ -1,6 +1,6 @@
 import { requireApiUser } from "@/modules/auth/api-tokens/guards";
 import { listOrders, type OrderTab } from "@/modules/commerce/queries";
-import { handle, ok } from "@/lib/api/v1";
+import { handle, ok } from "../_lib";
 
 /**
  * GET /api/v1/orders — list orders. Optional ?tab=all|unfulfilled|fulfilled|disputed|refunded

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { requireUser } from "@/modules/auth/guards";
 import { getTheme } from "@/modules/theme/queries";
+import { getGeneralSettings } from "@/modules/settings/queries";
 import { BrandEditor } from "@/modules/theme/admin/BrandEditor";
 import { listFontFamilies } from "@/modules/fonts/actions";
 import { mediaPublicUrl } from "@/modules/fonts/queries";
@@ -25,7 +26,7 @@ export default function BrandSettingsPage() {
 
 async function BrandSettingsPageInner() {
   await requireUser("owner");
-  const theme = await getTheme();
+  const [theme, general] = await Promise.all([getTheme(), getGeneralSettings()]);
   const [familiesRes, faviconPreviewUrl] = await Promise.all([
     listFontFamilies(),
     mediaPublicUrl(theme.faviconMediaId),
@@ -43,7 +44,7 @@ async function BrandSettingsPageInner() {
           Saved themes →
         </Link>
       </div>
-      <BrandEditor initial={theme} fontFamilies={fontFamilies} faviconPreviewUrl={faviconPreviewUrl} />
+      <BrandEditor initial={theme} fontFamilies={fontFamilies} faviconPreviewUrl={faviconPreviewUrl} siteName={general.name} />
     </AdminPage>
   );
 }

@@ -1,6 +1,6 @@
 -- Template for a drizzle-kit --custom migration, applied AFTER swapping to
 -- Postgres and running scripts/swap-db-dialect.ts (which adds .enableRLS()
--- and a per-table pgPolicy() granting the "oys_app" role full access).
+-- and a per-table pgPolicy() granting the "lamina_app" role full access).
 --
 -- Usage:
 --   npx drizzle-kit generate --custom --name enable-force-rls
@@ -8,7 +8,7 @@
 --   npm run db:migrate
 --
 -- What this does, beyond ENABLE ROW LEVEL SECURITY (which Drizzle already
--- emits from .enableRLS()): creates the oys_app role if missing, grants it
+-- emits from .enableRLS()): creates the lamina_app role if missing, grants it
 -- table/sequence privileges matching what its RLS policies already allow,
 -- and applies FORCE ROW LEVEL SECURITY — the one statement Drizzle has no
 -- schema-level API for, which closes the "connection is also table owner"
@@ -29,19 +29,19 @@
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'oys_app') THEN
-    CREATE ROLE oys_app WITH LOGIN NOINHERIT;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'lamina_app') THEN
+    CREATE ROLE lamina_app WITH LOGIN NOINHERIT;
   END IF;
 END
 $$;
 
-GRANT USAGE ON SCHEMA public TO oys_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO oys_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO oys_app;
+GRANT USAGE ON SCHEMA public TO lamina_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO lamina_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO lamina_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO oys_app;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO lamina_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT USAGE, SELECT ON SEQUENCES TO oys_app;
+  GRANT USAGE, SELECT ON SEQUENCES TO lamina_app;
 
 DO $$
 DECLARE

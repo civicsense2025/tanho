@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * Personal access tokens for external clients (e.g. the OYS Swift app). The
+ * Personal access tokens for external clients (e.g. the Lamina Swift app). The
  * `tokenHash` stores only the SHA-256 of the raw bearer token — a DB leak
  * alone can't forge a token, mirroring the session model in session.ts.
  * `prefix` is the first 8 chars of the raw token, shown in the admin UI so an

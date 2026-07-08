@@ -37,6 +37,16 @@ export const GENERAL_DEFAULTS: GeneralSettings = generalSettingsSchema.parse({
   name: "My Site",
 });
 
+/** Appearance / theme-mode settings — the "Appearance" settings screen. */
+export const appearanceSettingsSchema = z.object({
+  /** Platform default theme mode; "system" follows the visitor's OS preference. */
+  siteMode: z.enum(["light", "dark", "system"]).default("system"),
+});
+
+export type AppearanceSettings = z.infer<typeof appearanceSettingsSchema>;
+
+export const APPEARANCE_DEFAULTS: AppearanceSettings = appearanceSettingsSchema.parse({});
+
 /**
  * Registry of namespace → schema. Every settings write is parsed through
  * its namespace schema; unknown namespaces are rejected. Modules append
@@ -44,6 +54,7 @@ export const GENERAL_DEFAULTS: GeneralSettings = generalSettingsSchema.parse({
  */
 export const settingsSchemas: Record<string, z.ZodTypeAny> = {
   general: generalSettingsSchema,
+  appearance: appearanceSettingsSchema,
   // Header/footer/announcement are no longer settings namespaces — they are
   // block trees in `block_sets` under the chrome:header / chrome:footer owners
   // (see modules/chrome). Removed as part of the Phase 3 clean cutover.

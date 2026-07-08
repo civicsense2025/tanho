@@ -22,8 +22,11 @@ export const commonContent = {
 //
 // Layout primitives (section/row/columns/container/gallery/spacer/divider) do NOT
 // opt in — they own the gutter/full-bleed/maxWidth math and a universal wrapper
-// would break full-bleed. This layer is inner-box only (padding/type/colour/
-// border/radius/shadow/align) — never margin or maxWidth.
+// would break full-bleed. This layer is inner-box only (padding/margin/type/colour/
+// border/radius/shadow/align) — never maxWidth. Margin is permitted here: it lands
+// on the chrome wrapper of NON-layout blocks (which live inside a layout block's
+// flex container), so it augments the parent gap rather than breaking full-bleed
+// (full-bleed sections don't opt in, so their negative-margin math is untouched).
 // ───────────────────────────────────────────────────────────────────────────
 
 /** Named steps over the NON-CONTIGUOUS --space-* scale (no 7/9/11). Mapping goes
@@ -39,7 +42,7 @@ export const BACKGROUNDS = ["none", "surface", "surface-card", "tint", "tint-2",
 export const BORDER_WIDTHS = ["none", "hairline", "thick"] as const;
 export const BORDER_STYLES = ["solid", "dashed", "dotted"] as const;
 export const BORDER_COLORS = ["border", "border-strong", "accent", "accent-2"] as const;
-export const RADII = ["none", "xs", "sm", "md", "pill"] as const;
+export const RADII = ["none", "xs", "sm", "md", "lg", "xl", "2xl", "pill"] as const;
 export const SHADOWS = ["none", "sm", "md", "lg"] as const;
 export const ALIGNS = ["left", "center", "right"] as const;
 
@@ -89,6 +92,10 @@ export const styleFieldsSchema = z
     padRight: z.enum(SPACE_STEPS),
     padBottom: z.enum(SPACE_STEPS),
     padLeft: z.enum(SPACE_STEPS),
+    marginTop: z.enum(SPACE_STEPS),
+    marginRight: z.enum(SPACE_STEPS),
+    marginBottom: z.enum(SPACE_STEPS),
+    marginLeft: z.enum(SPACE_STEPS),
     fontSize: z.enum(FONT_SIZES),
     fontWeight: z.enum(FONT_WEIGHTS),
     leading: z.enum(LEADINGS),
@@ -326,6 +333,9 @@ export const RADIUS_VAR: Record<(typeof RADII)[number], string> = {
   xs: "var(--radius-xs)",
   sm: "var(--radius-sm)",
   md: "var(--radius-md)",
+  lg: "var(--radius-lg)",
+  xl: "var(--radius-xl)",
+  "2xl": "var(--radius-2xl)",
   pill: "var(--radius-pill)",
 };
 export const SHADOW_VAR: Record<(typeof SHADOWS)[number], string> = {
@@ -410,6 +420,12 @@ export const layoutLayerSchema = z
     cols: z.enum(LAYOUT_COLS),
     colTemplate: z.enum(LAYOUT_COL_TEMPLATES),
     minColWidth: z.enum(LAYOUT_MIN_COL_WIDTHS),
+    /** Corner radius for the layout block's own box. Emitted as --pbl-radius (a
+     *  custom property on the chrome wrapper, inherited by the block's inner
+     *  element), so a layout block with a background can be a rounded rectangle.
+     *  A no-op without a background/border. Uses the same RADII enum as the
+     *  inner-box style layer. */
+    radius: z.enum(RADII),
   })
   .partial();
 

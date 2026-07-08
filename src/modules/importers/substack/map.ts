@@ -18,7 +18,7 @@ export function resetBlockIdCounter(): void {
 }
 
 /**
- * Map one Substack post to OYS's page + block-tree shape via the shared
+ * Map one Substack post to Lamina's page + block-tree shape via the shared
  * html→blocks engine (image/button/subscribe cards via detectSubstackCard, the
  * rest coalesced into chunked richtext). A body exceeding one richtext block's
  * cap is split across sequential blocks (never truncated). Substack's canonical
@@ -58,7 +58,7 @@ export async function mapSubstackPost(
 }
 
 /**
- * Map one Substack subscriber to OYS's people shape. A paid/active-subscription
+ * Map one Substack subscriber to Lamina's people shape. A paid/active-subscription
  * row becomes a "member"; a free subscriber becomes a "subscriber". (Substack's
  * export carries no tier detail beyond free-vs-paid, so every paid subscriber
  * lands as an untiered member — reconciling to the site's real tier catalog is a

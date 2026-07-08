@@ -1,0 +1,60 @@
+/* TipTap rich text editor for the richtext block's `html` field.
+   Reuses the global `.prose` typography (see styles/tokens/base.css) and the
+   editor-shell's CSS-variable vocabulary so it reads as part of the inspector. */
+
+.wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.on {
+  background: var(--surface-card);
+  color: var(--accent);
+  border-color: var(--border);
+}
+
+/* The editable surface — `.content` is applied to the ProseMirror node. */
+.content {
+  min-height: 120px;
+  padding: var(--space-3) var(--space-4);
+  color: var(--text);
+  outline: none;
+}
+
+.content p:first-child { margin-top: 0; }
+.content:focus { outline: none; }

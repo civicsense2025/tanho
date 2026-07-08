@@ -8,7 +8,7 @@ import type { MdDoc } from "./parse";
  * Map one parsed markdown document to a page candidate. The heavy lifting — chunking
  * the already-sanitized body HTML into blocks (image cards via detectMarkdownCard,
  * everything else coalesced into richtext) — is the shared htmlToBlocks engine, so
- * markdown behaves exactly like every other importer. Markdown imports become OYS
+ * markdown behaves exactly like every other importer. Markdown imports become Lamina
  * pages (not posts); frontmatter aliases (Jekyll `redirect_from` / Hugo `aliases`)
  * flow through as `redirectFrom` so the shared commit loop can 301 old paths → new.
  */

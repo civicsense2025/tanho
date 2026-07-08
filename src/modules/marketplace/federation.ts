@@ -35,7 +35,7 @@ export type PeerCatalog = {
 };
 
 const FETCH_TIMEOUT_MS = 10_000;
-const CATALOG_FORMAT = "oys-marketplace@1";
+const CATALOG_FORMAT = "lamina-marketplace@1";
 
 /** Strip a trailing slash so we can concatenate path segments cleanly. */
 function joinUrl(peerUrl: string, path: string): string {
@@ -99,7 +99,7 @@ async function fetchWithTimeout(
 
 /**
  * Fetch a peer instance's catalog.json. Validates the `format` tag is
- * `oys-marketplace@1` and that `packs` is an array of the expected shape.
+ * `lamina-marketplace@1` and that `packs` is an array of the expected shape.
  * Returns the parsed catalog or a graceful error — never throws.
  */
 export async function fetchPeerCatalog(
@@ -151,7 +151,7 @@ export async function fetchPeerCatalog(
 
 /**
  * Fetch a single pack's portable JSON from a peer. Returns the raw parsed
- * JSON (the `oys-pack@1` object) for the importer to validate. Never throws.
+ * JSON (the `lamina-pack@1` object) for the importer to validate. Never throws.
  */
 export async function fetchPeerPack(
   peerUrl: string,

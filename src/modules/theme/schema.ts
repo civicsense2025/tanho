@@ -17,7 +17,7 @@ export const theme = sqliteTable("theme", {
   headingScale: real("heading_scale").notNull().default(1),
   leading: real("leading").notNull().default(1.6),
   density: real("density").notNull().default(1),
-  radius: text("radius").notNull().default("soft"),
+  radius: text("radius").notNull().default("round"),
   shadow: text("shadow").notNull().default("subtle"),
   /** Active custom/Google font family (font_families.id); null = use `font`. */
   fontFamilyId: text("font_family_id"),

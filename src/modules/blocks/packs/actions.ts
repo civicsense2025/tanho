@@ -9,7 +9,6 @@ import { blockSets } from "@/modules/pages/schema";
 import { entries } from "@/modules/entries/schema";
 import { treeReferencedTypes, validatePackTree } from "@/modules/pages/blocks-io";
 import { slugSchema } from "@/modules/pages/validation";
-import { slugify } from "@/lib/slug";
 import {
   exportBlockPackJson,
   importPackJson,
@@ -24,6 +23,13 @@ const invalidate = () => {
   updateTag("entries:block_pack");
   updateTag("block-packs");
 };
+
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
 
 const OWNER_TYPE = "entry:block_pack";
 
@@ -150,22 +156,13 @@ export async function importBlockPack(
   return { ok: true, data: { id: row.id, missingTypes: v.missingTypes, dropped: v.dropped } };
 }
 
-export type PortablePackExport = PortablePack & {
-  requiresConfigTypes: string[];
-  excludedTypes: string[];
-};
-
 /**
- * Serialize a block pack to a portable `PortablePack` object from its PUBLISHED
- * tree. No auth gate — the public marketplace download route calls this after
- * resolving the entry slug; the admin `exportBlockPack` wrapper adds the
- * `requireUser()` check. The result carries `requiresConfigTypes` (blocks the
- * importer must reconfigure) and `excludedTypes` (blocks stripped by the
- * portability allowlist) so the caller can surface them in the UI.
+ * Serialize a block pack to a portable `PortablePack` object. No auth gate —
+ * the public marketplace download route calls this after resolving the entry
+ * slug; the admin `exportBlockPack` wrapper adds the `requireUser()` check.
+ * Reads the PUBLISHED tree.
  */
-export async function serializeBlockPack(
-  id: string,
-): Promise<Result<PortablePackExport>> {
+export async function serializeBlockPack(id: string): Promise<Result<PortablePack>> {
   const existing = await db.query.entries.findFirst({ where: eq(entries.id, id) });
   if (!existing) return { ok: false, error: "Block pack not found" };
   const blocks = await readPackBlocks(id, "published");
@@ -176,16 +173,14 @@ export async function serializeBlockPack(
     { description: data.description, version: data.packVersion },
     Date.now(),
   );
-  return { ok: true, data: { ...pack, requiresConfigTypes: pack.requiresConfigTypes ?? [], excludedTypes: pack.excludedTypes ?? [] } };
+  return { ok: true, data: pack };
 }
 
 /**
  * Admin export of a block pack (for download or marketplace publishing).
  * Owner-gated; delegates to `serializeBlockPack`.
  */
-export async function exportBlockPack(
-  id: string,
-): Promise<Result<PortablePackExport>> {
+export async function exportBlockPack(id: string): Promise<Result<PortablePack>> {
   await requireUser();
   return serializeBlockPack(id);
 }
@@ -204,3 +199,4 @@ export async function deleteBlockPack(id: string): Promise<Result> {
   invalidate();
   return { ok: true };
 }
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createBlock } from "@/blocks/registry";
 import type { BlockCategory, BlockNode } from "@/blocks/types";
@@ -9,6 +9,7 @@ import { BlockPicker } from "@/editor/BlockPicker";
 import { CanvasChildren, type DragCtx } from "@/editor/CanvasBlock";
 import { BlockTab } from "@/editor/Inspector";
 import { DeviceToggle } from "@/editor/DeviceToggle";
+import { useAutosave, type ChangeKind } from "@/editor/useAutosave";
 import { useCanvasDrag } from "@/editor/useCanvasDrag";
 import { useEditor } from "@/editor/store";
 import shell from "@/editor/editor-shell.module.css";
@@ -63,35 +64,37 @@ export function ChromeEditor({
 
   const blocks = readyFor === ownerType ? storeBlocks : initialBlocks;
 
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [publishState, setPublishState] = useState<string | null>(null);
   const [draftDiffers, setDraftDiffers] = useState(isDirtyVsPublished);
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const {
+    saveState,
+    errorMessage,
+    schedule: scheduleSave,
+    flush: flushSave,
+    cancel: cancelSave,
+    resetBaseline,
+  } = useAutosave<BlockNode[]>({
+    save: (tree) => saveDraftChrome(ownerType, tree),
+  });
 
   useEffect(() => {
     setEnabledTypes(enabledTypes ? new Set(enabledTypes) : null);
   }, [enabledTypes, setEnabledTypes]);
 
-  const scheduleSave = useCallback(
-    (tree: BlockNode[]) => {
-      if (timer.current) clearTimeout(timer.current);
-      setSaveState("saving");
+  const scheduleSaveWithDirty = useCallback(
+    (tree: BlockNode[], kind: ChangeKind) => {
       setDraftDiffers(true);
-      timer.current = setTimeout(async () => {
-        const res = await saveDraftChrome(ownerType, tree);
-        setSaveState(res.ok ? "saved" : "error");
-        if (!res.ok) setPublishState(res.error);
-      }, 1000);
+      scheduleSave(tree, kind);
     },
-    [ownerType],
+    [scheduleSave],
   );
 
   useEffect(() => {
-    init(initialBlocks, scheduleSave, ownerType);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
+    resetBaseline(initialBlocks);
+    init(initialBlocks, scheduleSaveWithDirty, ownerType);
+    return () => { cancelSave(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerType]);
 
@@ -103,9 +106,8 @@ export function ChromeEditor({
 
   const doPublish = async () => {
     setPublishState("Publishing…");
-    if (timer.current) clearTimeout(timer.current);
-    const saved = await saveDraftChrome(ownerType, blocks);
-    if (!saved.ok) return setPublishState(saved.error);
+    const ok = await flushSave();
+    if (!ok) return setPublishState("Save failed");
     const res = await publishChrome(ownerType);
     setPublishState(res.ok ? "Published ✓" : res.error);
     if (res.ok) setDraftDiffers(false);
@@ -116,7 +118,7 @@ export function ChromeEditor({
       return;
     }
     clearSelection();
-    apply(() => t.build(firstMenuId));
+    apply(() => t.build(firstMenuId), "structural");
   };
 
   const dragCtx: DragCtx = {
@@ -132,7 +134,9 @@ export function ChromeEditor({
   };
 
   const saveLabel =
-    saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Save failed" : "";
+    saveState === "saving" ? "Saving…" :
+      saveState === "saved" ? "Saved" :
+        saveState === "error" ? (errorMessage ?? "Save failed") : "";
   const templates = chromeTemplatesFor(ownerType);
   const label = CHROME_OWNER_LABEL[ownerType];
 

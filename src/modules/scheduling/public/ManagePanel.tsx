@@ -15,6 +15,7 @@ export type ManageBooking = {
   tz: string;
   location: string;
   status: "pending" | "confirmed" | "cancelled";
+  meetLink: string | null;
 };
 
 /**
@@ -78,6 +79,14 @@ export function ManagePanel({ booking }: { booking: ManageBooking }) {
       </p>
       {notice ? <p className={styles.cardMeta}>{notice}</p> : null}
       {error ? <span className={styles.error}>{error}</span> : null}
+
+      {status === "confirmed" && booking.meetLink ? (
+        <div className={styles.linkRow}>
+          <a className={styles.link} href={booking.meetLink} target="_blank" rel="noreferrer">
+            Join Google Meet
+          </a>
+        </div>
+      ) : null}
 
       {status === "confirmed" && !rescheduling ? (
         <div className={styles.linkRow}>

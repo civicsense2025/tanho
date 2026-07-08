@@ -37,6 +37,6 @@ export const THEME_DEFAULTS: ThemeInput = themeInputSchema.parse({
   headingScale: 1,
   leading: 1.6,
   density: 1,
-  radius: "soft",
+  radius: "round",
   shadow: "subtle",
 });

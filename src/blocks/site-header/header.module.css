@@ -8,6 +8,7 @@
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
+
 .sticky {
   position: sticky;
   top: 0;
@@ -15,6 +16,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+
 .overlay {
   position: absolute;
   top: 0;
@@ -51,7 +53,7 @@
 }
 
 /* spread: logo left, everything else pushed right (default). */
-.spread > :first-child {
+.spread> :first-child {
   margin-right: auto;
 }
 
@@ -61,12 +63,13 @@
 }
 
 /* split: first child left, last child right, middle truly centered. */
-.split > :first-child {
+.split> :first-child {
   flex: 1 1 0;
   display: flex;
   justify-content: flex-start;
 }
-.split > :last-child {
+
+.split> :last-child {
   flex: 1 1 0;
   display: flex;
   justify-content: flex-end;
@@ -80,10 +83,12 @@
   padding-top: var(--space-3);
   padding-bottom: var(--space-3);
 }
-.stack > :first-child {
+
+.stack> :first-child {
   display: flex;
   justify-content: center;
 }
+
 .stackRest {
   display: flex;
   justify-content: center;
@@ -99,6 +104,7 @@
   border-bottom: none;
   border-right: 1px solid var(--border);
 }
+
 .sidebar {
   flex-direction: column;
   align-items: stretch;
@@ -108,9 +114,17 @@
   gap: var(--space-5);
   padding: var(--space-6) var(--space-5);
 }
-.sidebar > :first-child {
+
+.sidebar> :first-child {
   display: flex;
   justify-content: flex-start;
+}
+
+/* Theme toggle — sits at the right edge of the header bar. */
+.themeToggle {
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-6);
 }
 
 @media (max-width: 720px) {
@@ -118,6 +132,7 @@
     min-height: 54px;
     padding: 0 var(--space-5);
   }
+
   /* On mobile the bar collapses to logo + burger; spread keeps them apart. */
   .center,
   .split,
@@ -126,9 +141,11 @@
     align-items: center;
     justify-content: space-between;
   }
+
   .stackRest {
     justify-content: flex-end;
   }
+
   /* The sidebar column collapses to a normal top bar on mobile — a
      full-height side column has no room on a narrow viewport. */
   .sidebarBar {
@@ -136,6 +153,7 @@
     border-bottom: 1px solid var(--border);
     height: auto;
   }
+
   .sidebar {
     flex-direction: row;
     align-items: center;
@@ -145,7 +163,8 @@
     min-height: 54px;
     padding: 0 var(--space-5);
   }
-  .sidebar > :first-child {
+
+  .sidebar> :first-child {
     justify-content: flex-start;
   }
 }

@@ -21,7 +21,7 @@ export type CardResult = { block: DetectedBlock; issues: ParseIssue[] };
 
 /**
  * A per-provider element→block detector: given one top-level HTML element, return
- * its native OYS block, or `null` to fall through to richtext. Async because an
+ * its native Lamina block, or `null` to fall through to richtext. Async because an
  * embed path may make a network call (oEmbed). Every importer supplies one.
  */
 export type CardDetector = (elementHtml: string) => Promise<CardResult | null>;

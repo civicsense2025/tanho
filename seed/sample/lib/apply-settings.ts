@@ -35,7 +35,7 @@ export async function applySettings(db: SeedDb, pack: SamplePack): Promise<void>
       headingScale: 1.05,
       leading: 1.6,
       density: 1,
-      radius: "soft",
+      radius: "round",
       shadow: "subtle",
       ...pack.theme,
     }),

@@ -3,6 +3,9 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { enhancePolls } from "./poll-enhance";
+import { enhanceMotion } from "./motion-enhance";
+import { enhanceDrawers } from "./drawer-enhance";
+import { enhanceTabs } from "./tabs-enhance";
 
 /**
  * The one progressive-enhancement island for the structural blocks. Mounted
@@ -50,67 +53,8 @@ export function BlockEnhancements() {
       else link.removeAttribute("data-active");
     }
 
-    // ---- mobile nav drawer niceties (progressive enhancement) ------------
-    // The nav-menu mobile menu is a native <details data-mobile-nav>; with JS
-    // off it fully works. Here we LAYER the drawer conveniences: Esc to close,
-    // scrim tap-to-close, body-scroll-lock while a covering menu is open, and a
-    // focus-trap. Nothing gates content — every link is already in the DOM.
-    const drawers = Array.from(document.querySelectorAll<HTMLDetailsElement>("[data-mobile-nav]"));
-    for (const details of drawers) {
-      const scrim = details.querySelector<HTMLElement>("[data-mobile-scrim]");
-      // Body-scroll-lock: only for menus that cover the page (data-mobile-lock).
-      const syncScrollLock = () => {
-        const anyOpen = drawers.some((d) => d.hasAttribute("data-mobile-lock") && d.open);
-        document.body.style.overflow = anyOpen ? "hidden" : "";
-      };
-      const close = () => {
-        details.open = false;
-        // Setting `open` programmatically does NOT fire `toggle`, so release the
-        // scroll-lock explicitly (the toggle listener only fires on user clicks).
-        syncScrollLock();
-      };
-
-      // Esc closes an open drawer (a drawer-standard affordance).
-      const onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape" && details.open) {
-          close();
-          details.querySelector<HTMLElement>("summary")?.focus();
-        }
-      };
-      // Tab cycles within the open panel (focus-trap).
-      const onTrap = (e: KeyboardEvent) => {
-        if (e.key !== "Tab" || !details.open) return;
-        const focusables = details.querySelectorAll<HTMLElement>(
-          'a[href], button, summary, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusables.length === 0) return;
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      };
-      const onScrimClick = () => close();
-      // On user open/close of THIS details, re-evaluate the lock across all
-      // drawers (the summary click fires a real toggle event).
-      const onToggle = () => syncScrollLock();
-
-      details.addEventListener("keydown", onKeyDown);
-      details.addEventListener("keydown", onTrap);
-      details.addEventListener("toggle", onToggle);
-      scrim?.addEventListener("click", onScrimClick);
-      cleanups.push(() => {
-        details.removeEventListener("keydown", onKeyDown);
-        details.removeEventListener("keydown", onTrap);
-        details.removeEventListener("toggle", onToggle);
-        scrim?.removeEventListener("click", onScrimClick);
-        document.body.style.overflow = "";
-      });
-    }
+    // ---- mobile nav drawer niceties — extracted to drawer-enhance.ts ------
+    cleanups.push(...enhanceDrawers(document));
 
     // ---- smooth anchor scrolling (TOC opt-in) ----------------------------
     // A TOC with smoothScroll on emits [data-toc-smooth]; enable smooth scroll
@@ -247,126 +191,11 @@ export function BlockEnhancements() {
       });
     }
 
-    // ---- motion: entrance animations (load / in-view, optional stagger) --------
-    // Blocks with a `motion` layer carry [data-motion-trigger]; the scoped CSS holds
-    // their initial hidden state (gated on data-blocks-enhanced + no-reduced-motion).
-    // Here we flip [data-motion-in] to play the transition. Under reduced-motion we do
-    // NOTHING — the CSS guard already leaves the element in its final (visible) state.
-    if (!prefersReducedMotion) {
-      const reveal = (el: HTMLElement) => el.setAttribute("data-motion-in", "");
+    // ---- motion: entrance animations — extracted to motion-enhance.ts ----------
+    cleanups.push(...enhanceMotion(document, prefersReducedMotion));
 
-      // Stagger containers orchestrate their DIRECT motion children: when the container
-      // enters view, reveal each child in sequence, overriding the child's own trigger.
-      const staggerRoots = Array.from(
-        document.querySelectorAll<HTMLElement>("[data-motion-stagger]"),
-      );
-      const staggered = new Set<HTMLElement>();
-      for (const root of staggerRoots) {
-        const step = Number(root.getAttribute("data-motion-stagger")) || 0;
-        // Direct children carrying motion. querySelectorAll is descendant-wide, so filter
-        // to direct children (a nested stagger container owns its own subtree).
-        const kids = Array.from(root.querySelectorAll<HTMLElement>("[data-motion-trigger]")).filter(
-          (k) => k.parentElement === root || k.closest("[data-motion-stagger]") === root,
-        );
-        kids.forEach((k) => staggered.add(k));
-      }
-
-      // Load-triggered elements: reveal on the next frame (after first paint), minus any
-      // that a stagger container owns.
-      const loadEls = Array.from(
-        document.querySelectorAll<HTMLElement>('[data-motion-trigger="load"]'),
-      ).filter((el) => !staggered.has(el));
-      if (loadEls.length) {
-        const raf = window.requestAnimationFrame(() => loadEls.forEach(reveal));
-        cleanups.push(() => window.cancelAnimationFrame(raf));
-      }
-
-      // In-view elements (and stagger containers): reveal when they scroll into view.
-      const observed = [
-        ...Array.from(document.querySelectorAll<HTMLElement>('[data-motion-trigger="in-view"]')).filter(
-          (el) => !staggered.has(el),
-        ),
-        ...staggerRoots,
-      ];
-      if (observed.length && "IntersectionObserver" in window) {
-        const io = new IntersectionObserver(
-          (entries, obs) => {
-            for (const entry of entries) {
-              if (!entry.isIntersecting) continue;
-              const el = entry.target as HTMLElement;
-              obs.unobserve(el);
-              const step = Number(el.getAttribute("data-motion-stagger")) || 0;
-              if (step > 0) {
-                // Stagger: reveal each direct motion child in sequence.
-                const kids = Array.from(el.querySelectorAll<HTMLElement>("[data-motion-trigger]")).filter(
-                  (k) => k.parentElement === el || k.closest("[data-motion-stagger]") === el,
-                );
-                kids.forEach((k, i) => {
-                  const t = window.setTimeout(() => reveal(k), i * step);
-                  cleanups.push(() => window.clearTimeout(t));
-                });
-              } else {
-                reveal(el);
-              }
-            }
-          },
-          { rootMargin: "0px 0px -10% 0px", threshold: 0.1 },
-        );
-        observed.forEach((el) => io.observe(el));
-        cleanups.push(() => io.disconnect());
-      } else {
-        // No IntersectionObserver (very old browser): reveal everything immediately so
-        // nothing stays hidden.
-        observed.forEach(reveal);
-      }
-    }
-
-    // ---- tabs: upgrade the progressive-enhancement panels into an ARIA tablist --
-    const tabGroups = Array.from(document.querySelectorAll<HTMLElement>("[data-tabs]"));
-    for (const group of tabGroups) {
-      const tabs = Array.from(group.querySelectorAll<HTMLButtonElement>('[role="tab"][data-tab-index]'));
-      const panels = Array.from(group.querySelectorAll<HTMLElement>("[data-tab-panel]"));
-      if (tabs.length === 0 || panels.length === 0) continue;
-
-      const select = (idx: number) => {
-        tabs.forEach((t, i) => {
-          const on = i === idx;
-          t.setAttribute("aria-selected", on ? "true" : "false");
-          t.tabIndex = on ? 0 : -1;
-        });
-        // Hide inactive panels' content (the last child is the .panel body; its
-        // fallback label is already CSS-hidden once enhanced).
-        panels.forEach((p, i) => {
-          const body = p.lastElementChild as HTMLElement | null;
-          if (body) body.toggleAttribute("hidden", i !== idx);
-        });
-      };
-      // Initial: activate the first tab, hide the rest.
-      select(0);
-
-      tabs.forEach((tab, i) => {
-        const onClick = () => select(i);
-        const onKey = (e: KeyboardEvent) => {
-          const last = tabs.length - 1;
-          let next = -1;
-          if (e.key === "ArrowRight" || e.key === "ArrowDown") next = i === last ? 0 : i + 1;
-          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = i === 0 ? last : i - 1;
-          else if (e.key === "Home") next = 0;
-          else if (e.key === "End") next = last;
-          if (next >= 0) {
-            e.preventDefault();
-            select(next);
-            tabs[next]!.focus();
-          }
-        };
-        tab.addEventListener("click", onClick);
-        tab.addEventListener("keydown", onKey);
-        cleanups.push(() => {
-          tab.removeEventListener("click", onClick);
-          tab.removeEventListener("keydown", onKey);
-        });
-      });
-    }
+    // ---- tabs: ARIA tablist — extracted to tabs-enhance.ts ---------------------
+    cleanups.push(...enhanceTabs(document));
 
     // ---- before/after slider: mirror the range value onto --ba-pos -------------
     const baSliders = Array.from(document.querySelectorAll<HTMLElement>("[data-before-after]"));

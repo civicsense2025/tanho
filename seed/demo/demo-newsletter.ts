@@ -62,7 +62,7 @@ export async function seedDemoNewsletter(db: SeedDb): Promise<void> {
   await issue("own-your-domain-first", "Own your domain first", 1, [
     b("heading", { text: "Own your domain first", level: "h1", align: "left" }),
     rich(
-      "<p>If you do one thing this year to own your site, buy your domain and point it at " +
+      "<p>If you do one thing this year to Lamina, buy your domain and point it at " +
         "something you control. Everything else — your host, your CMS, your newsletter — " +
         "can change later without breaking a single link.</p>" +
         "<p>A domain is the one address no platform can take from you. Rent the software; " +

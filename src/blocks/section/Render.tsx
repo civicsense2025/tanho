@@ -23,13 +23,14 @@ export function RenderSection({ content, ctx }: { content: SectionContent; ctx: 
   return (
     <section
       id={anchorId}
+      data-theme={content.themeMode === "inherit" ? undefined : content.themeMode}
       style={{
         ...BG[content.background],
         paddingTop: pad,
         paddingBottom: pad,
         marginInline: content.width === "full" ? "calc(var(--pb-gutter, 0px) * -1)" : 0,
         paddingInline: content.width === "full" ? "var(--pb-gutter, 0px)" : 0,
-        borderRadius: content.width === "full" ? 0 : "var(--radius-sm)",
+        borderRadius: content.width === "full" ? 0 : "var(--pbl-radius, var(--radius-sm))",
         scrollMarginTop: anchorId ? "var(--header-height, 0px)" : undefined,
       }}
     >

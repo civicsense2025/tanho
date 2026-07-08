@@ -147,12 +147,24 @@ export async function startCheckout(input: unknown): Promise<StartCheckoutResult
 
   const { url } = await payments.createCheckoutSession({
     mode: "payment",
-    lineItems: priced.map((i) => ({
-      amountCents: i.unitCents,
-      currency,
-      name: i.name,
-      quantity: i.qty,
-    })),
+    lineItems: priced.map((i) => {
+      // Resolve the per-line tax code: variant override > product default.
+      const product = productById.get(i.productId);
+      const variant = i.variantId ? variantById.get(i.variantId) : undefined;
+      const taxCode = variant?.taxCode ?? product?.taxCode ?? undefined;
+      const taxBehavior = product?.taxBehavior ?? undefined;
+      return {
+        amountCents: i.unitCents,
+        currency,
+        name: i.name,
+        quantity: i.qty,
+        // Pass through to Stripe Tax when automatic tax is enabled. Stripe
+        // ignores these fields when automatic_tax is off, so they're safe to
+        // always include.
+        ...(taxCode ? { taxCode } : {}),
+        ...(taxBehavior ? { taxBehavior } : {}),
+      };
+    }),
     successUrl: `${appUrl()}/shop/success?code=${encodeURIComponent(code)}`,
     cancelUrl: `${appUrl()}/shop`,
     customerEmail: email,

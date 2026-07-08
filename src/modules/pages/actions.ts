@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { redirect } from "next/navigation";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
@@ -14,6 +15,18 @@ import { pageDetailsSchema, secureCustomCode } from "./validation";
 import { ROUTE_TYPE } from "@/modules/entries/router";
 import { resolveCodePage } from "@/app/(public)/code-pages/registry";
 import { saveOwnerBlocks, publishOwnerBlocks } from "@/modules/blocks/actions";
+
+/** Unique "untitled" slug for a new page, avoiding collisions. */
+async function uniqueUntitledSlug(): Promise<string> {
+  const base = "untitled";
+  let slug = base;
+  let n = 2;
+  while (await db.query.pages.findFirst({ where: eq(pages.slug, slug) })) {
+    slug = `${base}-${n}`;
+    n++;
+  }
+  return slug;
+}
 
 /** True when `route` collides with a reserved entity-route prefix (/work, /guides, /resources) or an exact code-page route. */
 function collidesWithReservedRoute(route: string): boolean {
@@ -52,6 +65,27 @@ export async function createPage(input: unknown): Promise<Result<{ id: string }>
   await writeAudit({ userId: user.id, action: "page.create", ownerType: "page", ownerId: row.id });
   invalidatePage(row.id);
   return { ok: true, data: { id: row.id } };
+}
+
+/**
+ * Create a blank page and immediately redirect into the block editor.
+ * Used by the dashboard "+ New page/post" button so users never see the old
+ * title/slug form.
+ */
+export async function createBlankPage(kind: "page" | "post" = "page"): Promise<never> {
+  const slug = await uniqueUntitledSlug();
+  const route = `/${slug}`;
+  const title = `Untitled ${kind}`;
+  const res = await createPage({
+    title,
+    slug,
+    route,
+    kind,
+    template: "blank",
+    status: "draft",
+  });
+  if (!res.ok) throw new Error(res.error);
+  redirect(`/admin/pages/${res.data!.id}`);
 }
 
 export async function savePageDetails(id: string, input: unknown): Promise<Result> {

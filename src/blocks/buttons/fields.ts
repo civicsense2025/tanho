@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commonContent, styleContent, trackEventSchema, trackParamsSchema, advancedStyleContent, motionContent } from "../common";
+import { commonContent, styleContent, trackEventSchema, trackParamsSchema, advancedStyleContent, motionContent, RADII } from "../common";
 
 /** Safe link targets only: web URLs, site-relative paths, anchors, mailto. */
 const hrefSchema = z
@@ -24,6 +24,12 @@ export const buttonsSchema = z.object({
   ...advancedStyleContent,
   ...motionContent,
   align: z.enum(["left", "center", "right"]).default("left"),
+  /** Corner radius for the button links themselves. Defaults to "sm"
+   *  (var(--radius-sm), the theme token), so buttons follow the site's
+   *  corner-radius preset unless an author overrides it here. Distinct from the
+   *  style-layer `radius`, which targets the (usually transparent) wrapper, not
+   *  the buttons. */
+  radius: z.enum(RADII).default("sm"),
   items: z.array(buttonItemSchema).max(50).default([]),
 });
 

@@ -29,13 +29,20 @@ export const stripePayments: PaymentsAdapter = {
         li.priceId
           ? { price: li.priceId, quantity: li.quantity }
           : {
-              quantity: li.quantity,
-              price_data: {
-                currency: li.currency ?? "usd",
-                unit_amount: li.amountCents ?? 0,
-                product_data: { name: li.name ?? "Item" },
+            quantity: li.quantity,
+            price_data: {
+              currency: li.currency ?? "usd",
+              unit_amount: li.amountCents ?? 0,
+              product_data: {
+                name: li.name ?? "Item",
+                // Stripe Tax: per-line tax code + behavior. When omitted,
+                // Stripe falls back to the account default tax code.
+                ...(li.taxCode ? { tax_code: li.taxCode } : {}),
               },
+              // tax_behavior is a price_data field (not product_data).
+              ...(li.taxBehavior ? { tax_behavior: li.taxBehavior } : {}),
             },
+          },
       ),
       shipping_options: input.shippingRates?.map((r) => ({
         shipping_rate_data: {
@@ -70,13 +77,13 @@ export const stripePayments: PaymentsAdapter = {
   async syncProduct(input) {
     const product = input.existingProductId
       ? await stripe().products.update(input.existingProductId, {
-          name: input.name,
-          description: input.description || undefined,
-        })
+        name: input.name,
+        description: input.description || undefined,
+      })
       : await stripe().products.create({
-          name: input.name,
-          description: input.description || undefined,
-        });
+        name: input.name,
+        description: input.description || undefined,
+      });
     // Prices are immutable; always create a fresh one and let the DB point at it.
     const price = await stripe().prices.create({
       product: product.id,

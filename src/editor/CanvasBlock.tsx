@@ -1,14 +1,15 @@
 "use client";
 
 import type { MouseEvent, PointerEvent } from "react";
+import { GripVertical, ChevronUp, ChevronDown, SquareStack, Copy, Trash2 } from "lucide-react";
 import { blockDef } from "@/blocks/registry";
 import { UnsupportedBlock } from "@/blocks/UnsupportedBlock";
 import { isContainer, kidsOf } from "@/blocks/tree";
+import { substituteRecordTokens } from "@/blocks/collection/bind";
 import type { BlockNode, Device } from "@/blocks/types";
 import type { BlockStyle, BlockLayout } from "@/blocks/common";
 import { useEditor } from "./store";
 import { BetweenMenuButton } from "./BetweenInsert";
-import type { OnAddBlock } from "./BlockPicker";
 import { resolveBlockPreviewWrapper } from "./blockPreviewStyle";
 import styles from "./canvas.module.css";
 
@@ -22,16 +23,6 @@ function withResolved(parsed: unknown, raw: Record<string, unknown>) {
   return { ...(parsed as Record<string, unknown>), _resolved: raw._resolved };
 }
 
-/** Apply the display-only preview transform (template editor) if one is set. */
-function applyPreview(
-  content: unknown,
-  type: string,
-  transform?: (c: Record<string, unknown>, type: string) => Record<string, unknown>,
-): unknown {
-  if (!transform || content === null || typeof content !== "object") return content;
-  return transform(content as Record<string, unknown>, type);
-}
-
 /** Drag/drop context PageEditor threads down so every nested block shares it. */
 export type DragCtx = {
   device: Device;
@@ -43,23 +34,7 @@ export type DragCtx = {
   setHover: (id: string | null) => void;
   startDrag: (id: string) => (e: PointerEvent) => void;
   dragCandidate: (id: string) => (e: PointerEvent) => void;
-  onInsert: (
-    parentId: string | null,
-    index: number,
-    type: string,
-    patch?: Record<string, unknown>,
-  ) => void;
-  /**
-   * DISPLAY-ONLY content transform, applied to each block's parsed content just
-   * before its Render — never to the stored/saved tree. The content-type
-   * template editor sets this to fill `{{field}}` tokens (and resolve `field`
-   * blocks) from a sample row so the canvas previews real data (e.g. "Blue
-   * Widget"), while the store (and thus the Inspector + what saves) keeps the
-   * raw tokens/field keys. `type` is the block's type so the transform can
-   * treat a `field` block differently. Undefined for every other editor → no
-   * change.
-   */
-  previewContent?: (content: Record<string, unknown>, type: string) => Record<string, unknown>;
+  onInsert: (parentId: string | null, index: number, type: string, patch?: Record<string, unknown>) => void;
 };
 
 /** Selectable, draggable canvas block — renders the real block inline + chrome. */
@@ -68,11 +43,13 @@ export function CanvasBlock({
   index,
   total,
   ctx,
+  record,
 }: {
   block: BlockNode;
   index: number;
   total: number;
   ctx: DragCtx;
+  record?: Record<string, unknown>;
 }) {
   const def = blockDef(block.type);
   const selection = useEditor((s) => s.selection);
@@ -81,46 +58,10 @@ export function CanvasBlock({
   const remove = useEditor((s) => s.remove);
   const duplicate = useEditor((s) => s.duplicate);
   const wrap = useEditor((s) => s.wrapInSection);
-  const selected = selection.has(block.id);
+  const patch = useEditor((s) => s.patch);
+  if (!def) return <UnsupportedBlock type={block.type} />;
 
-  if (!def) {
-    // Still registers with the drag/select system and offers at least a
-    // Remove button — an earlier version returned this bare, which meant an
-    // unsupported block (an imported pack the install doesn't have, or a
-    // disabled plugin) had no way to be removed from the canvas and never
-    // participated in drag hit-testing, unlike BlockCard.tsx's equivalent
-    // handling in the stacked layout.
-    return (
-      <div
-        ref={(node) => ctx.registerEl(block.id, node)}
-        data-selected={selected || undefined}
-        className={styles.canvasBlock}
-        onClick={(e: MouseEvent) => {
-          e.stopPropagation();
-          select(block.id, e.metaKey || e.ctrlKey ? "toggle" : e.shiftKey ? "range" : "single");
-        }}
-        onMouseOver={(e) => {
-          e.stopPropagation();
-          ctx.setHover(block.id);
-        }}
-      >
-        {selected ? <span className={styles.blockTag}>Unsupported ({block.type})</span> : null}
-        {selected || ctx.hoverId === block.id ? (
-          <span
-            className={styles.blockTools}
-            data-pb-toolbar="1"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <button type="button" className={styles.toolBtn} disabled={index === 0} onClick={() => move(block.id, -1)} title="Move up">↑</button>
-            <button type="button" className={styles.toolBtn} disabled={index === total - 1} onClick={() => move(block.id, 1)} title="Move down">↓</button>
-            <button type="button" className={styles.toolBtn} onClick={() => remove(block.id)} title="Remove">🗑</button>
-          </span>
-        ) : null}
-        <UnsupportedBlock type={block.type} />
-      </div>
-    );
-  }
+  const selected = selection.has(block.id);
   const hovered = ctx.hoverId === block.id;
   const locked = !!def.bound;
   const parsed = def.schema.safeParse(block.content);
@@ -131,19 +72,46 @@ export function CanvasBlock({
     select(block.id, e.metaKey || e.ctrlKey ? "toggle" : e.shiftKey ? "range" : "single");
   };
 
+  // Record-field binding: when this block is inside a collection item template, a
+  // `record` is in scope — replace `{{record.field}}` tokens in the VALIDATED
+  // content (after safeParse), mirroring BlockRenderer. `_resolved` is re-attached
+  // AFTER substitution (same order as the public walker, which resolves post-sub).
+  const content = parsed.success
+    ? (withResolved(
+      record ? substituteRecordTokens(parsed.data, record) : parsed.data,
+      block.content,
+    ) as Record<string, unknown> & { style?: BlockStyle; layout?: BlockLayout })
+    : null;
+  // Single-device style/layout wrapper — the canvas twin of BlockRenderer's
+  // per-block CSS. Plain blocks (no style/layout) get undefined/"" and keep today's
+  // exact wrapper (no class, no style).
+  const styleWrap = content
+    ? resolveBlockPreviewWrapper(block.id, content, ctx.device)
+    : { className: undefined, style: undefined, layoutCss: "" };
+
   const renderCtx = {
     mode: "editor" as const,
     device: ctx.device,
     viewer: null,
-    children: (kids: BlockNode[]) => <CanvasChildren blocks={kids} parentId={block.id} ctx={ctx} />,
+    children: (kids: BlockNode[], opts?: { horizontal?: boolean; record?: Record<string, unknown> }) => (
+      // A caller-supplied `record` (the collection block, per item) overrides the
+      // ambient one for that subtree; otherwise the ambient record threads through.
+      <CanvasChildren blocks={kids} parentId={block.id} ctx={ctx} record={opts?.record ?? record} />
+    ),
+    onChange: (partial: Record<string, unknown>) => patch(block.id, { ...block.content, ...partial }),
   };
 
   return (
     <div
       ref={(node) => ctx.registerEl(block.id, node)}
+      data-block={block.type}
       data-selected={selected || undefined}
-      className={styles.canvasBlock}
-      style={{ opacity: dragging ? 0.5 : 1, cursor: dragging ? "grabbing" : "pointer" }}
+      className={[styles.canvasBlock, styleWrap.className].filter(Boolean).join(" ")}
+      style={{
+        ...styleWrap.style,
+        opacity: dragging ? 0.5 : styleWrap.style?.opacity ?? 1,
+        cursor: dragging ? "grabbing" : "pointer",
+      }}
       onClick={onClick}
       onMouseOver={(e) => {
         e.stopPropagation();
@@ -151,6 +119,7 @@ export function CanvasBlock({
       }}
       onPointerDown={ctx.dragCandidate(block.id)}
     >
+      {styleWrap.layoutCss ? <style data-block-style="">{styleWrap.layoutCss}</style> : null}
       {selected ? <span className={styles.blockTag}>{def.label}</span> : null}
       {selected || hovered ? (
         <span
@@ -160,13 +129,13 @@ export function CanvasBlock({
           onPointerDown={(e) => e.stopPropagation()}
         >
           {!locked ? (
-            <button type="button" className={styles.toolBtn} title="Drag" style={{ cursor: "grab", touchAction: "none" }} onPointerDown={ctx.startDrag(block.id)}>⠿</button>
+            <button type="button" className={styles.toolBtn} title="Drag" style={{ cursor: "grab", touchAction: "none" }} onPointerDown={ctx.startDrag(block.id)}><GripVertical size={14} /></button>
           ) : null}
-          <button type="button" className={styles.toolBtn} disabled={locked || index === 0} onClick={() => move(block.id, -1)} title="Move up">↑</button>
-          <button type="button" className={styles.toolBtn} disabled={locked || index === total - 1} onClick={() => move(block.id, 1)} title="Move down">↓</button>
-          <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => wrap(block.id)} title="Wrap in section">▣</button>
-          <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => duplicate(block.id)} title="Duplicate">⧉</button>
-          <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => remove(block.id)} title="Remove">🗑</button>
+          <button type="button" className={styles.toolBtn} disabled={locked || index === 0} onClick={() => move(block.id, -1)} title="Move up"><ChevronUp size={14} /></button>
+          <button type="button" className={styles.toolBtn} disabled={locked || index === total - 1} onClick={() => move(block.id, 1)} title="Move down"><ChevronDown size={14} /></button>
+          <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => wrap(block.id)} title="Wrap in section"><SquareStack size={14} /></button>
+          <button type="button" className={styles.toolBtn} disabled={locked} onClick={() => duplicate(block.id)} title="Duplicate"><Copy size={14} /></button>
+          <button type="button" className={`${styles.toolBtn} ${styles.toolBtnDanger}`} disabled={locked} onClick={() => remove(block.id)} title="Remove"><Trash2 size={14} /></button>
         </span>
       ) : null}
 
@@ -178,29 +147,7 @@ export function CanvasBlock({
         // block's Render draws it (falling back to its own "· Live …"
         // placeholder only when a freshly-added block hasn't been resolved yet).
         // The block schema strips `_resolved` on parse, so re-attach it here.
-        // `previewContent` (template editor only) then fills {{field}} tokens
-        // from a sample row for DISPLAY — the stored/edited tree is untouched.
-        //
-        // The style/layout wrapper below mirrors BlockRenderer's data-block
-        // wrapper (padding/colour/border inline, flex/grid via a scoped
-        // <style>) resolved for ctx.device — WITHOUT this, Style/Layout panel
-        // edits produce no visible change on the canvas. Nested INSIDE the
-        // editor's own selection/drag chrome div (styles.canvasBlock) rather
-        // than merged onto it, so an author's background/opacity never
-        // collides with the editor's own selection-highlight styling.
-        (() => {
-          const content = applyPreview(withResolved(parsed.data, block.content), block.type, ctx.previewContent) as {
-            style?: BlockStyle;
-            layout?: BlockLayout;
-          };
-          const wrap = resolveBlockPreviewWrapper(block.id, content, ctx.device);
-          return (
-            <div data-block={block.type} className={wrap.className} style={wrap.style}>
-              {wrap.layoutCss ? <style data-block-style="">{wrap.layoutCss}</style> : null}
-              {def.Render({ content, ctx: renderCtx })}
-            </div>
-          );
-        })()
+        def.Render({ content, ctx: renderCtx })
       )}
     </div>
   );
@@ -231,10 +178,12 @@ export function CanvasChildren({
   blocks,
   parentId,
   ctx,
+  record,
 }: {
   blocks: BlockNode[];
   parentId: string | null;
   ctx: DragCtx;
+  record?: Record<string, unknown>;
 }) {
   const targeted = !!(ctx.drop && ctx.dragId && ctx.drop.parentId === parentId);
 
@@ -251,7 +200,7 @@ export function CanvasChildren({
       {blocks.map((b, i) => (
         <div key={b.id} style={{ position: "relative", minWidth: 0 }}>
           {ctx.drop && ctx.dragId && ctx.drop.parentId === parentId && ctx.drop.index === i ? <DropLine /> : null}
-          <CanvasBlock block={b} index={i} total={blocks.length} ctx={ctx} />
+          <CanvasBlock block={b} index={i} total={blocks.length} ctx={ctx} record={record} />
           <InsertMenu onInsert={(type, patch) => ctx.onInsert(parentId, i + 1, type, patch)} />
         </div>
       ))}
@@ -261,7 +210,7 @@ export function CanvasChildren({
 }
 
 /** Between-block quick insert — a centered ＋ that opens the block menu. */
-function InsertMenu({ onInsert }: { onInsert: OnAddBlock }) {
+function InsertMenu({ onInsert }: { onInsert: (type: string, patch?: Record<string, unknown>) => void }) {
   return (
     <div className={styles.insertRow}>
       <BetweenMenuButton onInsert={onInsert} />

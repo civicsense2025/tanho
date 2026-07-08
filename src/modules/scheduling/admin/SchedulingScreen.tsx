@@ -12,6 +12,7 @@ import { EventTypesTab } from "./EventTypesTab";
 import { AvailabilityTab } from "./AvailabilityTab";
 import { ExtensionsTab } from "./ExtensionsTab";
 import { TemplatesTab } from "./TemplatesTab";
+import type { CalendarListItem } from "../gcal-calendars";
 import styles from "./scheduling.module.css";
 
 export type SchedulingTab =
@@ -42,6 +43,7 @@ export type SchedulingScreenProps = {
   googleConnected: boolean;
   googleAccountLabel: string;
   isGoogleOAuthConfigured: boolean;
+  googleCalendars: CalendarListItem[];
 };
 
 /** The 5-tab scheduling admin. The active tab is URL-driven (?tab=…). */
@@ -82,6 +84,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
           googleConnected={props.googleConnected}
           googleAccountLabel={props.googleAccountLabel}
           isGoogleOAuthConfigured={props.isGoogleOAuthConfigured}
+          googleCalendars={props.googleCalendars}
         />
       ) : null}
       {tab === "extensions" ? <ExtensionsTab extensions={props.extensions} /> : null}

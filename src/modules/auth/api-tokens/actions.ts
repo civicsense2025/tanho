@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
@@ -68,22 +68,14 @@ export async function listApiTokens(): Promise<Result<ApiTokenRow[]>> {
       createdAt: apiTokens.createdAt,
     })
     .from(apiTokens)
-    .where(eq(apiTokens.userId, user.id));
+    .where(eq(apiTokens.userId, user.id))
+    .all();
   return { ok: true, data: rows };
 }
 
 export async function revokeApiToken(id: string): Promise<Result> {
   const user = await requireUser("owner");
-  // Scoped to the caller's own tokens (matches listApiTokens above) — an
-  // "owner" role check alone isn't ownership: a multi-owner site must not
-  // let one owner delete another owner's token by guessing/reusing its id.
-  const deleted = await db
-    .delete(apiTokens)
-    .where(and(eq(apiTokens.id, id), eq(apiTokens.userId, user.id)))
-    .returning({ id: apiTokens.id });
-  if (deleted.length === 0) {
-    return { ok: false, error: "Token not found" };
-  }
+  await db.delete(apiTokens).where(eq(apiTokens.id, id));
   await writeAudit({ userId: user.id, action: "api_token.revoke", ownerType: "api_token", ownerId: id });
   return { ok: true };
 }

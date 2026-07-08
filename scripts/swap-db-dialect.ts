@@ -19,7 +19,7 @@
  *   - everything else (enum text, primaryKey, notNull/default/unique,
  *     $defaultFn, $type<T>()) is left untouched — only the import source moves
  *   - every pgTable(...) call gets .enableRLS() chained on, and a
- *     "<table>_app_only" pgPolicy granting full access to the OYS_APP_ROLE
+ *     "<table>_app_only" pgPolicy granting full access to the LAMINA_APP_ROLE
  *     Postgres role (see docs/recipes/swap-database-to-postgres.md's "Create
  *     the app role" step) — defense-in-depth so a leaked Supabase anon/
  *     service key or a stray DATABASE_URL to a different role can't read or
@@ -49,7 +49,7 @@
  * alone, and client/config files already converted are detected and
  * skipped too — safe to re-run after a partial conversion.
  */
-import { OYS_APP_ROLE, MODULES_ROOT } from "./swap-db-dialect/config";
+import { LAMINA_APP_ROLE, MODULES_ROOT } from "./swap-db-dialect/config";
 import { findSchemaFiles } from "./swap-db-dialect/find-schema-files";
 import { convertSchemaFile } from "./swap-db-dialect/schema";
 import { fixQueryTerminators } from "./swap-db-dialect/query-terminators";
@@ -81,8 +81,8 @@ function main() {
   console.log(
     `\nNext steps (not done by this script — see docs/recipes/swap-database-to-postgres.md):\n` +
       `  1. npm install pg (remove @libsql/client if you like)\n` +
-      `  2. Create the "${OYS_APP_ROLE}" Postgres role and point DATABASE_URL at it\n` +
-      `     (this MUST happen before step 3 — CREATE POLICY ... TO ${OYS_APP_ROLE} fails\n` +
+      `  2. Create the "${LAMINA_APP_ROLE}" Postgres role and point DATABASE_URL at it\n` +
+      `     (this MUST happen before step 3 — CREATE POLICY ... TO ${LAMINA_APP_ROLE} fails\n` +
       `     if the role doesn't exist yet)\n` +
       `  3. rm -rf drizzle/ && npm run db:generate && npm run db:migrate\n` +
       `  4. npm run typecheck to confirm\n` +
@@ -90,7 +90,7 @@ function main() {
       `     contents with scripts/postgres-rls-force.sql (role grants + FORCE ROW LEVEL\n` +
       `     SECURITY — Drizzle has no schema-level API for FORCE RLS)\n` +
       `  6. npm run db:migrate again to apply the FORCE RLS migration\n` +
-      `  7. npm run seed to confirm the app works end-to-end connected as ${OYS_APP_ROLE}`,
+      `  7. npm run seed to confirm the app works end-to-end connected as ${LAMINA_APP_ROLE}`,
   );
 }
 

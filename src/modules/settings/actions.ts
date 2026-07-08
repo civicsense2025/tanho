@@ -45,3 +45,39 @@ export async function saveSettings(
   });
   return { ok: true };
 }
+
+/**
+ * Upserts the appearance settings namespace. Owner-only. Invalidates both the
+ * appearance settings cache and the theme cache so a mode change is reflected
+ * immediately across the site.
+ */
+export async function saveAppearanceSettings(
+  data: unknown,
+): Promise<SaveSettingsState> {
+  const user = await requireUser("owner");
+
+  const schema = settingsSchemas.appearance;
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid settings" };
+  }
+
+  await db
+    .insert(settings)
+    .values({ namespace: "appearance", data: parsed.data, updatedAt: Date.now() })
+    .onConflictDoUpdate({
+      target: settings.namespace,
+      set: { data: parsed.data, updatedAt: Date.now() },
+    });
+
+  // Immediate expiry (read-your-own-writes) so the admin sees the change now.
+  updateTag("settings:appearance");
+  updateTag("theme");
+  await writeAudit({
+    userId: user.id,
+    action: "settings.save",
+    ownerType: "settings",
+    ownerId: "appearance",
+  });
+  return { ok: true };
+}

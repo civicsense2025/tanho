@@ -22,7 +22,7 @@ Everything you need to run, adapt, and extend the platform.
 | [architecture/paywall.md](architecture/paywall.md) | Server-enforced membership gating |
 | [architecture/theming.md](architecture/theming.md) | Token derivation, white-label theming |
 | [architecture/adapters.md](architecture/adapters.md) | Swapping database/storage/email/payments/sms/ai/calendar |
-| [portability.md](portability.md) | Portable formats (`oys-theme@1`, `oys-pack@1`, `oys-site@1`), the portability allowlist, and admin import/export workflows |
+| [portability.md](portability.md) | Portable formats (`lamina-theme@1`, `lamina-pack@1`, `lamina-site@1`), the portability allowlist, and admin import/export workflows |
 
 ## Entities — adapt each content type to your cause
 

@@ -22,6 +22,16 @@ export type FormState = {
   shippingClass: "standard" | "heavy" | "digital";
   seoTitle: string;
   seoDescription: string;
+  // --- Typed-product axes (migration 0034) ---
+  kind: "physical" | "digital" | "service" | "course";
+  billingModel: "one-time" | "recurring";
+  membershipTier: string;
+  taxCode: string;
+  taxBehavior: "exclusive" | "inclusive";
+  fulfillmentMode: "ship" | "download" | "access_grant" | "booking" | "pod" | "none";
+  accessGrantTargetType: "entry" | "membership" | "pack" | "download" | "";
+  accessGrantTargetId: string;
+  fulfillmentProvider: "local" | "printful" | "printify" | "manual";
 };
 
 export const initState = (p: ProductRow): FormState => ({
@@ -45,6 +55,15 @@ export const initState = (p: ProductRow): FormState => ({
   shippingClass: p.shippingClass,
   seoTitle: p.seo?.title ?? "",
   seoDescription: p.seo?.description ?? "",
+  kind: p.kind ?? "physical",
+  billingModel: p.billingModel ?? "one-time",
+  membershipTier: p.membershipTier ?? "",
+  taxCode: p.taxCode ?? "",
+  taxBehavior: p.taxBehavior ?? "exclusive",
+  fulfillmentMode: p.fulfillmentMode ?? "ship",
+  accessGrantTargetType: p.accessGrantTargetType ?? "",
+  accessGrantTargetId: p.accessGrantTargetId ?? "",
+  fulfillmentProvider: p.fulfillmentProvider ?? "local",
 });
 
 export const intOf = (s: string) => Math.max(0, parseInt(s || "0", 10) || 0);

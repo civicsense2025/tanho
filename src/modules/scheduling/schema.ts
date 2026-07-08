@@ -65,6 +65,10 @@ export const bookings = sqliteTable(
     notes: text("notes").notNull().default(""),
     /** Set when synced to Google Calendar (stub today). */
     googleEventId: text("google_event_id"),
+    /** Which Google Calendar the event was pushed to ("primary" by default). */
+    calendarId: text("calendar_id"),
+    /** Google Meet link returned by the Calendar API when conference data is requested. */
+    meetLink: text("meet_link"),
     /** Which reminders have fired, e.g. { email: true, sms: false }. */
     remindersSent: text("reminders_sent", { mode: "json" })
       .$type<Record<string, boolean>>()

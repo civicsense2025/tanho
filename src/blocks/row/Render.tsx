@@ -18,6 +18,7 @@ export function RenderRow({ content, ctx }: { content: RowContent; ctx: RenderCt
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gap: GAP[content.gap] ?? GAP.md,
         alignItems: content.align,
+        borderRadius: "var(--pbl-radius, 0)",
       }}
     >
       {ctx.children(content.blocks as BlockNode[], { horizontal: true })}

@@ -1,6 +1,6 @@
 /**
  * SAMPLE PACK — journalist / independent reporter.
- * FICTIONAL persona: "Dana Ortiz". Translated from the OYS Design System's
+ * FICTIONAL persona: "Dana Ortiz". Translated from the Lamina Design System's
  * `ui_kits/sites/journalist`. The design's "story-feed" becomes a `collection`
  * bound to story entries; the secure-tip band and subscribe tiers are core blocks.
  */

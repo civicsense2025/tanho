@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { clientIp } from "@/lib/client-ip";
 import {
   allowLoginAttempt,
   clearLoginAttempts,
@@ -29,10 +30,10 @@ const FAILED = "Wrong email or password.";
 
 export type AuthState = { error?: string; notice?: string };
 
-const clientIp = async () => {
+const clientInfo = async () => {
   const hdrs = await headers();
   return {
-    ip: (hdrs.get("x-forwarded-for") ?? "local").split(",")[0]!.trim(),
+    ip: clientIp(hdrs),
     userAgent: hdrs.get("user-agent") ?? undefined,
   };
 };
@@ -56,7 +57,7 @@ export async function joinAction(
   }
 
   const emailLc = parsed.data.email.toLowerCase();
-  const { ip, userAgent } = await clientIp();
+  const { ip, userAgent } = await clientInfo();
   if (!(await allowLoginAttempt(emailLc, ip))) {
     return { error: "Too many attempts. Try again in a few minutes." };
   }
@@ -129,7 +130,7 @@ export async function signinAction(
   if (!parsed.success) return { error: FAILED };
 
   const emailLc = parsed.data.email.toLowerCase();
-  const { ip, userAgent } = await clientIp();
+  const { ip, userAgent } = await clientInfo();
   if (!(await allowLoginAttempt(emailLc, ip))) {
     return { error: "Too many attempts. Try again in a few minutes." };
   }

@@ -5,7 +5,7 @@ import { handleMembershipEvent } from "@/modules/memberships/events";
 import { confirmPaidBooking } from "@/modules/scheduling/booking-payment";
 import { markFormResponsePaid } from "@/modules/forms/payment";
 import { grantEntitlementsForOrder } from "@/modules/marketplace/entitlements";
-import { disputes, orderItems, orders, productVariants, products, stripeEvents } from "./schema";
+import { disputes, entitlements, orderItems, orders, productVariants, products, stripeEvents } from "./schema";
 
 /**
  * The ONE order/dispute state machine. Every Stripe webhook flows through
@@ -104,6 +104,20 @@ async function onCheckoutCompleted(session: Record<string, unknown>) {
   const order = await db.query.orders.findFirst({ where: eq(orders.id, ref) });
   if (!order || order.status !== "pending") return;
 
+  // Stripe Tax breakdown — captured at checkout completion so the local order
+  // carries the per-jurisdiction tax detail for refunds + reports. Shape:
+  //   total_details.amount_tax: number
+  //   total_details.breakdown.tax: [{ amount, description, tax_rate: {id} }]
+  // (See https://docs.stripe.com/api/checkout/sessions/object)
+  const totalDetails = (session.total_details as Record<string, unknown> | undefined) ?? {};
+  const taxCents = (totalDetails.amount_tax as number) ?? 0;
+  const breakdownTax = (totalDetails.breakdown as { tax?: Array<Record<string, unknown>> } | undefined)?.tax ?? [];
+  const taxBreakdown = breakdownTax.map((t) => ({
+    jurisdiction: String(t.description ?? t.jurisdiction ?? "tax"),
+    amount: (t.amount as number) ?? 0,
+    taxRateId: typeof t.tax_rate === "string" ? t.tax_rate : undefined,
+  }));
+
   await db.transaction(async (tx) => {
     await tx
       .update(orders)
@@ -111,6 +125,8 @@ async function onCheckoutCompleted(session: Record<string, unknown>) {
         status: "unfulfilled",
         stripePaymentIntentId: (session.payment_intent as string) ?? null,
         stripeCheckoutSessionId: (session.id as string) ?? null,
+        taxCents,
+        taxBreakdown,
       })
       .where(eq(orders.id, order.id));
 
@@ -135,16 +151,22 @@ async function onCheckoutCompleted(session: Record<string, unknown>) {
     }
   });
 
-  // Grant pack entitlements for any pack-linked products in this order.
+  // Grant entitlements for any access-granting products in this order.
   // Runs outside the inventory transaction (it's an append-only insert with
   // onConflictDoNothing idempotency). Skipped for guest orders (no personId).
-  await grantEntitlementsForOrder(order.id, order.personId);
+  await grantEntitlementsForOrder(order.id);
 }
 
 /**
  * Handles refunds issued from anywhere (this app's Refund button, or
  * directly from the Stripe Dashboard) — reconciles refundedCents/status
  * from the charge's own amount_refunded vs amount so both paths agree.
+ *
+ * Tax reversal: Stripe Tax auto-reverses the tax portion when a refund is
+ * issued through Stripe. We track the reversed tax locally so reports stay
+ * accurate. The reversed tax is approximated from the refund fraction when
+ * Stripe doesn't break it out on the charge object (the Tax Transactions
+ * API has the exact number; this is the conservative ledger entry).
  */
 async function onRefunded(charge: Record<string, unknown>) {
   const pi = charge.payment_intent as string | undefined;
@@ -153,13 +175,29 @@ async function onRefunded(charge: Record<string, unknown>) {
   if (!order) return;
   const refundedCents = (charge.amount_refunded as number) ?? order.refundedCents;
   const totalCents = (charge.amount as number) ?? order.totalCents;
+  // Approximate reversed tax proportionally — the exact figure lives in the
+  // Stripe Tax Transaction (created at checkout); the charge object doesn't
+  // carry per-line tax. Proportional is correct for full refunds and a safe
+  // conservative estimate for partial ones.
+  const refundFraction = totalCents > 0 ? refundedCents / totalCents : 0;
+  const taxRefundedCents = Math.round(order.taxCents * refundFraction);
   await db
     .update(orders)
     .set({
       refundedCents,
+      taxRefundedCents,
       status: refundedCents >= totalCents ? "refunded" : order.status,
     })
     .where(eq(orders.id, order.id));
+
+  // Revoke entitlements on full refunds so refunded users lose access to
+  // paid content. Partial refunds don't revoke (the buyer keeps the product).
+  if (refundedCents >= totalCents && totalCents > 0) {
+    await db
+      .update(entitlements)
+      .set({ revokedAt: Date.now() })
+      .where(eq(entitlements.orderId, order.id));
+  }
 }
 
 /** A pending checkout the customer never completed — release it, not inventory (never reserved). */

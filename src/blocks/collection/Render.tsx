@@ -22,7 +22,25 @@ export function RenderCollection({
   const template = content.blocks as BlockNode[];
 
   if (ctx.mode === "editor") {
-    const sample = records[0] ?? {};
+    if (records.length === 0) {
+      return (
+        <div data-collection>
+          <div
+            style={{
+              padding: "var(--space-6)",
+              textAlign: "center",
+              border: "1px dashed var(--border-strong)",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--text-faint)",
+              fontSize: "var(--text-sm)",
+            }}
+          >
+            Collection has no records yet — add data to preview cards.
+          </div>
+        </div>
+      );
+    }
+    const sample = records[0];
     return <div data-collection>{ctx.children(template, { record: sample })}</div>;
   }
 

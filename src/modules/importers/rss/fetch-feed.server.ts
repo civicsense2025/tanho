@@ -59,13 +59,57 @@ function rawFetch(target: URL): Promise<Response> {
   });
 }
 
-/** Read a Response body as text with a hard size cap. `res.text()` fully
- *  buffers, so we cap on the resulting string length — simpler and sufficient
- *  (an oversized feed is either an attack or not a feed). */
-async function readCapped(res: Response): Promise<{ ok: true; data: string } | { ok: false; error: string }> {
-  const text = await res.text();
-  if (text.length > MAX_FEED_BYTES) return { ok: false, error: "Feed is too large" };
-  return { ok: true, data: text };
+/** Read a Response body as text with a hard size cap. The body is streamed
+ *  chunk-by-chunk and the reader is cancelled the moment the accumulated byte
+ *  count crosses the cap, so a hostile host streaming GBs is aborted before it
+ *  can exhaust memory — `res.text()` would buffer the whole body first. A
+ *  `Content-Length` header over the cap is rejected upfront with no body read.
+ *  When `res.body` is null (some runtimes), falls back to `res.text()` with a
+ *  post-check — the original behavior, as a safe default. */
+export async function readCapped(res: Response): Promise<{ ok: true; data: string } | { ok: false; error: string }> {
+  const contentLength = res.headers.get("content-length");
+  if (contentLength) {
+    const len = Number(contentLength);
+    if (Number.isFinite(len) && len > MAX_FEED_BYTES) {
+      return { ok: false, error: "Feed is too large" };
+    }
+  }
+
+  // Some runtimes (and our test mocks) expose no streaming body — fall back to
+  // the buffer-then-check path. Safe because those bodies are already in memory.
+  if (!res.body) {
+    const text = await res.text();
+    if (text.length > MAX_FEED_BYTES) return { ok: false, error: "Feed is too large" };
+    return { ok: true, data: text };
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (; ;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_FEED_BYTES) {
+        // Cancel the underlying stream so the host stops sending, then bail
+        // before buffering any more of the oversized body.
+        await reader.cancel();
+        return { ok: false, error: "Feed is too large" };
+      }
+      chunks.push(value);
+    }
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return { ok: true, data: decoder.decode(merged) };
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 /**

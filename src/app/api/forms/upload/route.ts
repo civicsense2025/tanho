@@ -1,6 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
 import { storage } from "@/adapters/storage";
+import { clientIp } from "@/lib/client-ip";
 import { matchesSignature } from "@/modules/media/signature";
+import { clientIp } from "@/lib/client-ip";
 import { sanitizeFilename } from "@/modules/media/validation";
 import {
   FORM_UPLOAD_MAX_BYTES,
@@ -17,7 +19,7 @@ import { allowUpload } from "@/modules/forms/upload-rate-limit";
  * gets a 400 with a clear message; it never throws a 500.
  */
 export async function POST(request: Request): Promise<Response> {
-  const ip = (request.headers.get("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+  const ip = clientIp(request.headers);
   if (!allowUpload(ip)) {
     return json({ error: "Too many uploads. Try again in a minute." }, 400);
   }

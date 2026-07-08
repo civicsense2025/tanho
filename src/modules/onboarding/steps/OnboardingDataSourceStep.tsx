@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { HelpDisclosure } from "@/components/admin/HelpDisclosure";
 import { CreateConnectionForm } from "@/modules/data-sources/admin/CreateConnectionForm";
 import { AllowlistEditor } from "@/modules/data-sources/admin/AllowlistEditor";
+import dataSourceStyles from "@/modules/data-sources/admin/data-sources.module.css";
 import type { WizardStepProps } from "../types";
 
 /**
@@ -20,6 +22,49 @@ export function OnboardingDataSourceStep({ initial, difficulty, onStepComplete }
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const beginner = difficulty === 1;
   const advanced = difficulty === 3;
+  const existing = initial.existingConnection;
+
+  // A data source is already configured (e.g. via Settings, or a prior run) —
+  // there's nothing to set up, so just reassure the owner it's connected rather
+  // than making them create another one. The step is already marked complete in
+  // onboarding state (see the wizard page), so the shell's "Next" is enabled and
+  // the owner advances when ready — the card isn't skipped past automatically.
+  if (existing) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+          A database is already connected — your pages can read live data from it. Nothing to do here;
+          you can manage or add more anytime in Settings.
+        </p>
+        <div className={dataSourceStyles.card}>
+          <div className={dataSourceStyles.row}>
+            <span className={dataSourceStyles.name}>{existing.name}</span>
+            <span
+              className={`${dataSourceStyles.status} ${
+                existing.status === "connected"
+                  ? dataSourceStyles.statusConnected
+                  : existing.status === "error"
+                    ? dataSourceStyles.statusError
+                    : ""
+              }`}
+            >
+              {existing.status}
+            </span>
+          </div>
+          <span className={dataSourceStyles.meta}>
+            {existing.provider} · {existing.allowlistJson.length} table
+            {existing.allowlistJson.length === 1 ? "" : "s"} allowlisted
+          </span>
+        </div>
+        <Link
+          href="/admin/settings/data-sources"
+          style={{ fontSize: "var(--text-sm)", color: "var(--accent)" }}
+        >
+          Manage data sources
+        </Link>
+      </div>
+    );
+  }
 
   if (connectionId) {
     return (

@@ -4,31 +4,33 @@ import {
   getPublishedEntryBlocks,
   listPublishedEntries,
 } from "./queries";
-import type { ResourceData } from "@/entities/schemas/resource";
 import type { GuideData } from "@/entities/schemas/guide";
 import { getContentTypesSettings, isTypeDisabled } from "@/modules/custom-types/content-types-settings";
 
 /** Which content type a public entity route base belongs to. */
-export const ROUTE_TYPE: Record<string, string> = { work: "project", guides: "guide", resources: "resource" };
+export const ROUTE_TYPE: Record<string, string> = { guides: "guide" };
 
 /**
  * Discriminated union describing what a public site-relative route resolves to.
  * The catch-all route renders the matching template, or calls notFound() on null.
+ *
+ * Projects and Resources were moved to data-backed ct_* tables and are now
+ * resolved by the content-type router (resolveContentTypeRoute). Only the
+ * guides hierarchy (hubs directory → hub list → guide detail) remains here,
+ * because its category-field-based routing doesn't map to the ct_* path system.
  */
 export type EntityRoute =
-  | { kind: "project-detail"; entry: EntryRow }
   | { kind: "hubs-directory"; hubs: EntryRow[]; countsByHub: Record<string, number> }
   | { kind: "hub-list"; hub: EntryRow; guides: EntryRow[] }
-  | { kind: "guide-detail"; entry: EntryRow; hub: EntryRow }
-  | { kind: "resources-index"; resources: EntryRow[] };
+  | { kind: "guide-detail"; entry: EntryRow; hub: EntryRow };
 
 /**
- * Resolve a site-relative route ("/work/foo", "/guides", "/guides/hub/slug",
- * "/resources") to the entity content it should render, or null so the
- * catch-all falls through to notFound().
+ * Resolve a site-relative route ("/guides", "/guides/hub", "/guides/hub/slug")
+ * to the entity content it should render, or null so the catch-all falls
+ * through to the next resolver.
  *
  * Server-only: reads the cached public query layer directly. Never leaks
- * unpublished entries, and for resources only ever surfaces is_public rows.
+ * unpublished entries.
  */
 export async function resolveEntityRoute(route: string): Promise<EntityRoute | null> {
   const segments = route.split("/").filter(Boolean);
@@ -39,13 +41,6 @@ export async function resolveEntityRoute(route: string): Promise<EntityRoute | n
   if (baseType) {
     const contentTypes = await getContentTypesSettings();
     if (isTypeDisabled(contentTypes, baseType)) return null;
-  }
-
-  // /work/:slug — published project detail.
-  if (segments[0] === "work") {
-    if (segments.length !== 2) return null;
-    const entry = await getPublishedEntry("project", segments[1]);
-    return entry ? { kind: "project-detail", entry } : null;
   }
 
   // /guides, /guides/:hub, /guides/:hub/:slug
@@ -80,15 +75,6 @@ export async function resolveEntityRoute(route: string): Promise<EntityRoute | n
     }
 
     return null;
-  }
-
-  // /resources — published AND is_public resources only.
-  if (segments[0] === "resources") {
-    if (segments.length !== 1) return null;
-    const resources = (await listPublishedEntries("resource")).filter(
-      (r) => (r.data as ResourceData).is_public === true,
-    );
-    return { kind: "resources-index", resources };
   }
 
   return null;

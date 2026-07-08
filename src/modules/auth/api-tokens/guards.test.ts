@@ -50,7 +50,7 @@ beforeEach(async () => {
 describe("requireApiUser rate-limit interaction", () => {
   it("does NOT throttle a valid token used far more than the failure limit", async () => {
     const { requireApiUser } = await import("./guards");
-    const token = "oys_valid_token_abcdefghijklmnop";
+    const token = "lamina_valid_token_abcdefghijklmnop";
     await seedOwnerWithToken(token);
     currentAuthHeader = `Bearer ${token}`;
 
@@ -64,11 +64,11 @@ describe("requireApiUser rate-limit interaction", () => {
 
   it("throttles after 30 failed attempts, then blocks even a valid token", async () => {
     const { requireApiUser, ApiAuthError } = await import("./guards");
-    const token = "oys_valid_token_abcdefghijklmnop";
+    const token = "lamina_valid_token_abcdefghijklmnop";
     await seedOwnerWithToken(token);
 
     // 30 bad-token attempts trip the limiter.
-    currentAuthHeader = "Bearer oys_wrong_token_xxxxxxxxxxxx";
+    currentAuthHeader = "Bearer lamina_wrong_token_xxxxxxxxxxxx";
     for (let i = 0; i < 30; i++) {
       await expect(requireApiUser()).rejects.toBeInstanceOf(ApiAuthError);
     }

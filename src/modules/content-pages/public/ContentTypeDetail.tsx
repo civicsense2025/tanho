@@ -1,7 +1,5 @@
 import { RenderBlocks } from "@/blocks/renderer/BlockRenderer";
 import { CUSTOM_SCOPE_CLASS } from "@/lib/css-sanitizer";
-import { visibleBlocksFor } from "@/blocks/paywall/gate";
-import { buildOutline } from "@/modules/pages/outline";
 import type { TableBackedType } from "@/modules/content-schema/queries";
 import { getPublishedTypeRow } from "@/modules/content-schema/queries";
 import type { ContentRow } from "@/modules/content-schema/crud";
@@ -44,11 +42,9 @@ export async function ContentTypeDetail({
    *  titles; RenderBlocks re-does the real paywall gate. */
   const renderTree = (tree: Parameters<typeof fillBlockTree>[0]) => {
     const blocks = fillBlockTree(tree, row, fieldLabels);
-    const visible = visibleBlocksFor(null, blocks);
-    const { byBlockId: anchors, headings: outline } = buildOutline(visible);
     return (
       <article className={`${CUSTOM_SCOPE_CLASS} ${styles.page}`}>
-        <RenderBlocks blocks={blocks} viewer={null} anchors={anchors} outline={outline} />
+        <RenderBlocks blocks={blocks} viewer={null} />
       </article>
     );
   };

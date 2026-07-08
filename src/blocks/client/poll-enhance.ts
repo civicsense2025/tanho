@@ -10,7 +10,7 @@ export function enhancePolls(root: ParentNode): Array<() => void> {
   const polls = root.querySelectorAll<HTMLElement>("[data-poll]");
 
   for (const poll of polls) {
-    const key = `oys-poll:${poll.getAttribute("data-poll")}`;
+    const key = `lamina-poll:${poll.getAttribute("data-poll")}`;
     const options = Array.from(poll.querySelectorAll<HTMLButtonElement>("[data-poll-option]"));
     if (options.length < 2) continue;
 

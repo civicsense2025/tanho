@@ -9,7 +9,7 @@ import { writeAudit } from "@/modules/audit/log";
 import { blockSets } from "@/modules/pages/schema";
 import { validateBlockTree } from "@/modules/pages/blocks-io";
 import { blockRegistry } from "./schema";
-import { ensureBlockRegistrySeeded, resetBlockRegistrySeedGuard } from "./registry-queries";
+import { ensureBlockRegistrySeeded } from "./registry-queries";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -111,10 +111,7 @@ export async function toggleBlockEnabled(type: string, enabled: boolean): Promis
  */
 export async function refreshBlockRegistry(): Promise<Result> {
   const user = await requireUser("owner");
-  // Reset the once-per-process guard so a manual refresh re-runs the upsert
-  // (ensureBlockRegistrySeeded on its own only re-runs after an ERROR —
-  // a successfully-resolved seed is cached for the life of the process).
-  resetBlockRegistrySeedGuard();
+  // Reset the once-per-process guard so a manual refresh re-runs the upsert.
   await ensureBlockRegistrySeeded();
   updateTag("block-registry");
   await writeAudit({

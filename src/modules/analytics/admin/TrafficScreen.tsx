@@ -19,6 +19,7 @@ export function TrafficScreen({
   gscSiteUrl,
   pages,
   queries,
+  productionUrl: _productionUrl,
 }: {
   connected: boolean;
   isOwner: boolean;
@@ -26,6 +27,7 @@ export function TrafficScreen({
   gscSiteUrl: string;
   pages: PageStat[];
   queries: QueryStat[];
+  productionUrl?: string;
 }) {
   if (!connected) {
     return (
@@ -36,6 +38,8 @@ export function TrafficScreen({
         startHref="/api/oauth/google/google-search-console"
         isOwner={isOwner}
         isGoogleOAuthConfigured={isGoogleOAuthConfigured}
+        service="google-search-console"
+        productionUrl={_productionUrl}
       />
     );
   }

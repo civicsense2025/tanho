@@ -10,8 +10,16 @@ import type { ThemeInput } from "../validation";
  * real ThemeStyle (via themeScopeStyle), so what you see is what ships.
  * `mode` flips light/dark.
  */
-export function ThemePreview({ theme, mode }: { theme: ThemeInput; mode: "light" | "dark" }) {
-  const style = themeScopeStyle(theme, mode);
+export function ThemePreview({
+  theme,
+  mode,
+  customStack,
+}: {
+  theme: ThemeInput;
+  mode: "light" | "dark";
+  customStack?: string | null;
+}) {
+  const style = themeScopeStyle(theme, mode, customStack);
 
   return (
     <div

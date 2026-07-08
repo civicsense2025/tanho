@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import type { OnboardingState } from "./validation";
+import type { DataSourceConnectionSummary } from "@/modules/data-sources/queries";
 
 /**
  * The wizard-step contract — mirrors BlockDef (src/blocks/types.ts): one
  * definition unifies heterogeneous step types (a settings form, a brand
- * editor, a data-source connect flow, a summary screen) behind a single
- * `Render` slot, so the shell never special-cases a step by id.
+ * editor, a summary screen) behind a single `Render` slot, so the shell
+ * never special-cases a step by id.
  */
-export type WizardStepId = "identity" | "brand" | "data-source" | "review";
+export type WizardStepId = "identity" | "brand" | "review";
 
 /**
  * Server-fetched seed data every step might need (e.g. GeneralSettings for
@@ -26,6 +27,8 @@ export type WizardInitialData = {
   theme: unknown;
   /** Whether the deployment has registered a Supabase OAuth app — gates the "Connect with Supabase" link, same check the standalone connections screen uses. */
   supabaseOAuthConfigured: boolean;
+  /** The most-recently-updated external data-source connection, if one already exists — lets the data-source step show a "Connected" state instead of nagging the owner to create one. `null` when none is configured yet. Secret-free summary (no `configEncrypted`). */
+  existingConnection: DataSourceConnectionSummary | null;
 };
 
 /** A step registers its own save function here (via `registerSave`) so the
@@ -47,8 +50,8 @@ export type WizardStepProps = {
   onStepComplete: () => void;
   /** Steps with their own internal save action call this once, e.g. in a
    *  `useEffect`, to give the shell a way to trigger that save before Next
-   *  advances. Steps with no separate save step (data-source, review)
-   *  simply never call it. */
+   *  advances. Steps with no separate save step (review) simply never
+   *  call it. */
   registerSave?: (fn: StepSaveFn) => void;
 };
 

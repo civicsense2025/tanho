@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
@@ -12,20 +11,8 @@ import type { BlockNode } from "@/blocks/types";
 
 export const metadata = { title: "Block pack" };
 
-export default function BlockPackDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <BlockPackDetailPageInner params={params} />
-    </Suspense>
-  );
-}
-
 /** Read-only preview of a block pack's published tree + its metadata. */
-async function BlockPackDetailPageInner({
+export default async function BlockPackDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;

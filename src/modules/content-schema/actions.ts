@@ -2,15 +2,32 @@
 
 import { updateTag } from "next/cache";
 import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { rawRun } from "@/lib/db/raw";
 import { requireUser } from "@/modules/auth/guards";
 import { writeAudit } from "@/modules/audit/log";
 import { customTypes, type CustomTypeRow } from "@/modules/custom-types/schema";
-import { fieldListSchema, type FieldDef } from "@/modules/custom-types/validation";
+import { basePathSchema, fieldListSchema, type FieldDef } from "@/modules/custom-types/validation";
 import { currentDialect } from "./dialect";
-import { RESERVED_FIELD_KEYS, createTableStatements, dropTableStatement, tableNameForSlug } from "./ddl";
+import {
+  RESERVED_FIELD_KEYS,
+  SPINE_COLUMNS,
+  createTableStatements,
+  dropTableStatement,
+  tableNameForSlug,
+  addColumnStatement,
+  postgresRlsStatements,
+} from "./ddl";
 import { applyContentTypeChange } from "./apply";
-import { tableExists } from "./introspect";
+import {
+  tableExists,
+  listTables,
+  tableColumnInfo,
+  inferFieldKind,
+  type TableCandidate,
+} from "./introspect";
+import { assertIdentifier } from "./identifiers";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -54,7 +71,7 @@ export async function createTableBackedType(input: {
 
   // 1) DDL first.
   for (const stmt of createTableStatements(tableName, fields.data, currentDialect())) {
-    await db.run(stmt);
+    await rawRun(stmt);
   }
 
   // 2) Metadata row (source of truth).
@@ -108,7 +125,7 @@ export async function updateTableBackedTypeSchema(
     };
   }
 
-  for (const stmt of change.statements) await db.run(stmt);
+  for (const stmt of change.statements) await rawRun(stmt);
 
   await db
     .update(customTypes)
@@ -135,7 +152,7 @@ export async function deleteTableBackedType(id: string, opts: { force?: boolean 
   }
 
   if (await tableExists(type.row.tableName!)) {
-    await db.run(dropTableStatement(type.row.tableName!));
+    await rawRun(dropTableStatement(type.row.tableName!));
   }
   await db.delete(customTypes).where(eq(customTypes.id, id));
 
@@ -181,4 +198,148 @@ async function requireTableBacked(
   if (!row) return { ok: false, error: "Content type not found" };
   if (!row.tableName) return { ok: false, error: "This content type is not table-backed" };
   return { row: row as CustomTypeRow & { tableName: string } };
+}
+
+// ─── Import-from-DB actions ─────────────────────────────────────────────
+
+// `inferFieldKind` and `TableCandidate` live in ./introspect (not here)
+// because this file is "use server" — every export must be an async
+// function, and inferFieldKind is a pure sync helper.
+
+/**
+ * List all tables in the platform DB that could be imported as content types.
+ * Excludes platform system tables and tables already registered as content
+ * types. Owner-only.
+ */
+export async function listImportableTables(): Promise<Result<{ tables: TableCandidate[] }>> {
+  await requireUser("owner");
+
+  const allTables = await listTables();
+  // Exclude tables already registered as content types
+  const registered = await db.query.customTypes.findMany();
+  const registeredNames = new Set(registered.map((t) => t.tableName).filter(Boolean) as string[]);
+
+  const candidates: TableCandidate[] = [];
+  for (const tableName of allTables) {
+    if (registeredNames.has(tableName)) continue;
+    const columns = await tableColumnInfo(tableName);
+    const spineSet = new Set(SPINE_COLUMNS as readonly string[]);
+    const spineColumns = columns.filter((c) => spineSet.has(c.name)).map((c) => c.name);
+    const fieldColumns = columns
+      .filter((c) => !spineSet.has(c.name))
+      .map((column) => ({ column, inferredKind: inferFieldKind(column) }));
+    candidates.push({ tableName, columns, spineColumns, fieldColumns });
+  }
+  return { ok: true, data: { tables: candidates } };
+}
+
+/**
+ * Register an existing table as a content type. The table must exist; if it's
+ * missing spine columns (id, slug, title, status, etc.), they're ALTERed in.
+ * RLS is applied on Postgres. Does NOT create a new table — links to the
+ * existing one. Owner-only, audited.
+ */
+export async function registerExistingTable(input: {
+  tableName: string;
+  name: string;
+  pluralName?: string;
+  basePath?: string;
+  titleField?: string;
+  slugField?: string;
+  fields: FieldDef[];
+}): Promise<Result<{ id: string }>> {
+  const user = await requireUser("owner");
+
+  const fields = fieldListSchema.safeParse(input.fields);
+  if (!fields.success) {
+    return { ok: false, error: fields.error.issues[0]?.message ?? "Invalid fields" };
+  }
+  const reserved = fields.data.find((f) => RESERVED_FIELD_KEYS.has(f.key));
+  if (reserved) {
+    return { ok: false, error: `Field key "${reserved.key}" is reserved by the table's built-in columns` };
+  }
+
+  const basePath = basePathSchema.safeParse(input.basePath);
+  if (!basePath.success) {
+    return { ok: false, error: basePath.error.issues[0]?.message ?? "Invalid base path" };
+  }
+
+  const tableName = assertIdentifier(input.tableName);
+  if (!(await tableExists(tableName))) {
+    return { ok: false, error: `Table "${tableName}" does not exist` };
+  }
+
+  // Check for duplicate basePath
+  if (basePath.data) {
+    const all = await db.query.customTypes.findMany();
+    if (all.some((t) => t.basePath === basePath.data)) {
+      return { ok: false, error: `A content type with base path "${basePath.data}" already exists` };
+    }
+  }
+
+  // Ensure spine columns exist; ALTER TABLE ADD COLUMN for any missing
+  const existingCols = new Set(await tableColumnInfo(tableName).then((cs) => cs.map((c) => c.name)));
+  const dialect = currentDialect();
+  const ts = dialect === "postgres" ? "bigint" : "integer";
+  const missingSpine: Array<{ name: string; ddl: string }> = [
+    { name: "id", ddl: `"id" text PRIMARY KEY` },
+    { name: "slug", ddl: `"slug" text NOT NULL DEFAULT ''` },
+    { name: "title", ddl: `"title" text NOT NULL DEFAULT ''` },
+    { name: "status", ddl: `"status" text NOT NULL DEFAULT 'draft'` },
+    { name: "sort_order", ddl: `"sort_order" ${dialect === "postgres" ? "double precision" : "real"} NOT NULL DEFAULT 0` },
+    { name: "parent_id", ddl: `"parent_id" text` },
+    { name: "path", ddl: `"path" text NOT NULL DEFAULT ''` },
+    { name: "created_at", ddl: `"created_at" ${ts}` },
+    { name: "updated_at", ddl: `"updated_at" ${ts}` },
+  ].filter((s) => !existingCols.has(s.name));
+
+  for (const s of missingSpine) {
+    await rawRun(sql.raw(`ALTER TABLE "${tableName}" ADD COLUMN ${s.ddl}`));
+  }
+
+  // Ensure field columns exist; ALTER TABLE ADD COLUMN for any missing
+  for (const field of fields.data) {
+    if (!existingCols.has(field.key)) {
+      await rawRun(addColumnStatement(tableName, field, dialect));
+    }
+  }
+
+  // Add path uniqueness index if missing (for routing)
+  const indexPath = sql.raw(
+    `CREATE INDEX IF NOT EXISTS "${tableName}_slug_idx" ON "${tableName}" ("slug")`,
+  );
+  await rawRun(indexPath);
+
+  // Apply RLS on Postgres
+  if (dialect === "postgres") {
+    for (const stmt of postgresRlsStatements(tableName)) {
+      await rawRun(stmt);
+    }
+  }
+
+  // Write metadata row
+  const [row] = await db
+    .insert(customTypes)
+    .values({
+      slug: input.tableName.replace(/^ct_/, "").replace(/[^a-z0-9-]/g, "-"),
+      name: input.name,
+      pluralName: input.pluralName ?? input.name,
+      fields: fields.data,
+      tableName,
+      basePath: basePath.data,
+      titleField: input.titleField ?? "title",
+      slugField: input.slugField ?? "slug",
+      status: "draft",
+      updatedAt: Date.now(),
+    })
+    .returning();
+
+  updateTag("custom_types");
+  await writeAudit({
+    userId: user.id,
+    action: "content_type.import",
+    ownerType: "custom_type",
+    ownerId: row.id,
+  });
+  return { ok: true, data: { id: row.id } };
 }

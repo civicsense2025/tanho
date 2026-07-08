@@ -58,6 +58,36 @@ describe("detectWxrCard — button", () => {
       content: { align: "left", items: [{ label: "Click me", href: "https://example.com/go", variant: "solid", target: "_self" }] },
     });
   });
+
+  it("returns null when every button href is javascript: (stored-XSS guard)", async () => {
+    const html = `<div class="wp-block-buttons"><div class="wp-block-button"><a class="wp-block-button__link" href="javascript:alert(1)">Hack</a></div></div>`;
+    expect(await detectWxrCard(html)).toBeNull();
+  });
+
+  it("returns null when every button href is data:", async () => {
+    const html = `<div class="wp-block-button"><a class="wp-block-button__link" href="data:text/html,<script>alert(1)</script>">Hack</a></div>`;
+    expect(await detectWxrCard(html)).toBeNull();
+  });
+
+  it("keeps a relative /path button href", async () => {
+    const html = `<div class="wp-block-button"><a class="wp-block-button__link" href="/relative/path">Go</a></div>`;
+    const result = await detectWxrCard(html);
+    expect((result?.block.content as { items: Array<{ href: string }> }).items[0]!.href).toBe("/relative/path");
+  });
+
+  it("keeps a mailto: button href", async () => {
+    const html = `<div class="wp-block-button"><a class="wp-block-button__link" href="mailto:foo@bar.com">Email</a></div>`;
+    const result = await detectWxrCard(html);
+    expect((result?.block.content as { items: Array<{ href: string }> }).items[0]!.href).toBe("mailto:foo@bar.com");
+  });
+
+  it("drops only the unsafe button in a group, keeping the safe one", async () => {
+    const html = `<div class="wp-block-buttons"><div class="wp-block-button"><a class="wp-block-button__link" href="javascript:alert(1)">Hack</a></div><div class="wp-block-button"><a class="wp-block-button__link" href="https://example.com/safe">Safe</a></div></div>`;
+    const result = await detectWxrCard(html);
+    const items = (result?.block.content as { items: Array<{ href: string }> }).items;
+    expect(items).toHaveLength(1);
+    expect(items[0]!.href).toBe("https://example.com/safe");
+  });
 });
 
 describe("detectWxrCard — embed", () => {
@@ -75,6 +105,11 @@ describe("detectWxrCard — embed", () => {
     const result = await detectWxrCard(html);
     expect(result?.block.type).toBe("buttons");
     expect(result?.issues.some((i) => i.kind === "embed-unsupported")).toBe(true);
+  });
+
+  it("returns null for an embed whose only candidate is a javascript: href (no unsafe fallback link)", async () => {
+    const html = `<figure class="wp-block-embed"><a href="javascript:alert(1)">click</a></figure>`;
+    expect(await detectWxrCard(html)).toBeNull();
   });
 });
 

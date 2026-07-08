@@ -1,5 +1,6 @@
 import { RenderBlocks } from "@/blocks/renderer/BlockRenderer";
 import { getPageForEdit } from "@/modules/pages/queries";
+import { getActiveFontRender } from "@/modules/fonts/queries";
 import { themeScopeStyle } from "../scope-style";
 import { showcaseBlocks } from "./showcase-blocks";
 import type { ThemeInput } from "../validation";
@@ -20,8 +21,11 @@ export async function ThemePreviewContent({
   mode: "light" | "dark";
   pageId?: string;
 }) {
-  const blocks = pageId ? await loadPageBlocks(pageId) : showcaseBlocks();
-  const style = themeScopeStyle(theme, mode);
+  const [blocks, font] = await Promise.all([
+    pageId ? loadPageBlocks(pageId) : Promise.resolve(showcaseBlocks()),
+    getActiveFontRender(theme.fontFamilyId),
+  ]);
+  const style = themeScopeStyle(theme, mode, font.cssStack);
 
   return (
     <div

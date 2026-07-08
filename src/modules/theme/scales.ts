@@ -100,6 +100,7 @@ export function typeVars(t: TypeScaleInput): Record<string, string> {
   const bs = t.baseSize / 16;
   const out: Record<string, string> = {
     "--font-sans": t.customStack ?? FONT_STACKS[t.font],
+    "--font-mono": 'var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace',
   };
   for (const [k, rem] of Object.entries(TYPE_SIZES)) {
     const isHeading = HEADING_KEYS.has(k);
@@ -120,9 +121,9 @@ const SPACES: Record<string, number> = {
 };
 
 export const RADII = {
-  square: { xs: "1px", sm: "2px", md: "4px" },
-  soft: { xs: "3px", sm: "4px", md: "8px" },
-  round: { xs: "6px", sm: "10px", md: "16px" },
+  square: { xs: "1px", sm: "2px", md: "4px", lg: "6px", xl: "8px", "2xl": "12px" },
+  soft: { xs: "3px", sm: "4px", md: "8px", lg: "12px", xl: "16px", "2xl": "24px" },
+  round: { xs: "6px", sm: "10px", md: "16px", lg: "24px", xl: "32px", "2xl": "48px" },
 } as const;
 export type RadiusId = keyof typeof RADII;
 
@@ -160,6 +161,9 @@ export function spaceVars(s: SpaceScaleInput): Record<string, string> {
   out["--radius-xs"] = r.xs;
   out["--radius-sm"] = r.sm;
   out["--radius-md"] = r.md;
+  out["--radius-lg"] = r.lg;
+  out["--radius-xl"] = r.xl;
+  out["--radius-2xl"] = r["2xl"];
   const sh = SHADOWS[s.shadow];
   out["--shadow-sm"] = sh.sm;
   out["--shadow-md"] = sh.md;

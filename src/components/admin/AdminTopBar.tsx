@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { AdminUser } from "@/modules/auth/session";
 import { AccountMenu } from "./AccountMenu";
+import { AdminThemeToggle } from "./AdminThemeToggle";
 import { NavBucket, type NavItem } from "./NavBucket";
 
 /**
@@ -29,12 +30,14 @@ export function AdminTopBar({
       { label: "Products", href: "/admin/shop/products" },
       { label: "Collections", href: "/admin/shop/collections" },
       { label: "Shipping", href: "/admin/shop/shipping" },
+      { label: "Reviews", href: "/admin/reviews" },
     ]
     : [
       { label: "Orders", href: "/admin/shop/products", locked: true },
       { label: "Products", href: "/admin/shop/products", locked: true },
       { label: "Collections", href: "/admin/shop/products", locked: true },
       { label: "Shipping", href: "/admin/shop/products", locked: true },
+      { label: "Reviews", href: "/admin/reviews", locked: true },
     ];
 
   return (
@@ -57,7 +60,10 @@ export function AdminTopBar({
           borderBottom: "1px solid var(--border)",
         }}
       >
-        <Presence user={user} />
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap" }}>
+          <AdminPanelLink />
+          <Presence user={user} />
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap" }}>
           <Link
             href="/"
@@ -65,6 +71,7 @@ export function AdminTopBar({
           >
             ← View site
           </Link>
+          <AdminThemeToggle />
           <span style={{ width: 1, height: 24, background: "var(--border)" }} />
           <AccountMenu name={user.name} email={user.email} role={user.role} />
         </div>
@@ -90,12 +97,11 @@ export function AdminTopBar({
           { label: "Content types", href: "/admin/content/types" },
           { label: "Forms", href: "/admin/content/forms" },
           { label: "Media library", href: "/admin/media" },
+          { label: "Block packs", href: "/admin/block-packs" },
+          { label: "Design packs", href: "/admin/design-packs" },
           { label: "Tags", href: "/admin/content/tags" },
           { label: "Redirects", href: "/admin/content/redirects" },
           { label: "Import content", href: "/admin/content/import" },
-          // Reusable design assets — separated from the content you author above.
-          { label: "Block packs", href: "/admin/block-packs", group: "Reusable" },
-          { label: "Design packs", href: "/admin/design-packs" },
         ]} />
         <NavBucket label="People" items={[
           { label: "All people", href: "/admin/people" },
@@ -114,7 +120,9 @@ export function AdminTopBar({
         <span style={{ flex: 1 }} />
         <NavBucket label="Settings" indicator={!setupComplete} items={[
           { label: "Setup guide", href: "/admin/onboarding" },
+          { label: "Team", href: "/admin/team" },
           { label: "General", href: "/admin/settings/general" },
+          { label: "Appearance", href: "/admin/settings/appearance" },
           { label: "Brand", href: "/admin/settings/brand" },
           { label: "Data sources", href: "/admin/settings/data-sources" },
           { label: "Membership", href: "/admin/settings/membership" },
@@ -122,9 +130,50 @@ export function AdminTopBar({
           { label: "Donations", href: "/admin/settings/donations" },
           { label: "AI & crawlers", href: "/admin/settings/ai" },
           { label: "Policies", href: "/admin/settings/policies" },
+          { label: "Account", href: "/admin/account" },
         ]} />
       </nav>
     </header>
+  );
+}
+
+/** Admin panel link — brand mark + label, top-left of the header row. */
+function AdminPanelLink() {
+  return (
+    <Link
+      href="/admin"
+      title="Admin panel"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+        textDecoration: "none",
+        color: "var(--text)",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 5,
+          background: "var(--accent)",
+          color: "var(--text-on-accent)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-label)",
+          fontSize: "var(--text-2xs)",
+          fontWeight: 600,
+          flexShrink: 0,
+        }}
+      >
+        A
+      </span>
+      <span style={{ fontFamily: "var(--font-label)", fontSize: "var(--text-xs)", fontWeight: 500 }}>
+        Admin panel
+      </span>
+    </Link>
   );
 }
 

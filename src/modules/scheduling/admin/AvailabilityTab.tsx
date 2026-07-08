@@ -7,8 +7,9 @@ import { Button } from "@/components/core/Button";
 import buttonStyles from "@/components/core/Button.module.css";
 import { Input } from "@/components/forms/Input";
 import { Toggle } from "@/components/admin/Seg";
-import { disconnectIntegration } from "@/modules/integrations";
+import { disconnectIntegration } from "@/modules/integrations/actions";
 import type { AvailabilitySettings } from "../validation";
+import type { CalendarListItem } from "../gcal-calendars";
 import { saveAvailability } from "../admin-actions";
 import styles from "./scheduling.module.css";
 
@@ -31,12 +32,14 @@ export function AvailabilityTab({
   googleConnected,
   googleAccountLabel,
   isGoogleOAuthConfigured,
+  googleCalendars,
 }: {
   settings: AvailabilitySettings;
   isOwner: boolean;
   googleConnected: boolean;
   googleAccountLabel: string;
   isGoogleOAuthConfigured: boolean;
+  googleCalendars: CalendarListItem[];
 }) {
   const router = useRouter();
   const [hours, setHours] = useState<Hours>(settings.hours);
@@ -47,6 +50,7 @@ export function AvailabilityTab({
     bufferAfterMin: settings.bufferAfterMin,
     slotIncrementMin: settings.slotIncrementMin,
     timezone: settings.timezone,
+    calendarId: settings.google.calendarId,
   });
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -60,7 +64,12 @@ export function AvailabilityTab({
     setPending(true);
     setError(null);
     setNotice(null);
-    const res = await saveAvailability({ ...settings, ...rules, hours });
+    const res = await saveAvailability({
+      ...settings,
+      ...rules,
+      hours,
+      google: { calendarId: rules.calendarId },
+    });
     setPending(false);
     if (res.ok) {
       setNotice("Availability saved.");
@@ -93,9 +102,28 @@ export function AvailabilityTab({
         ) : isOwner ? (
           <div className={styles.actions}>
             {googleConnected ? (
-              <Button variant="outline" size="sm" onClick={disconnectGoogle} loading={disconnecting}>
-                Disconnect
-              </Button>
+              <>
+                {googleCalendars.length > 0 ? (
+                  <div className={styles.rowGrid}>
+                    <span className={styles.label}>Sync to calendar</span>
+                    <select
+                      className={styles.timeInput}
+                      value={rules.calendarId}
+                      onChange={(e) => setRules({ ...rules, calendarId: e.target.value })}
+                    >
+                      {googleCalendars.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.summary}
+                          {c.primary ? " (primary)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <Button variant="outline" size="sm" onClick={disconnectGoogle} loading={disconnecting}>
+                  Disconnect
+                </Button>
+              </>
             ) : (
               <Link
                 href="/api/oauth/google/google-calendar"

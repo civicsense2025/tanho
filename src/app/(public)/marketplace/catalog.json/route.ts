@@ -17,7 +17,7 @@ type CatalogPack = {
 };
 
 type Catalog = {
-  format: "oys-marketplace@1";
+  format: "lamina-marketplace@1";
   name: string;
   description: string;
   packs: CatalogPack[];
@@ -51,7 +51,7 @@ export async function GET(): Promise<Response> {
   }));
 
   const catalog: Catalog = {
-    format: "oys-marketplace@1",
+    format: "lamina-marketplace@1",
     name: s.name,
     description: s.description,
     packs,

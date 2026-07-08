@@ -13,6 +13,7 @@ import {
   getExtensionsSettings,
   getTemplatesSettings,
 } from "@/modules/scheduling/settings";
+import { listCalendars } from "@/modules/scheduling/gcal-calendars";
 import {
   SchedulingScreen,
   type SchedulingTab,
@@ -72,6 +73,7 @@ async function SchedulingPageInner({
       isConnected("google-calendar"),
       connectionSummary("google-calendar"),
     ]);
+  const googleCalendars = googleConnected ? await listCalendars() : [];
 
   return (
     <AdminPage>
@@ -88,6 +90,7 @@ async function SchedulingPageInner({
         googleConnected={googleConnected}
         googleAccountLabel={googleSummary?.accountLabel ?? ""}
         isGoogleOAuthConfigured={isGoogleOAuthConfigured()}
+        googleCalendars={googleCalendars}
       />
     </AdminPage>
   );

@@ -7,7 +7,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-const CLIENT_FILE_FIXES: Array<{ file: string; from: string; to: string }> = [
+export const CLIENT_FILE_FIXES: Array<{ file: string; from: string; to: string }> = [
   {
     file: "src/lib/db/client.ts",
     from:
@@ -24,7 +24,21 @@ const CLIENT_FILE_FIXES: Array<{ file: string; from: string; to: string }> = [
       `  authToken: process.env.TURSO_AUTH_TOKEN,\n` +
       `});\n` +
       `\n` +
-      `export const db = drizzle(client, { schema });`,
+      `// Make foreign-key enforcement explicit. Stock SQLite defaults \`foreign_keys\`\n` +
+      `// to OFF (silently disabling ON DELETE CASCADE / SET NULL); libsql defaults it\n` +
+      `// ON, but set it here so the behavior doesn't depend on the driver's default.\n` +
+      `// For the local file URL the client holds a single connection, so one PRAGMA\n` +
+      `// covers it. For a remote Turso URL the HTTP protocol is stateless and the\n` +
+      `// PRAGMA won't persist across requests — Turso enforces FKs server-side.\n` +
+      `//\n` +
+      `// Fire-and-forget (no await): the sqlite3 driver executes synchronously for\n` +
+      `// file URLs, so the PRAGMA lands before any query. For Turso it's a no-op\n` +
+      `// (FKs enforced server-side). Avoiding top-level await keeps this module\n` +
+      `// loadable from tsx/CJS contexts (the seed scripts).\n` +
+      `void client.execute("PRAGMA foreign_keys = ON");\n` +
+      `\n` +
+      `export const db = drizzle(client, { schema });\n` +
+      `export type Db = typeof db;`,
     to:
       `import { Pool } from "pg";\n` +
       `import { drizzle } from "drizzle-orm/node-postgres";\n` +
@@ -35,7 +49,8 @@ const CLIENT_FILE_FIXES: Array<{ file: string; from: string; to: string }> = [
       `// src/modules/*/queries.ts survive unchanged. See docs/architecture/adapters.md.\n` +
       `const pool = new Pool({ connectionString: process.env.DATABASE_URL });\n` +
       `\n` +
-      `export const db = drizzle(pool, { schema });`,
+      `export const db = drizzle(pool, { schema });\n` +
+      `export type Db = typeof db;`,
   },
   {
     file: "seed/lib.ts",
@@ -44,6 +59,12 @@ const CLIENT_FILE_FIXES: Array<{ file: string; from: string; to: string }> = [
       `import { createClient } from "@libsql/client";\n` +
       `import { drizzle } from "drizzle-orm/libsql";\n` +
       `import * as schema from "../src/lib/db/schema";\n` +
+      `import { resolveEnvPrefix } from "../src/lib/env/prefix";\n` +
+      `\n` +
+      `// Seed/import scripts run via tsx outside Next.js, so the instrumentation.ts\n` +
+      `// boot hook never fires. Resolve prefixed env vars (e.g. TANHO_DATABASE_URL →\n` +
+      `// DATABASE_URL) before any read. Canonical names always win. Idempotent.\n` +
+      `resolveEnvPrefix();\n` +
       `\n` +
       `/** Standalone DB handle for seed scripts (no Next.js runtime). */\n` +
       `export function seedDb() {\n` +
@@ -56,6 +77,12 @@ const CLIENT_FILE_FIXES: Array<{ file: string; from: string; to: string }> = [
       `import { Pool } from "pg";\n` +
       `import { drizzle } from "drizzle-orm/node-postgres";\n` +
       `import * as schema from "../src/lib/db/schema";\n` +
+      `import { resolveEnvPrefix } from "../src/lib/env/prefix";\n` +
+      `\n` +
+      `// Seed/import scripts run via tsx outside Next.js, so the instrumentation.ts\n` +
+      `// boot hook never fires. Resolve prefixed env vars (e.g. TANHO_DATABASE_URL →\n` +
+      `// DATABASE_URL) before any read. Canonical names always win. Idempotent.\n` +
+      `resolveEnvPrefix();\n` +
       `\n` +
       `/** Standalone DB handle for seed scripts (no Next.js runtime). */\n` +
       `export function seedDb() {\n` +
@@ -91,7 +118,7 @@ export function convertClientFiles(dryRun: boolean) {
     if (!src.includes(from)) {
       console.log(
         `  ${file}: WARNING — expected libSQL block not found (file has drifted since this ` +
-          `script was written). Convert by hand — see docs/recipes/swap-database-to-postgres.md.`,
+        `script was written). Convert by hand — see docs/recipes/swap-database-to-postgres.md.`,
       );
       continue;
     }

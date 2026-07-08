@@ -9,7 +9,7 @@
  * runs RLS injection, since that's a separate concern from dialect.
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { OYS_APP_ROLE } from "./config";
+import { LAMINA_APP_ROLE } from "./config";
 import { injectRls } from "./rls";
 
 export function convertSchemaFile(path: string, dryRun: boolean): { changed: boolean; summary: string } {
@@ -78,7 +78,7 @@ export function convertSchemaFile(path: string, dryRun: boolean): { changed: boo
     src = src.replace(importLineMatch[0], newImport);
   }
 
-  const rlsResult = injectRls(src, OYS_APP_ROLE);
+  const rlsResult = injectRls(src, LAMINA_APP_ROLE);
   src = rlsResult.src;
 
   if (!dryRun) writeFileSync(path, src);

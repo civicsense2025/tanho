@@ -4,12 +4,9 @@ import { notFound } from "next/navigation";
 import { record404 } from "@/modules/seo/audit/tracking";
 import { RenderBlocks } from "@/blocks/renderer/BlockRenderer";
 import { CUSTOM_SCOPE_CLASS, sanitizeCss } from "@/lib/css-sanitizer";
-import { visibleBlocksFor } from "@/blocks/paywall/gate";
-import { buildOutline } from "@/modules/pages/outline";
 import { pageLayout, type PageLayoutSettings } from "@/blocks/layout";
 import { layoutForTemplate } from "@/modules/pages/public/page-template";
-import { getPublishedPage, getPageAncestors } from "@/modules/pages/queries";
-import type { PageCtx } from "@/blocks/types";
+import { getPublishedPage } from "@/modules/pages/queries";
 import { getGeneralSettings } from "@/modules/settings/queries";
 import { getViewer } from "@/modules/people/viewer";
 import { getSeoSettings } from "@/modules/seo/queries";
@@ -79,7 +76,7 @@ export async function generateMetadata({
       excerpt: vars.excerpt,
       tag: vars.tag,
       path: route,
-      kind: type === "project" || type === "guide" ? "article" : "website",
+      kind: type === "guide" ? "article" : "website",
     });
   }
 
@@ -151,52 +148,20 @@ export default async function PublicPage({
     const L = pageLayout(merged, "desktop");
     // Only gated pages read the viewer cookie — keeps un-gated pages static.
     const viewer = hit.page.hasPaywall ? await getViewer() : null;
-    // Anchor map + heading outline, built from the tree the viewer is ALLOWED
-    // to see (the paywall cut's pure mirror, including any preview-depth
-    // window) — never the full tree, so a TOC can't leak gated titles or
-    // link to anchors that were never rendered. One walk also reports the
-    // block types present, so page-level context is fetched only for blocks
-    // that exist on this page.
-    const visible = visibleBlocksFor(viewer, hit.blocks);
-    const { byBlockId: anchors, headings: outline, types } = buildOutline(visible);
-
-    // Site identity for structured data. Needed by the breadcrumbs block
-    // (BreadcrumbList) and by page-level Article JSON-LD on posts — fetch it
-    // once when either applies (both settings queries are cached).
-    const isPost = hit.page.kind === "post";
-    const needsBreadcrumbs = types.has("breadcrumbs");
-    let pageCtx: PageCtx | undefined;
+    // Article JSON-LD for posts only.
     let articleLd: ReturnType<typeof article> | undefined;
-    if (isPost || needsBreadcrumbs) {
-      const [ancestors, general, seo] = await Promise.all([
-        needsBreadcrumbs ? getPageAncestors(hit.page.id) : Promise.resolve([]),
-        getGeneralSettings(),
-        getSeoSettings(),
-      ]);
+    if (hit.page.kind === "post") {
+      const [general, seo] = await Promise.all([getGeneralSettings(), getSeoSettings()]);
       const siteName = general.name;
       const siteUrl = seo.siteUrl || process.env.APP_URL || "http://localhost:3000";
-      if (needsBreadcrumbs) {
-        pageCtx = {
-          title: hit.page.title,
-          route: hit.page.route,
-          ancestors: ancestors.map((a) => ({ title: a.title, route: a.route })),
-          siteName,
-          siteUrl,
-        };
-      }
-      if (isPost) {
-        // Activate the dormant article() builder: posts advertise as
-        // schema.org Article. publisher = site name (set by the builder);
-        // no per-page author field exists, so authorName is omitted.
-        articleLd = article(
-          {
-            title: hit.page.seoTitle || hit.page.title,
-            summary: hit.page.seoDescription || undefined,
-            url: hit.page.route,
-          },
-          { siteName, siteUrl },
-        );
-      }
+      articleLd = article(
+        {
+          title: hit.page.seoTitle || hit.page.title,
+          summary: hit.page.seoDescription || undefined,
+          url: hit.page.route,
+        },
+        { siteName, siteUrl },
+      );
     }
     // Per-page custom code. customCss is RE-sanitised here (defence in depth — also
     // sanitised on save) and scoped to this page's .pb-custom-scope root. The head/body
@@ -223,7 +188,7 @@ export default async function PublicPage({
         {articleLd ? <JsonLd schema={articleLd} /> : null}
         {pageCss ? <style data-page-css="">{pageCss}</style> : null}
         {headHtml ? <div data-page-head-code="" dangerouslySetInnerHTML={{ __html: headHtml }} /> : null}
-        <RenderBlocks blocks={hit.blocks} viewer={viewer} anchors={anchors} outline={outline} page={pageCtx} />
+        <RenderBlocks blocks={hit.blocks} viewer={viewer} />
         {bodyHtml ? <div data-page-body-code="" dangerouslySetInnerHTML={{ __html: bodyHtml }} /> : null}
       </main>
     );

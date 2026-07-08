@@ -42,6 +42,10 @@ export type CheckoutLineItem = {
   currency?: string;
   name?: string;
   quantity: number;
+  /** Stripe tax code (e.g. "txcd_99999999") — passed to Stripe Tax for per-line calculation. */
+  taxCode?: string;
+  /** Whether the unit_amount already includes tax ("inclusive") or tax is added on top ("exclusive"). */
+  taxBehavior?: "exclusive" | "inclusive";
 };
 
 export type CheckoutSessionInput = {

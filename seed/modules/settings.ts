@@ -1,6 +1,8 @@
 import { settings } from "../../src/modules/settings/schema";
 import {
+  APPEARANCE_DEFAULTS,
   GENERAL_DEFAULTS,
+  appearanceSettingsSchema,
   generalSettingsSchema,
 } from "../../src/modules/settings/validation";
 import { log, type SeedDb } from "../lib";
@@ -21,4 +23,11 @@ export async function seedSettings(db: SeedDb) {
     .values({ namespace: "general", data: general })
     .onConflictDoNothing();
   log("settings.general seeded (skip if present)");
+
+  const appearance = appearanceSettingsSchema.parse(APPEARANCE_DEFAULTS);
+  await db
+    .insert(settings)
+    .values({ namespace: "appearance", data: appearance })
+    .onConflictDoNothing();
+  log("settings.appearance seeded (skip if present)");
 }

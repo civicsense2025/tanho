@@ -1,4 +1,4 @@
-# OYS Platform
+# Lamina Platform
 
 A self-hostable, **white-label** website platform for creators and small
 businesses: portfolio + guides + newsletter with memberships + shop + booking,
@@ -59,9 +59,19 @@ enabled" state. See [docs/getting-started.md](docs/getting-started.md).
 
 ## Get Started (deploy your own)
 
+### 1-Click Deployment
+
+Deploy the platform instantly to your preferred cloud provider:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcivicsense2025%2Flamina-platform&env=DATABASE_URL,APP_ENCRYPTION_KEY,APP_URL) &nbsp; [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/civicsense2025/lamina-platform)
+
+*Note: For Vercel deployments, you will need to provision a remote database (Turso or Supabase) and set up an S3-compatible bucket (like Cloudflare R2) for media uploads. For Render, the platform automatically deploys with a persistent disk for SQLite and media storage out of the box.*
+
+### Manual Installation
+
 Self-hosting is a standard Node process with a writable filesystem (no
 Dockerfile or serverless config required). Set a few environment secrets
-**before the first boot**, run the migrations, then finish setup in the
+**before the first boot** (migrations run automatically on startup), then finish setup in the
 browser — a WordPress-style first-run install.
 
 **1. Set environment secrets.** Copy `.env.example` to `.env` and set at least:
@@ -85,13 +95,14 @@ be changed from inside the running site, so set them before you start. See
 `.env.example` for the full list (Stripe, email, Google/Supabase OAuth are all
 optional and stay dormant until configured).
 
-**2. Install and migrate.**
+**2. Install and build.**
 
 ```bash
 npm install
-npm run db:migrate      # creates the schema in your DATABASE_URL
 npm run build && npm start
 ```
+
+*(Note: Database migrations are applied automatically on server startup. There is no need to run migrations manually.)*
 
 Do **not** run `npm run seed` on a real deployment — seeding creates a CLI
 owner and starter content. Instead, create your owner from the browser (next
