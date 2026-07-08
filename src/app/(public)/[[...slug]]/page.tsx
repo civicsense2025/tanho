@@ -13,8 +13,6 @@ import { getSeoSettings } from "@/modules/seo/queries";
 import { article } from "@/modules/seo/jsonld";
 import { JsonLd } from "@/modules/seo/JsonLdScript";
 import { buildPageMetadata } from "@/modules/seo/metadata/build";
-import { resolveEntityRoute } from "@/modules/entries/router";
-import { EntityRouteView, entityMetaVars } from "@/modules/entries/public/EntityRouteView";
 import { resolveContentTypeRoute } from "@/modules/content-pages/router";
 import {
   ContentTypeRouteView,
@@ -64,19 +62,6 @@ export async function generateMetadata({
       title: codePage.title,
       excerpt: codePage.description,
       path: route,
-    });
-  }
-
-  const entity = await resolveEntityRoute(route);
-  if (entity) {
-    const { type, vars } = entityMetaVars(entity);
-    return buildPageMetadata({
-      contentType: type,
-      title: vars.title,
-      excerpt: vars.excerpt,
-      tag: vars.tag,
-      path: route,
-      kind: type === "guide" ? "article" : "website",
     });
   }
 
@@ -199,9 +184,6 @@ export default async function PublicPage({
     const { Component } = codePage;
     return <Component />;
   }
-
-  const entity = await resolveEntityRoute(route);
-  if (entity) return <EntityRouteView route={entity} />;
 
   const contentRoute = await resolveContentTypeRoute(route);
   if (contentRoute) return <ContentTypeRouteView route={contentRoute} />;

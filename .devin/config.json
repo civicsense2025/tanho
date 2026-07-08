@@ -15,7 +15,12 @@
       ]
     },
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=fruosvefvciqogkhwnta"
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.supabase.com/mcp?project_ref=fruosvefvciqogkhwnta"
+      ]
     },
     "brave-search": {
       "command": "npx",

@@ -8,6 +8,8 @@ import { Select } from "@/components/forms/Select";
 import { Toggle } from "@/components/admin/Seg";
 import { type FieldDescriptor, type FieldKind, splitTags, joinTags } from "./field-descriptors";
 
+export type { FieldDescriptor, FieldKind };
+
 type ControlProps = {
   descriptor: FieldDescriptor;
   value: unknown;

@@ -17,7 +17,8 @@ import { Button } from "@/components/core/Button";
 import { descriptorsFromFieldDefs } from "@/modules/custom-types/admin/descriptors";
 import type { FieldDef } from "@/modules/custom-types/validation";
 import { BlockCanvasEditor } from "@/editor/BlockCanvasEditor";
-import { FIELD_DESCRIPTORS, FieldControl, type FieldDescriptor } from "./fields";
+import { FIELD_DESCRIPTORS, type FieldDescriptor } from "./field-descriptors";
+import { FieldControl } from "./fields";
 import styles from "./entry-form.module.css";
 import shell from "@/editor/editor-shell.module.css";
 

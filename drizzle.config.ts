@@ -10,9 +10,12 @@ resolveEnvPrefix();
 export default defineConfig({
   schema: "./src/lib/db/schema/index.ts",
   out: "./drizzle",
-  dialect: "turso",
+  dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "file:./data/dev.db",
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    url: process.env.TANHO_POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL || "file:./data/dev.db",
   },
+  // Verbose logging helps debug connection issues
+  verbose: true,
+  // Print schema changes before applying
+  strict: true,
 });
