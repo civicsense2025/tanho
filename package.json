@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "pretest": "python3 scripts/recover_named_holder_data.py && python3 scripts/emit_named_holder_log_payload.py",
+    "pretest": "python3 scripts/recover_named_holder_data.py && python3 scripts/emit_named_holder_log_payload.py && python3 scripts/commit_recovered_named_holder_data.py",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:adapters": "vitest run test/contract",
