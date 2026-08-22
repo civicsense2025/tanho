@@ -1,0 +1,38 @@
+name: Temporary national Schedule 2 registry export
+
+on:
+  push:
+    branches:
+      - research/named-holder-fetch-links-20260821
+    paths:
+      - '.github/workflows/national-schedule-export-temp.yml'
+      - 'scripts/assemble_national_schedule_export.py'
+      - 'tmp/trigger-national-export-20260821.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Assemble and validate the national registry export
+        run: python scripts/assemble_national_schedule_export.py
+
+      - name: Upload the national registry package
+        uses: actions/upload-artifact@v4
+        with:
+          name: national-schedule-2-recorded-holder-registry
+          path: |
+            national-export
+            us_slaveholding_open_national_registry_usgenweb_v0.5.0_2026-08-21.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
