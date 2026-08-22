@@ -1,0 +1,1 @@
+Trigger the isolated national Schedule 2 registry export workflow after all public CSV chunks were generated.
